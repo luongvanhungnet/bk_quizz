@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  --color-bk-red: #C8102E;
+  --color-bk-red-deep: #8F0C18;
+  --color-bk-red-hover: #A50F24;
+  --color-bk-red-light: #FDE7EA;
+  --color-bk-cream: #FFF4D9;
+  --color-bk-cream-soft: #FFF8E8;
+  --color-bk-ink: #09090B;
+  
+  --color-bg-neutral: #F7F7F8;
+  --color-bg-white: #FFFFFF;
+  
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  
+  --color-border-color: #E5E7EB;
+  
+  --color-success: #16A34A;
+  --color-warning: #F59E0B;
+  --color-danger: #DC2626;
+
+  --radius-xl: 12px;
+  --radius-lg: 10px;
+}
+
+@layer base {
+  :root {
+    --bk-red: #C8102E;
+    --bk-red-deep: #8F0C18;
+    --bk-red-hover: #A50F24;
+    --bk-red-light: #FDE7EA;
+    --bk-cream: #FFF4D9;
+    --bk-cream-soft: #FFF8E8;
+    --bk-ink: #09090B;
+    --bk-line: #E5E7EB;
+    --bk-muted: #6B7280;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-color: #F7F7F8;
+    color: #111827;
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .bk-auth-grid {
+    background-color: #050505;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(200, 16, 46, 0.7) 1.2px, transparent 0),
+      linear-gradient(120deg, rgba(200, 16, 46, 0.12), transparent 32%);
+    background-size: 30px 30px, 100% 100%;
+  }
+
+  .bk-soft-grid {
+    background-image:
+      linear-gradient(rgba(200, 16, 46, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200, 16, 46, 0.08) 1px, transparent 1px);
+    background-size: 36px 36px;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bk-shadow {
+    box-shadow: 0 16px 40px rgba(17, 24, 39, 0.08);
+  }
+}
