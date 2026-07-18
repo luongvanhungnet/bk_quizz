@@ -1,0 +1,137 @@
+spring:
+  config:
+    import: optional:file:../.env[.properties],optional:file:.env[.properties]
+  application:
+    name: bkquiz-api
+  datasource:
+    # DATABASE_* is the canonical contract used by Docker Compose and .env.
+    # BKQUIZ_DATABASE_* remains supported for existing local environments.
+    url: ${DATABASE_URL:${BKQUIZ_DATABASE_URL:jdbc:postgresql://localhost:5432/bkquiz}}
+    username: ${DATABASE_USERNAME:${BKQUIZ_DATABASE_USERNAME:bkquiz}}
+    password: ${DATABASE_PASSWORD:${BKQUIZ_DATABASE_PASSWORD:bkquiz}}
+    hikari:
+      maximum-pool-size: ${DATABASE_POOL_SIZE:15}
+      connection-timeout: 10000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-migration-naming: true
+    user: ${DATABASE_MIGRATION_USERNAME:${DATABASE_USERNAME:${BKQUIZ_DATABASE_USERNAME:bkquiz}}}
+    password: ${DATABASE_MIGRATION_PASSWORD:${DATABASE_PASSWORD:${BKQUIZ_DATABASE_PASSWORD:bkquiz}}}
+  servlet:
+    multipart:
+      max-file-size: ${MAX_UPLOAD_SIZE:50MB}
+      max-request-size: ${MAX_REQUEST_SIZE:55MB}
+  jackson:
+    default-property-inclusion: non_null
+    time-zone: UTC
+  ai:
+    model:
+      chat: ${AI_CHAT_PROVIDER:none}
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY:}
+        chat:
+          model: ${GEMINI_MODEL:gemini-3.5-flash}
+          response-mime-type: application/json
+
+server:
+  port: ${PORT:8080}
+  shutdown: graceful
+  forward-headers-strategy: framework
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  max-http-request-header-size: 16KB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+
+springdoc:
+  api-docs:
+    enabled: ${API_DOCS_ENABLED:true}
+    path: /api/openapi.json
+  swagger-ui:
+    path: /api/docs
+
+bkquiz:
+  frontend-origins: ${FRONTEND_ORIGINS:http://localhost:5173}
+  security:
+    access-secret: ${JWT_ACCESS_SECRET:change-me-in-production-access-secret-32chars}
+    access-ttl: ${JWT_ACCESS_TTL:15m}
+    refresh-ttl: ${REFRESH_TOKEN_TTL:7d}
+    refresh-cookie-name: bkquiz_refresh
+    xsrf-cookie-name: XSRF-TOKEN
+    cookie-secure: ${COOKIE_SECURE:false}
+    bcrypt-strength: ${BCRYPT_STRENGTH:12}
+  storage:
+    provider: ${STORAGE_PROVIDER:local}
+    local-root: ${LOCAL_STORAGE_ROOT:./data/uploads}
+    local-temp: ${LOCAL_STORAGE_TEMP:./data/tmp}
+    user-quota-bytes: ${USER_STORAGE_QUOTA_BYTES:2147483648}
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    region: ${S3_REGION:us-east-1}
+    access-key: ${S3_ACCESS_KEY:minioadmin}
+    secret-key: ${S3_SECRET_KEY:minioadmin}
+    bucket: ${S3_BUCKET:bkquiz}
+    path-style: ${S3_PATH_STYLE:true}
+    clamav-host: ${CLAMAV_HOST:localhost}
+    clamav-port: ${CLAMAV_PORT:3310}
+    clamav-enabled: ${CLAMAV_ENABLED:false}
+  ai:
+    enabled: ${AI_ENABLED:false}
+    generation-model: ${GEMINI_MODEL:gemini-3.5-flash}
+    embedding-model: ${GEMINI_EMBEDDING_MODEL:gemini-embedding-2}
+    embedding-dimensions: ${GEMINI_EMBEDDING_DIMENSIONS:768}
+    timeout: ${GEMINI_TIMEOUT:60s}
+    max-attempts: ${GEMINI_MAX_ATTEMPTS:3}
+    max-questions: ${MAX_QUESTIONS_PER_QUIZ:50}
+    max-sources: ${MAX_SOURCES_PER_GENERATION:10}
+    min-source-characters: ${MIN_SOURCE_CHARACTERS:100}
+  jobs:
+    worker-enabled: ${WORKER_ENABLED:true}
+    poll-delay: ${JOB_POLL_DELAY:1s}
+    lease-duration: ${JOB_LEASE_DURATION:2m}
+    max-attempts: ${JOB_MAX_ATTEMPTS:5}
+  admin-bootstrap:
+    enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
+    email: ${ADMIN_BOOTSTRAP_EMAIL:}
+    username: ${ADMIN_BOOTSTRAP_USERNAME:BKQuiz Admin}
+    password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+
+logging:
+  pattern:
+    level: "%5p [traceId:%X{traceId:-}]"
+  level:
+    org.hibernate.SQL: WARN
+    org.springframework.security: INFO
+
+resend:
+  api:
+    key: ${RESEND_API_KEY:}
+    url: ${RESEND_API_URL:https://api.resend.com/emails}
+    connect-timeout: ${RESEND_CONNECT_TIMEOUT:10s}
+    read-timeout: ${RESEND_READ_TIMEOUT:15s}
+
+app:
+  mail:
+    from: ${APP_MAIL_FROM:}

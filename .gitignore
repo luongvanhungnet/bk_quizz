@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+backend/target/
+coverage/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Runtime data
+.data/
+uploads/
+*.log
+
