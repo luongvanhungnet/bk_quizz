@@ -1,0 +1,15 @@
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+bkquiz:
+  security:
+    cookie-secure: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.security: WARN
+
