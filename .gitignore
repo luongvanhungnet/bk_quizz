@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 frontend/node_modules/
+infra/postgres/.env
 
 # Build outputs
 dist/
@@ -10,6 +11,8 @@ coverage/
 frontend/coverage/
 frontend/playwright-report/
 frontend/test-results/
+# Local AI models
+rag-service/data/models/embedding-onnx/onnx/*.onnx
 
 # Secrets and local config
 .env

@@ -1,5 +1,6 @@
 package com.genquiz.bk.source;
 
+import com.genquiz.bk.job.Job;
 import com.genquiz.bk.topic.ActorIdentityService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -26,10 +27,13 @@ import org.springframework.web.multipart.MultipartFile;
 public class SourceController {
     private final SourceService service;
     private final ActorIdentityService actors;
+    private final SourcePresentationService presentation;
 
-    public SourceController(SourceService service, ActorIdentityService actors) {
+    public SourceController(SourceService service, ActorIdentityService actors,
+                            SourcePresentationService presentation) {
         this.service = service;
         this.actors = actors;
+        this.presentation = presentation;
     }
 
     @PostMapping("/topics/{topicId}/sources/text")
@@ -38,7 +42,7 @@ public class SourceController {
                                                      Principal principal) {
         SourceDocument source = service.paste(actors.requireUserId(principal), topicId, request);
         return ResponseEntity.created(URI.create("/api/sources/" + source.getId()))
-                .body(SourceDtos.Response.from(source));
+                .body(presentation.response(source));
     }
 
     @PostMapping(value = "/topics/{topicId}/sources/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -50,22 +54,32 @@ public class SourceController {
         var result = service.upload(actors.requireUserId(principal), topicId, file, idempotencyKey);
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .header(HttpHeaders.LOCATION, "/api/jobs/" + result.job().getId())
-                .body(new SourceDtos.UploadResponse(SourceDtos.Response.from(result.source()), result.job().getId()));
+                .body(new SourceDtos.UploadResponse(presentation.response(result.source()), result.job().getId()));
     }
 
     @GetMapping("/topics/{topicId}/sources")
     public List<SourceDtos.Response> list(@PathVariable UUID topicId, Principal principal) {
-        return service.list(actors.requireUserId(principal), topicId).stream().map(SourceDtos.Response::from).toList();
+        return service.list(actors.requireUserId(principal), topicId).stream()
+                .map(presentation::response).toList();
     }
 
     @GetMapping("/sources/{sourceId}")
     public SourceDtos.Response get(@PathVariable UUID sourceId, Principal principal) {
-        return SourceDtos.Response.from(service.getOwned(actors.requireUserId(principal), sourceId));
+        return presentation.response(service.getOwned(actors.requireUserId(principal), sourceId));
     }
 
     @DeleteMapping("/sources/{sourceId}")
     public ResponseEntity<Void> delete(@PathVariable UUID sourceId, Principal principal) {
         service.delete(actors.requireUserId(principal), sourceId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/sources/{sourceId}/reindex")
+    public ResponseEntity<SourceDtos.UploadResponse> reindex(@PathVariable UUID sourceId, Principal principal) {
+        UUID actorId = actors.requireUserId(principal);
+        Job job = service.reindex(actorId, sourceId);
+        SourceDocument source = service.getOwned(actorId, sourceId);
+        return ResponseEntity.accepted().header(HttpHeaders.LOCATION, "/api/jobs/" + job.getId())
+                .body(new SourceDtos.UploadResponse(presentation.response(source), job.getId()));
     }
 }

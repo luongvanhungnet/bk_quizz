@@ -5,6 +5,7 @@ import tools.jackson.databind.ObjectMapper;
 import com.genquiz.bk.job.Job;
 import com.genquiz.bk.job.JobService;
 import com.genquiz.bk.job.JobType;
+import com.genquiz.bk.config.QuizGenerationBatchProperties;
 import com.genquiz.bk.source.SourceDocument;
 import com.genquiz.bk.source.SourceDocumentRepository;
 import com.genquiz.bk.source.SourceStatus;
@@ -37,18 +38,21 @@ public class QuizService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final VerifiedAccountGuard verifiedAccounts;
+    private final QuizGenerationBatchProperties batchProperties;
 
     @Autowired
     public QuizService(QuizRepository quizzes, QuizSourceRepository quizSources, QuestionRepository questions,
                        SourceDocumentRepository sources, TopicService topics, JobService jobs,
-                       ObjectMapper objectMapper, VerifiedAccountGuard verifiedAccounts) {
+                       ObjectMapper objectMapper, VerifiedAccountGuard verifiedAccounts,
+                       QuizGenerationBatchProperties batchProperties) {
         this(quizzes, quizSources, questions, sources, topics, jobs, objectMapper,
-                verifiedAccounts, Clock.systemUTC());
+                verifiedAccounts, batchProperties, Clock.systemUTC());
     }
 
     QuizService(QuizRepository quizzes, QuizSourceRepository quizSources, QuestionRepository questions,
                 SourceDocumentRepository sources, TopicService topics, JobService jobs,
-                ObjectMapper objectMapper, VerifiedAccountGuard verifiedAccounts, Clock clock) {
+                ObjectMapper objectMapper, VerifiedAccountGuard verifiedAccounts,
+                QuizGenerationBatchProperties batchProperties, Clock clock) {
         this.quizzes = quizzes;
         this.quizSources = quizSources;
         this.questions = questions;
@@ -57,6 +61,7 @@ public class QuizService {
         this.jobs = jobs;
         this.objectMapper = objectMapper;
         this.verifiedAccounts = verifiedAccounts;
+        this.batchProperties = batchProperties;
         this.clock = clock;
     }
 
@@ -85,6 +90,13 @@ public class QuizService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền chỉnh sửa bài kiểm tra này");
         }
         return quiz;
+    }
+
+    @Transactional(readOnly = true)
+    public List<SourceDocument> listSources(UUID actorId, UUID quizId) {
+        getOwned(actorId, quizId);
+        return sources.findAllById(quizSources.findByQuizId(quizId).stream()
+                .map(QuizSource::getSourceDocumentId).toList());
     }
 
     @Transactional(readOnly = true)
@@ -146,7 +158,7 @@ public class QuizService {
         String scopedKey = idempotencyKey == null || idempotencyKey.isBlank()
                 ? null : "quiz-generation:" + actorId + ":" + idempotencyKey;
         Job job = jobs.enqueue(JobType.QUIZ_GENERATION, actorId, quiz.getId(), generationPayload(quiz, request),
-                scopedKey, 3);
+                scopedKey, maxJobAttempts(request.questionCounts()));
         if (!quiz.getId().equals(job.getResourceId())) {
             quizSources.deleteByQuizId(quiz.getId());
             quizzes.delete(quiz);
@@ -171,7 +183,21 @@ public class QuizService {
                 .map(sourceId -> new QuizSource(quizId, sourceId)).toList());
         String key = idempotencyKey == null || idempotencyKey.isBlank() ? null
                 : "quiz-generation-retry:" + actorId + ":" + quizId + ":" + idempotencyKey;
-        Job job = jobs.enqueue(JobType.QUIZ_GENERATION, actorId, quizId, generationPayload(quiz, request), key, 3);
+        Job job = jobs.enqueue(JobType.QUIZ_GENERATION, actorId, quizId,
+                generationPayload(quiz, request), key, maxJobAttempts(request.questionCounts()));
+        return new GenerationResult(quiz, job);
+    }
+
+    @Transactional
+    public GenerationResult retryLast(UUID actorId, UUID quizId) {
+        Quiz quiz = getOwned(actorId, quizId);
+        if (quiz.getStatus() != QuizStatus.FAILED
+                || quiz.getGenerationMode() != GenerationMode.AI) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Bài kiểm tra không thể thử sinh lại");
+        }
+        Job job = jobs.retryOwnedQuizGeneration(actorId, quizId);
+        quiz.queueRetry();
         return new GenerationResult(quiz, job);
     }
 
@@ -234,12 +260,19 @@ public class QuizService {
             return objectMapper.writeValueAsString(Map.of(
                     "quizId", quiz.getId(),
                     "topicId", quiz.getTopicId(),
+                    "title", request.title(),
                     "sourceIds", request.sourceIds(),
                     "difficulty", request.difficulty(),
                     "questionCounts", request.questionCounts()));
         } catch (JacksonException exception) {
             throw new IllegalStateException("Không thể tạo payload sinh câu hỏi", exception);
         }
+    }
+
+    private int maxJobAttempts(QuizDtos.QuestionCounts counts) {
+        int batches = (counts.total() + batchProperties.batchMaxQuestions() - 1)
+                / batchProperties.batchMaxQuestions();
+        return batches * batchProperties.batchMaxAttempts();
     }
 
     private Quiz requireActive(UUID quizId) {

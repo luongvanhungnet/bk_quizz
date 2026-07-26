@@ -24,6 +24,7 @@ import {
 import { accessTokenStore } from "../../auth/accessToken";
 import { useAuth } from "../../auth/AuthProvider";
 import { Button, Card, Checkbox, Input } from "../components/ui";
+import { SharedResourceCard } from "../components/SharedResourceCard";
 
 type Tab = "feed" | "assignments" | "resources" | "members" | "settings";
 
@@ -143,6 +144,7 @@ export default function ClassroomDetail() {
                 content,
                 topicShareId: null,
                 assignmentId: null,
+                resourcePreview: null,
                 attachments: files,
                 editedAt: null,
                 deletedAt: null,
@@ -322,9 +324,23 @@ export default function ClassroomDetail() {
                         <i className="text-xs">Tin nhắn đã xóa</i>
                       ) : (
                         <>
-                          <p className="whitespace-pre-wrap text-sm">
-                            {message.content}
-                          </p>
+                          {message.content &&
+                            !(
+                              message.type === "QUIZ_SHARE" &&
+                              message.content === message.resourcePreview?.title
+                            ) && (
+                            <p className="whitespace-pre-wrap text-sm">
+                              {message.content}
+                            </p>
+                          )}
+                          {(message.type === "TOPIC_SHARE" ||
+                            message.type === "QUIZ_SHARE") &&
+                            message.resourcePreview && (
+                              <SharedResourceCard
+                                classroomId={classroomId}
+                                preview={message.resourcePreview}
+                              />
+                            )}
                           {message.attachments.map((a) => (
                             <Attachment
                               key={a.id}
@@ -482,11 +498,16 @@ export default function ClassroomDetail() {
                   onClick={() =>
                     void bkquizApi
                       .shareTopic(classroomId, t.id)
-                      .then(() =>
-                        queryClient.invalidateQueries({
-                          queryKey: ["classroom-shares", classroomId],
-                        }),
-                      )
+                      .then(async () => {
+                        await Promise.all([
+                          queryClient.invalidateQueries({
+                            queryKey: ["classroom-shares", classroomId],
+                          }),
+                          queryClient.invalidateQueries({
+                            queryKey: ["classroom-messages", classroomId],
+                          }),
+                        ]);
+                      })
                       .catch((e) => toast.error(e.message))
                   }
                 >
@@ -495,10 +516,12 @@ export default function ClassroomDetail() {
               ))}
             </div>
             <div className="mt-6 space-y-2">
-              {shares.data?.map((s) => (
-                <Link key={s.id} to={`/workspace/${s.topicId}`}>
-                  <Card className="p-3 text-sm">Chủ đề {s.topicId}</Card>
-                </Link>
+              {shares.data?.map((share) => (
+                <SharedResourceCard
+                  key={share.id}
+                  classroomId={classroomId}
+                  preview={share.resourcePreview}
+                />
               ))}
             </div>
           </Card>
@@ -658,9 +681,17 @@ function Assignments({
       }),
     onSuccess: async (a) => {
       await bkquizApi.publishAssignment(a.id);
-      await client.invalidateQueries({
-        queryKey: ["classroom-assignments", classroomId],
-      });
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: ["classroom-assignments", classroomId],
+        }),
+        client.invalidateQueries({
+          queryKey: ["classroom-messages", classroomId],
+        }),
+        client.invalidateQueries({
+          queryKey: ["classroom-shared-resource", classroomId],
+        }),
+      ]);
     },
     onError: (e: Error) => toast.error(e.message),
   });

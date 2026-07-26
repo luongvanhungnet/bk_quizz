@@ -45,6 +45,9 @@ public class AttemptAnswer {
     @Column(name = "graded_at")
     private Instant gradedAt;
 
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -68,6 +71,9 @@ public class AttemptAnswer {
     }
 
     public void save(String selectedOptionIds, String textAnswer, Instant now) {
+        if (confirmedAt != null) {
+            throw new IllegalStateException("ANSWER_ALREADY_CONFIRMED");
+        }
         this.selectedOptionIds = selectedOptionIds == null ? "[]" : selectedOptionIds;
         this.textAnswer = textAnswer == null ? null : textAnswer.trim();
         this.correct = null;
@@ -84,6 +90,14 @@ public class AttemptAnswer {
         this.updatedAt = now;
     }
 
+    public void confirm(boolean correct, BigDecimal points, Instant now) {
+        if (confirmedAt != null) {
+            throw new IllegalStateException("ANSWER_ALREADY_CONFIRMED");
+        }
+        grade(correct, points, now);
+        confirmedAt = now;
+    }
+
     public UUID getId() { return id; }
     public UUID getAttemptId() { return attemptId; }
     public UUID getSnapshotId() { return snapshotId; }
@@ -91,5 +105,7 @@ public class AttemptAnswer {
     public String getTextAnswer() { return textAnswer; }
     public Boolean getCorrect() { return correct; }
     public BigDecimal getAwardedPoints() { return awardedPoints; }
+    public Instant getAnsweredAt() { return answeredAt; }
+    public Instant getConfirmedAt() { return confirmedAt; }
     public long getVersion() { return version; }
 }

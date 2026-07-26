@@ -3,7 +3,14 @@ import { Link, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Flag, Trophy, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { bkquizApi, type Attempt, type AttemptResult } from "../../api/bkquiz";
+import {
+  bkquizApi,
+  type AnswerFeedback,
+  type Attempt,
+  type AttemptResult,
+} from "../../api/bkquiz";
+import { citationLocation } from "./citationLocation";
+import { questionVisualState } from "./attemptQuestionState";
 import { Badge, Button, Card, Checkbox, Input, Modal } from "../components/ui";
 
 type AnswerValue = { selectedOptionIds: string[]; textAnswer: string };
@@ -11,6 +18,15 @@ const errorText = (error: unknown) =>
   error instanceof Error ? error.message : "Không thể tải bài làm.";
 const formatTime = (seconds: number) =>
   `${String(Math.floor(seconds / 3600)).padStart(2, "0")}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+const loadAttemptDraft = (attemptId: string): Record<string, AnswerValue> => {
+  try {
+    const raw = sessionStorage.getItem(`bkquiz-attempt-draft-${attemptId}`);
+    return raw ? (JSON.parse(raw) as Record<string, AnswerValue>) : {};
+  } catch {
+    sessionStorage.removeItem(`bkquiz-attempt-draft-${attemptId}`);
+    return {};
+  }
+};
 
 export default function QuizTaking() {
   const { id, attemptId } = useParams();
@@ -34,13 +50,14 @@ function AttemptStarter({
   quizId: string;
   onStarted: (attempt: Attempt) => void;
 }) {
+  const [mode, setMode] = useState<"STANDARD" | "LIVE_FEEDBACK">("STANDARD");
   const quiz = useQuery({
     queryKey: ["quiz", quizId],
     queryFn: () => bkquizApi.quiz(quizId),
     enabled: Boolean(quizId),
   });
   const start = useMutation({
-    mutationFn: () => bkquizApi.startAttempt(quizId),
+    mutationFn: () => bkquizApi.startAttempt(quizId, undefined, mode),
     onSuccess: onStarted,
     onError: (error) => toast.error(errorText(error)),
   });
@@ -63,6 +80,26 @@ function AttemptStarter({
                 Timer bắt đầu khi bạn xác nhận. Reload sau đó sẽ tiếp tục cùng
                 lượt làm.
               </p>
+              <div className="mt-5 grid gap-3 text-left sm:grid-cols-2">
+                <button
+                  className={`rounded-lg border p-4 ${mode === "STANDARD" ? "border-[#C8102E] bg-[#FDE7EA]" : "bg-white"}`}
+                  onClick={() => setMode("STANDARD")}
+                >
+                  <b>Làm bài tiêu chuẩn</b>
+                  <span className="mt-1 block text-xs text-[#6B7280]">
+                    Có thể sửa câu trả lời trước khi nộp bài.
+                  </span>
+                </button>
+                <button
+                  className={`rounded-lg border p-4 ${mode === "LIVE_FEEDBACK" ? "border-[#C8102E] bg-[#FDE7EA]" : "bg-white"}`}
+                  onClick={() => setMode("LIVE_FEEDBACK")}
+                >
+                  <b>Học với đáp án trực tiếp</b>
+                  <span className="mt-1 block text-xs text-[#6B7280]">
+                    Xem đáp án sau khi xác nhận; câu đã xác nhận sẽ bị khóa.
+                  </span>
+                </button>
+              </div>
               <Button
                 className="mt-6"
                 disabled={start.isPending}
@@ -80,10 +117,14 @@ function AttemptStarter({
 
 function AttemptSession({ attemptId }: { attemptId: string }) {
   const client = useQueryClient();
-  const [current, setCurrent] = useState(0);
+  const draftKey = `bkquiz-attempt-draft-${attemptId}`;
   const [marked, setMarked] = useState<string[]>([]);
-  const [answerEdits, setAnswerEdits] = useState<Record<string, AnswerValue>>({});
-  const [dirty, setDirty] = useState(false);
+  const [activeQuestion, setActiveQuestion] = useState<string>();
+  const [answerEdits, setAnswerEdits] = useState<Record<string, AnswerValue>>(
+    () => loadAttemptDraft(attemptId),
+  );
+  const [saveErrors, setSaveErrors] = useState<Record<string, string>>({});
+  const [feedbackEdits, setFeedbackEdits] = useState<Record<string, AnswerFeedback>>({});
   const [seconds, setSeconds] = useState(0);
   const [confirm, setConfirm] = useState(false);
   const [result, setResult] = useState<AttemptResult | null>(null);
@@ -103,12 +144,44 @@ function AttemptSession({ attemptId }: { attemptId: string }) {
   });
   const answers = useMemo<Record<string, AnswerValue>>(() => {
     const saved = Object.fromEntries(
-      (attemptQuery.data?.answers ?? []).map((answer) => [answer.snapshotId, {
-        selectedOptionIds: answer.selectedOptionIds ?? [], textAnswer: answer.textAnswer ?? "",
-      }]),
+      (attemptQuery.data?.answers ?? []).map((answer) => [
+        answer.snapshotId,
+        {
+          selectedOptionIds: answer.selectedOptionIds ?? [],
+          textAnswer: answer.textAnswer ?? "",
+        },
+      ]),
     );
     return { ...saved, ...answerEdits };
   }, [answerEdits, attemptQuery.data?.answers]);
+  const feedback = useMemo(
+    () => ({
+      ...Object.fromEntries(
+        (attemptQuery.data?.confirmedFeedback ?? []).map((item) => [
+          item.snapshotId,
+          item,
+        ]),
+      ),
+      ...feedbackEdits,
+    }),
+    [attemptQuery.data?.confirmedFeedback, feedbackEdits],
+  );
+  useEffect(() => {
+    if (Object.keys(answerEdits).length) {
+      sessionStorage.setItem(draftKey, JSON.stringify(answerEdits));
+    } else {
+      sessionStorage.removeItem(draftKey);
+    }
+  }, [answerEdits, draftKey]);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!Object.keys(answerEdits).length) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [answerEdits]);
   useEffect(() => {
     const expiresAt = attemptQuery.data?.expiresAt;
     if (!expiresAt || result) return;
@@ -123,38 +196,116 @@ function AttemptSession({ attemptId }: { attemptId: string }) {
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
   }, [attemptQuery.data?.expiresAt, result]);
-  const autosave = useMutation({
-    mutationFn: async () => {
+  useEffect(() => {
+    const questions = attemptQuery.data?.questions ?? [];
+    if (!questions.length) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (visible) setActiveQuestion(visible.target.getAttribute("data-question-id") ?? undefined);
+      },
+      { rootMargin: "-20% 0px -65% 0px" },
+    );
+    questions.forEach((question) => {
+      const element = document.getElementById(`question-${question.snapshotId}`);
+      if (element) observer.observe(element);
+    });
+    return () => observer.disconnect();
+  }, [attemptQuery.data?.questions]);
+  const save = useMutation({
+    mutationFn: async (snapshotIds: string[]) => {
       const attempt = attemptQuery.data!;
-      return bkquizApi.autosave(
+      const payload = Object.fromEntries(
+        snapshotIds.map((snapshotId) => [
+          snapshotId,
+          answerEdits[snapshotId] ?? answers[snapshotId] ?? {
+            selectedOptionIds: [],
+            textAnswer: "",
+          },
+        ]),
+      );
+      const data = await bkquizApi.autosave(
         attemptId,
         attempt.version,
-        Object.entries(answers).map(([snapshotId, value]) => ({
+        Object.entries(payload).map(([snapshotId, value]) => ({
           snapshotId,
           ...value,
         })),
       );
+      return { data, payload };
     },
-    onSuccess: (data) => { client.setQueryData(["attempt", attemptId], data); setAnswerEdits({}); setDirty(false); },
-    onError: async (error) => {
-      toast.error(errorText(error));
+    onSuccess: ({ data, payload }) => {
+      client.setQueryData(["attempt", attemptId], data);
+      setAnswerEdits((current) => {
+        const next = { ...current };
+        Object.entries(payload).forEach(([id, sent]) => {
+          if (JSON.stringify(current[id]) === JSON.stringify(sent)) delete next[id];
+        });
+        return next;
+      });
+      setSaveErrors((current) => {
+        const next = { ...current };
+        Object.keys(payload).forEach((id) => delete next[id]);
+        return next;
+      });
+    },
+    onError: async (error, snapshotIds) => {
+      setSaveErrors((current) => ({
+        ...current,
+        ...Object.fromEntries(snapshotIds.map((id) => [id, errorText(error)])),
+      }));
       await client.invalidateQueries({ queryKey: ["attempt", attemptId] });
     },
   });
   useEffect(() => {
+    const ids = Object.keys(answerEdits).filter((id) => !feedback[id]);
     if (
-      !dirty ||
+      !ids.length ||
       !preferences.data?.attemptAutosave ||
       !attemptQuery.data ||
-      result
+      result ||
+      save.isPending
     )
       return;
-    const timer = window.setTimeout(() => autosave.mutate(), 800);
+    const timer = window.setTimeout(() => save.mutate(ids), 800);
     return () => window.clearTimeout(timer);
-  }, [answers, attemptQuery.data, autosave, dirty, preferences.data?.attemptAutosave, result]);
+  }, [answerEdits, attemptQuery.data, feedback, preferences.data?.attemptAutosave, result, save]);
+  const confirmAnswer = useMutation({
+    mutationFn: async ({ snapshotId, value }: { snapshotId: string; value: AnswerValue }) =>
+      bkquizApi.confirmAnswer(
+        attemptId,
+        snapshotId,
+        attemptQuery.data!.version,
+        value,
+      ),
+    onSuccess: async (value) => {
+      setFeedbackEdits((current) => ({ ...current, [value.snapshotId]: value }));
+      setAnswerEdits((current) => {
+        const next = { ...current };
+        delete next[value.snapshotId];
+        return next;
+      });
+      setSaveErrors((current) => {
+        const next = { ...current };
+        delete next[value.snapshotId];
+        return next;
+      });
+      await client.invalidateQueries({ queryKey: ["attempt", attemptId] });
+    },
+    onError: async (error, variables) => {
+      setSaveErrors((current) => ({
+        ...current,
+        [variables.snapshotId]: errorText(error),
+      }));
+      await client.invalidateQueries({ queryKey: ["attempt", attemptId] });
+    },
+  });
   const submit = useMutation({
     mutationFn: async () => {
-      if (preferences.data?.attemptAutosave) await autosave.mutateAsync();
+      const dirtyIds = Object.keys(answerEdits).filter((id) => !feedback[id]);
+      if (dirtyIds.length) await save.mutateAsync(dirtyIds);
       const storageKey = `bkquiz-submit-${attemptId}`;
       let key = sessionStorage.getItem(storageKey);
       if (!key) {
@@ -167,6 +318,7 @@ function AttemptSession({ attemptId }: { attemptId: string }) {
       setResult(data);
       setConfirm(false);
       sessionStorage.removeItem(`bkquiz-submit-${attemptId}`);
+      sessionStorage.removeItem(draftKey);
       void client.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (error) => toast.error(errorText(error)),
@@ -189,19 +341,24 @@ function AttemptSession({ attemptId }: { attemptId: string }) {
     return <ExistingResult attemptId={attemptId} />;
   if (result)
     return <ResultView result={result} {...(quiz.data?.title ? { quizTitle: quiz.data.title } : {})} />;
-  const question = attempt.questions[current];
-  if (!question) return <Center text="Quiz không có câu hỏi để làm." error />;
-  const value = answers[question.snapshotId] ?? {
-    selectedOptionIds: [],
-    textAnswer: "",
-  };
-  const setValue = (next: AnswerValue) => { setDirty(true); setAnswerEdits((state) => ({ ...state, [question.snapshotId]: next })); };
+  if (!attempt.questions.length)
+    return <Center text="Quiz không có câu hỏi để làm." error />;
   const answered = Object.values(answers).filter(
     (answer) => answer.selectedOptionIds.length || answer.textAnswer.trim(),
   ).length;
+  const savedIds = new Set(attempt.answers.map((answer) => answer.snapshotId));
+  const savedById = Object.fromEntries(
+    attempt.answers.map((answer) => [answer.snapshotId, answer]),
+  );
+  const scrollTo = (snapshotId: string) => {
+    document.getElementById(`question-${snapshotId}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
   return (
-    <div className="flex min-h-screen flex-col bg-[#F7F7F8]">
-      <header className="flex min-h-16 items-center justify-between gap-3 border-b bg-white px-4">
+    <div className="min-h-screen bg-[#F7F7F8]">
+      <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b bg-white px-4 shadow-sm">
         <div>
           <b>{quiz.data?.title ?? "Quiz"}</b>
           <span className="ml-2 text-xs text-[#6B7280]">
@@ -209,11 +366,7 @@ function AttemptSession({ attemptId }: { attemptId: string }) {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <Badge
-            className={
-              seconds < 300 ? "bg-red-50 text-red-700" : "bg-[#F3F4F6]"
-            }
-          >
+          <Badge className={seconds < 300 ? "bg-red-50 text-red-700" : "bg-[#F3F4F6]"}>
             <Clock className="mr-1 h-4 w-4" />
             {formatTime(seconds)}
           </Badge>
@@ -222,152 +375,304 @@ function AttemptSession({ attemptId }: { attemptId: string }) {
           </Button>
         </div>
       </header>
-      <div className="grid flex-1 lg:grid-cols-[1fr_280px]">
-        <main className="p-5 md:p-10">
-          <div className="mx-auto max-w-3xl">
-            <div className="mb-6 flex justify-between">
-              <div>
-                <h1 className="text-2xl font-black">
-                  Câu {current + 1}/{attempt.questions.length}
-                </h1>
-                <p className="text-sm text-[#6B7280]">{question.type}</p>
-              </div>
-              <button
-                onClick={() =>
-                  setMarked((items) =>
-                    items.includes(question.snapshotId)
-                      ? items.filter((id) => id !== question.snapshotId)
-                      : [...items, question.snapshotId],
-                  )
-                }
-                className={
-                  marked.includes(question.snapshotId)
-                    ? "text-amber-600"
-                    : "text-[#6B7280]"
-                }
+      <div className="mx-auto grid max-w-6xl gap-5 p-4 lg:grid-cols-[1fr_280px] lg:p-8">
+        <QuestionNavigator
+          className="lg:hidden"
+          attempt={attempt}
+          answers={answers}
+          edits={answerEdits}
+          feedback={feedback}
+          marked={marked}
+          activeQuestion={activeQuestion}
+          onSelect={scrollTo}
+        />
+        <main className="space-y-6">
+          {attempt.questions.map((question, index) => {
+            const value = answers[question.snapshotId] ?? {
+              selectedOptionIds: [],
+              textAnswer: "",
+            };
+            const itemFeedback = feedback[question.snapshotId];
+            const locked = Boolean(itemFeedback);
+            const dirty = Boolean(answerEdits[question.snapshotId]);
+            const hasAnswer = Boolean(
+              value.selectedOptionIds.length || value.textAnswer.trim(),
+            );
+            const saving = save.isPending &&
+              Boolean(save.variables?.includes(question.snapshotId));
+            const setValue = (next: AnswerValue) => {
+              if (locked) return;
+              setAnswerEdits((state) => ({ ...state, [question.snapshotId]: next }));
+            };
+            return (
+              <section
+                id={`question-${question.snapshotId}`}
+                data-question-id={question.snapshotId}
+                key={question.snapshotId}
+                className="scroll-mt-24"
               >
-                <Flag className="h-5 w-5" />
-              </button>
-            </div>
-            <Card className="p-6">
-              <p className="mb-6 text-lg font-bold leading-8">
-                {question.prompt}
-              </p>
-              {question.type === "FILL_BLANK" ? (
-                <Input
-                  value={value.textAnswer}
-                  onChange={(e) =>
-                    setValue({
-                      selectedOptionIds: [],
-                      textAnswer: e.target.value,
-                    })
-                  }
-                  placeholder="Nhập câu trả lời..."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {question.options.map((option) => {
-                    const selected = value.selectedOptionIds.includes(
-                      option.id,
-                    );
-                    return (
-                      <label
-                        key={option.id}
-                        className={`flex cursor-pointer gap-3 rounded-md border p-4 ${selected ? "border-[#C8102E] bg-[#FDE7EA]" : ""}`}
+                <Card className="p-5 md:p-7">
+                  <div className="mb-5 flex items-start justify-between gap-3">
+                    <div>
+                      <h2 className="text-xl font-black">
+                        Câu {index + 1}/{attempt.questions.length}
+                      </h2>
+                      <p className="text-xs text-[#6B7280]">{question.type}</p>
+                    </div>
+                    <button
+                      aria-label={`Đánh dấu câu ${index + 1}`}
+                      onClick={() =>
+                        setMarked((items) =>
+                          items.includes(question.snapshotId)
+                            ? items.filter((id) => id !== question.snapshotId)
+                            : [...items, question.snapshotId],
+                        )
+                      }
+                      className={marked.includes(question.snapshotId) ? "text-amber-600" : "text-[#6B7280]"}
+                    >
+                      <Flag className="h-5 w-5" />
+                    </button>
+                  </div>
+                  <p className="mb-6 text-lg font-bold leading-8">{question.prompt}</p>
+                  {question.type === "FILL_BLANK" ? (
+                    <Input
+                      disabled={locked}
+                      value={value.textAnswer}
+                      onChange={(event) =>
+                        setValue({ selectedOptionIds: [], textAnswer: event.target.value })
+                      }
+                      placeholder="Nhập câu trả lời..."
+                    />
+                  ) : (
+                    <div className="space-y-3">
+                      {question.options.map((option) => {
+                        const selected = value.selectedOptionIds.includes(option.id);
+                        return (
+                          <label
+                            key={option.id}
+                            className={`flex gap-3 rounded-md border p-4 ${locked ? "cursor-not-allowed opacity-80" : "cursor-pointer"} ${selected ? "border-[#C8102E] bg-[#FDE7EA]" : ""}`}
+                          >
+                            <Checkbox
+                              disabled={locked}
+                              type={question.type === "SINGLE_CHOICE" ? "radio" : "checkbox"}
+                              name={question.snapshotId}
+                              checked={selected}
+                              onChange={() =>
+                                setValue({
+                                  textAnswer: "",
+                                  selectedOptionIds:
+                                    question.type === "SINGLE_CHOICE"
+                                      ? [option.id]
+                                      : selected
+                                        ? value.selectedOptionIds.filter((id) => id !== option.id)
+                                        : [...value.selectedOptionIds, option.id],
+                                })
+                              }
+                            />
+                            <span>{option.text}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+                    <span className="text-xs text-[#6B7280]">
+                      {saving
+                        ? "Đang lưu..."
+                        : locked
+                          ? `Đã xác nhận lúc ${new Date(itemFeedback!.confirmedAt).toLocaleTimeString("vi-VN")}`
+                          : dirty
+                            ? "Có thay đổi chưa lưu"
+                            : savedIds.has(question.snapshotId)
+                              ? `Đã lưu lúc ${new Date(savedById[question.snapshotId]!.answeredAt).toLocaleTimeString("vi-VN")}`
+                              : "Chưa lưu"}
+                    </span>
+                    {!locked && (
+                      <Button
+                        disabled={
+                          save.isPending ||
+                          confirmAnswer.isPending ||
+                          (attempt.mode === "LIVE_FEEDBACK" && !hasAnswer)
+                        }
+                        onClick={() =>
+                          attempt.mode === "LIVE_FEEDBACK"
+                            ? confirmAnswer.mutate({ snapshotId: question.snapshotId, value })
+                            : save.mutate([question.snapshotId])
+                        }
                       >
-                        <Checkbox
-                          type={
-                            question.type === "SINGLE_CHOICE"
-                              ? "radio"
-                              : "checkbox"
-                          }
-                          name={question.snapshotId}
-                          checked={selected}
-                          onChange={() =>
-                            setValue({
-                              textAnswer: "",
-                              selectedOptionIds:
-                                question.type === "SINGLE_CHOICE"
-                                  ? [option.id]
-                                  : selected
-                                    ? value.selectedOptionIds.filter(
-                                        (id) => id !== option.id,
-                                      )
-                                    : [...value.selectedOptionIds, option.id],
-                            })
-                          }
-                        />
-                        <span>{option.text}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-            <div className="mt-5 flex justify-between">
-              <Button
-                variant="outline"
-                disabled={current === 0}
-                onClick={() => setCurrent((index) => index - 1)}
-              >
-                Câu trước
-              </Button>
-              <Button
-                disabled={current === attempt.questions.length - 1}
-                onClick={() => setCurrent((index) => index + 1)}
-              >
-                Câu sau
-              </Button>
-            </div>
-          </div>
+                        {attempt.mode === "LIVE_FEEDBACK"
+                          ? "Xác nhận và xem đáp án"
+                          : "Lưu câu trả lời"}
+                      </Button>
+                    )}
+                  </div>
+                  {saveErrors[question.snapshotId] && (
+                    <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                      {saveErrors[question.snapshotId]}
+                    </div>
+                  )}
+                  {itemFeedback && (
+                    <LiveFeedbackView
+                      feedback={itemFeedback}
+                      question={question}
+                    />
+                  )}
+                </Card>
+              </section>
+            );
+          })}
+          <Card className="p-6 text-center">
+            <p className="font-bold">
+              Đã trả lời {answered}/{attempt.questions.length} câu · còn{" "}
+              {Object.keys(answerEdits).length} câu chưa đồng bộ
+            </p>
+            <Button className="mt-4" variant="danger" onClick={() => setConfirm(true)}>
+              Nộp bài
+            </Button>
+          </Card>
         </main>
-        <aside className="border-l bg-white p-4">
-          <h2 className="mb-3 font-black">Danh sách câu hỏi</h2>
-          <div className="grid grid-cols-5 gap-2">
-            {attempt.questions.map((item, index) => {
-              const answer = answers[item.snapshotId];
-              const done = Boolean(
-                answer?.selectedOptionIds.length || answer?.textAnswer.trim(),
-              );
-              return (
-                <button
-                  key={item.snapshotId}
-                  onClick={() => setCurrent(index)}
-                  className={`h-10 rounded-md border text-sm font-black ${index === current ? "ring-2 ring-[#C8102E]" : ""} ${done ? "bg-[#C8102E] text-white" : marked.includes(item.snapshotId) ? "bg-amber-100" : "bg-white"}`}
-                >
-                  {index + 1}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-5 text-xs text-[#6B7280]">
-            {autosave.isPending
-              ? "Đang tự động lưu..."
-              : preferences.data?.attemptAutosave
-                ? "Tự động lưu đang bật"
-                : "Tự động lưu đang tắt"}
-          </p>
+        <aside className="hidden lg:block">
+          <QuestionNavigator
+            className="sticky top-24"
+            attempt={attempt}
+            answers={answers}
+            edits={answerEdits}
+            feedback={feedback}
+            marked={marked}
+            activeQuestion={activeQuestion}
+            onSelect={scrollTo}
+          />
         </aside>
       </div>
       {confirm && (
         <Modal title="Nộp bài?" onClose={() => setConfirm(false)}>
           <div className="p-5">
-            <p>
-              Bạn đã trả lời {answered}/{attempt.questions.length} câu.
-            </p>
+            <p>Bạn đã trả lời {answered}/{attempt.questions.length} câu.</p>
             <div className="mt-5 flex justify-end gap-2">
               <Button variant="outline" onClick={() => setConfirm(false)}>
                 Tiếp tục làm
               </Button>
-              <Button
-                disabled={submit.isPending}
-                onClick={() => submit.mutate()}
-              >
+              <Button disabled={submit.isPending} onClick={() => submit.mutate()}>
                 {submit.isPending ? "Đang nộp..." : "Nộp bài"}
               </Button>
             </div>
           </div>
         </Modal>
+      )}
+    </div>
+  );
+}
+
+function QuestionNavigator({
+  className = "",
+  attempt,
+  answers,
+  edits,
+  feedback,
+  marked,
+  activeQuestion,
+  onSelect,
+}: {
+  className?: string;
+  attempt: Attempt;
+  answers: Record<string, AnswerValue>;
+  edits: Record<string, AnswerValue>;
+  feedback: Record<string, AnswerFeedback>;
+  marked: string[];
+  activeQuestion: string | undefined;
+  onSelect: (snapshotId: string) => void;
+}) {
+  const savedIds = new Set(attempt.answers.map((answer) => answer.snapshotId));
+  return (
+    <Card className={`p-4 ${className}`}>
+      <h2 className="mb-3 font-black">Danh sách câu hỏi</h2>
+      <div className="grid grid-cols-5 gap-2">
+        {attempt.questions.map((item, index) => {
+          const answer = answers[item.snapshotId];
+          const hasAnswer = Boolean(
+            answer?.selectedOptionIds.length || answer?.textAnswer.trim(),
+          );
+          const itemFeedback = feedback[item.snapshotId];
+          const state = questionVisualState({
+            hasAnswer,
+            dirty: Boolean(edits[item.snapshotId]),
+            saved: savedIds.has(item.snapshotId),
+            ...(itemFeedback
+              ? { confirmedCorrect: itemFeedback.correct }
+              : {}),
+          });
+          const color = {
+            CONFIRMED_CORRECT: "bg-green-600 text-white",
+            CONFIRMED_INCORRECT: "bg-red-600 text-white",
+            DIRTY: "bg-amber-100 text-amber-900",
+            SAVED: "bg-[#C8102E] text-white",
+            UNANSWERED: marked.includes(item.snapshotId)
+              ? "bg-amber-100"
+              : "bg-white",
+          }[state];
+          return (
+            <button
+              key={item.snapshotId}
+              onClick={() => onSelect(item.snapshotId)}
+              className={`h-10 rounded-md border text-sm font-black ${color} ${activeQuestion === item.snapshotId ? "ring-2 ring-[#111827] ring-offset-2" : ""}`}
+            >
+              {index + 1}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-4 space-y-1 text-xs text-[#6B7280]">
+        <p>Đỏ thương hiệu: đã lưu · Vàng: chưa lưu</p>
+        {attempt.mode === "LIVE_FEEDBACK" && <p>Xanh lá/đỏ: đã xác nhận đúng/sai</p>}
+      </div>
+    </Card>
+  );
+}
+
+function LiveFeedbackView({
+  feedback,
+  question,
+}: {
+  feedback: AnswerFeedback;
+  question: Attempt["questions"][number];
+}) {
+  const correctOptions = question.options
+    .filter((option) => feedback.correctOptionIds.includes(option.id))
+    .map((option) => option.text);
+  return (
+    <div className={`mt-4 rounded-lg border p-4 ${feedback.correct ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}`}>
+      <div className="flex items-center gap-2 font-black">
+        {feedback.correct ? (
+          <CheckCircle2 className="text-green-600" />
+        ) : (
+          <XCircle className="text-red-600" />
+        )}
+        {feedback.correct ? "Chính xác" : "Chưa chính xác"}
+      </div>
+      {correctOptions.length > 0 && (
+        <p className="mt-2 text-sm">Đáp án đúng: {correctOptions.join(", ")}</p>
+      )}
+      {feedback.acceptedAnswers.length > 0 && (
+        <p className="mt-2 text-sm">
+          Đáp án chấp nhận: {feedback.acceptedAnswers.join(", ")}
+        </p>
+      )}
+      {(feedback.explanation || feedback.citations.length > 0) && (
+        <details className="mt-3 rounded border bg-white p-3 text-sm">
+          <summary className="cursor-pointer font-bold">Xem giải thích đáp án</summary>
+          {feedback.explanation && <p className="mt-2">{feedback.explanation}</p>}
+          {feedback.citations
+            .filter((citation) => citation.role !== "QUESTION")
+            .map((citation) => (
+              <blockquote
+                key={`${citation.role}-${citation.sourceChunkId}`}
+                className="mt-2 border-l-2 pl-3 text-[#6B7280]"
+              >
+                <b>{citation.filename} · {citationLocation(citation)}</b>
+                <span className="block">{citation.evidenceQuote}</span>
+              </blockquote>
+            ))}
+        </details>
       )}
     </div>
   );
@@ -448,6 +753,18 @@ function ResultView({
                   <p className="mt-2 text-sm text-[#6B7280]">
                     {item.explanation}
                   </p>
+                )}
+                {item.citations?.length > 0 && (
+                  <details className="mt-3 rounded border bg-gray-50 p-3 text-sm">
+                    <summary className="cursor-pointer font-bold">Nguồn đáp án</summary>
+                    {item.citations.filter((citation) => citation.role !== "QUESTION").map((citation) => (
+                      <div key={`${citation.role}-${citation.sourceChunkId}`} className="mt-2">
+                        <b>{citation.filename} · {citationLocation(citation)}</b>
+                        {citation.heading && <span> · {citation.heading}</span>}
+                        <blockquote className="mt-1 border-l-2 pl-2 text-[#6B7280]">{citation.evidenceQuote}</blockquote>
+                      </div>
+                    ))}
+                  </details>
                 )}
               </Card>
             ))}

@@ -44,6 +44,10 @@ public class Job {
     @Column(name = "result_payload", columnDefinition = "jsonb")
     private String resultPayload;
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "checkpoint_payload", columnDefinition = "jsonb")
+    private String checkpointPayload;
+
     @Column(nullable = false)
     private int attempts;
 
@@ -67,6 +71,11 @@ public class Job {
 
     @Column(name = "error_message", length = 1000)
     private String errorMessage;
+
+    @Column(name = "upstream_request_id", length = 100)
+    private String upstreamRequestId;
+    @Column(name = "progress_percent", nullable = false) private int progress;
+    @Column(name = "current_step", length = 64) private String step;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -96,6 +105,7 @@ public class Job {
         this.availableAt = now;
         this.createdAt = now;
         this.updatedAt = now;
+        this.step = "QUEUED";
     }
 
     public void claim(String workerId, Instant now) {
@@ -125,6 +135,8 @@ public class Job {
         errorMessage = null;
         completedAt = now;
         updatedAt = now;
+        progress = 100; step = "SUCCEEDED";
+        checkpointPayload = null;
         clearLease();
         scrubSensitivePayload();
     }
@@ -134,8 +146,15 @@ public class Job {
     }
 
     public void fail(String safeCode, String safeMessage, Instant now, Duration retryAfter, boolean permanent) {
+        fail(safeCode, safeMessage, now, retryAfter, permanent, null);
+    }
+
+    public void fail(String safeCode, String safeMessage, Instant now, Duration retryAfter,
+                     boolean permanent, String requestId) {
         errorCode = safeCode;
         errorMessage = safeMessage == null ? null : safeMessage.substring(0, Math.min(1000, safeMessage.length()));
+        upstreamRequestId = requestId == null || requestId.isBlank()
+                ? null : requestId.substring(0, Math.min(100, requestId.length()));
         updatedAt = now;
         if (permanent || attempts >= maxAttempts) {
             status = JobStatus.FAILED;
@@ -151,6 +170,16 @@ public class Job {
         clearLease();
     }
 
+    public void defer(Instant now, Duration delay) {
+        status = JobStatus.RETRY;
+        attempts = Math.max(0, attempts - 1);
+        availableAt = now.plus(delay == null || delay.isNegative() ? Duration.ZERO : delay);
+        errorCode = null;
+        errorMessage = null;
+        updatedAt = now;
+        clearLease();
+    }
+
     public void reclaimIfStale(Instant now) {
         status = JobStatus.RETRY;
         availableAt = now;
@@ -161,6 +190,23 @@ public class Job {
     public void retryByAdmin(Instant now) {
         if (status != JobStatus.FAILED) throw new IllegalStateException("Chỉ có thể thử lại job đã thất bại");
         status = JobStatus.RETRY; availableAt = now; completedAt = null; errorCode = null; errorMessage = null; updatedAt = now; clearLease();
+    }
+
+    public void retryByOwner(Instant now) {
+        if (status != JobStatus.FAILED || type != JobType.QUIZ_GENERATION) {
+            throw new IllegalStateException("Chỉ có thể thử lại job sinh quiz đã thất bại");
+        }
+        status = JobStatus.RETRY;
+        attempts = 0;
+        availableAt = now;
+        completedAt = null;
+        errorCode = null;
+        errorMessage = null;
+        upstreamRequestId = null;
+        progress = 0;
+        step = "QUEUED";
+        updatedAt = now;
+        clearLease();
     }
 
     public void cancelByAdmin(Instant now) {
@@ -185,13 +231,24 @@ public class Job {
     public UUID getResourceId() { return resourceId; }
     public String getPayload() { return payload; }
     public String getResultPayload() { return resultPayload; }
+    public String getCheckpointPayload() { return checkpointPayload; }
     public int getAttempts() { return attempts; }
     public int getMaxAttempts() { return maxAttempts; }
     public Instant getAvailableAt() { return availableAt; }
     public Instant getHeartbeatAt() { return heartbeatAt; }
     public String getErrorCode() { return errorCode; }
     public String getErrorMessage() { return errorMessage; }
+    public String getUpstreamRequestId() { return upstreamRequestId; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public Instant getCompletedAt() { return completedAt; }
+    public int getProgress() { return progress; }
+    public String getStep() { return step; }
+    public void checkpoint(String value, Instant now) {
+        checkpointPayload = value;
+        updatedAt = now;
+    }
+    public void progress(int value, String currentStep, Instant now) {
+        progress = Math.max(0, Math.min(100, value)); step = currentStep; updatedAt = now;
+    }
 }

@@ -1,24 +1,25 @@
-import { Navigate, Outlet, useLocation } from "react-router";
+import { Navigate, Outlet, useLocation, useNavigate } from "react-router";
+import { AccessDenied } from "./AccessDenied";
 import { useAuth } from "./AuthProvider";
+
+function LoadingSession() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#FFF4D9] text-sm font-semibold text-[#6B7280]">
+      Đang khôi phục phiên đăng nhập...
+    </div>
+  );
+}
 
 export function RequireAuth() {
   const { status } = useAuth();
   const location = useLocation();
 
-  if (status === "loading") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FFF4D9] text-sm font-semibold text-[#6B7280]">
-        Đang khôi phục phiên đăng nhập...
-      </div>
-    );
-  }
+  if (status === "loading") return <LoadingSession />;
 
   if (status === "anonymous") {
     return (
-      <Navigate
-        to="/login"
-        replace
-        state={{ from: `${location.pathname}${location.search}${location.hash}` }}
+      <AccessDenied
+        returnTo={`${location.pathname}${location.search}${location.hash}`}
       />
     );
   }
@@ -30,26 +31,52 @@ export function GuestOnly() {
   const { status, user } = useAuth();
   const location = useLocation();
 
-  if (status === "loading") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#FFF4D9] text-sm font-semibold text-[#6B7280]">
-        Đang khôi phục phiên đăng nhập...
-      </div>
-    );
-  }
+  if (status === "loading") return <LoadingSession />;
 
   if (status === "authenticated") {
     const from = (location.state as { from?: unknown } | null)?.from;
-    return <Navigate to={typeof from === "string" ? from : user?.role === "ADMIN" ? "/admin" : "/dashboard"} replace />;
+    return (
+      <Navigate
+        replace
+        to={
+          typeof from === "string"
+            ? from
+            : user?.role === "ADMIN"
+              ? "/admin"
+              : "/dashboard"
+        }
+      />
+    );
   }
 
   return <Outlet />;
 }
 
 export function RequireAdmin() {
-  const { status, user } = useAuth();
-  if (status === "loading") return <div className="flex min-h-screen items-center justify-center">Đang tải...</div>;
-  if (status === "anonymous") return <Navigate to="/login" replace />;
-  if (user?.role !== "ADMIN") return <Navigate to="/dashboard" replace />;
+  const { status, user, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const returnTo = `${location.pathname}${location.search}${location.hash}`;
+
+  if (status === "loading") return <LoadingSession />;
+  if (status === "anonymous") return <AccessDenied returnTo={returnTo} />;
+
+  if (user?.role !== "ADMIN") {
+    return (
+      <AccessDenied
+        authenticated
+        returnTo={returnTo}
+        onUseAnotherAccount={() => {
+          void logout().finally(() => {
+            navigate("/login", {
+              replace: true,
+              state: { from: returnTo },
+            });
+          });
+        }}
+      />
+    );
+  }
+
   return <Outlet />;
 }

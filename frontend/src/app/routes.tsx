@@ -1,49 +1,132 @@
 import { createBrowserRouter } from "react-router";
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ForgotPassword from "./pages/ForgotPassword";
-import Dashboard from "./pages/Dashboard";
-import NewTopic from "./pages/NewTopic";
-import Workspace from "./pages/Workspace";
-import QuizTaking from "./pages/QuizTaking";
-import Pricing from "./pages/Pricing";
-import VerifyEmail from "./pages/VerifyEmail";
-import Classrooms from "./pages/Classrooms";
-import ClassroomDetail from "./pages/ClassroomDetail";
-import JoinClass from "./pages/JoinClass";
-import QuizAnalytics from "./pages/QuizAnalytics";
-import Admin from "./pages/Admin";
 import { GuestOnly, RequireAdmin, RequireAuth } from "../auth/RouteGuards";
+import { PageBrandLayout } from "./components/PageBrandLayout";
+import Landing from "./pages/Landing";
 
 export const router = createBrowserRouter([
-  { path: "/", Component: Landing },
-  { path: "/pricing", Component: Pricing },
-  { path: "/verify-email", Component: VerifyEmail },
-  { path: "/join-class/:joinCode", Component: JoinClass },
   {
-    Component: GuestOnly,
+    Component: PageBrandLayout,
     children: [
-      { path: "/login", Component: Login },
-      { path: "/register", Component: Register },
-      { path: "/forgot-password", Component: ForgotPassword },
-    ],
-  },
-  {
-    Component: RequireAdmin,
-    children: [{ path: "/admin", Component: Admin }],
-  },
-  {
-    Component: RequireAuth,
-    children: [
-      { path: "/dashboard", Component: Dashboard },
-      { path: "/topic/new", Component: NewTopic },
-      { path: "/workspace/:id", Component: Workspace },
-      { path: "/quiz/:id/take", Component: QuizTaking },
-      { path: "/attempt/:attemptId", Component: QuizTaking },
-      { path: "/classrooms", Component: Classrooms },
-      { path: "/classrooms/:classroomId", Component: ClassroomDetail },
-      { path: "/quizzes/:quizId/analytics", Component: QuizAnalytics },
+      { path: "/", Component: Landing },
+      {
+        path: "/pricing",
+        lazy: async () => ({
+          Component: (await import("./pages/Pricing")).default,
+        }),
+      },
+      {
+        path: "/verify-email",
+        lazy: async () => ({
+          Component: (await import("./pages/VerifyEmail")).default,
+        }),
+      },
+      {
+        path: "/join-class/:joinCode",
+        lazy: async () => ({
+          Component: (await import("./pages/JoinClass")).default,
+        }),
+      },
+      {
+        Component: GuestOnly,
+        children: [
+          {
+            path: "/login",
+            lazy: async () => ({
+              Component: (await import("./pages/Login")).default,
+            }),
+          },
+          {
+            path: "/register",
+            lazy: async () => ({
+              Component: (await import("./pages/Register")).default,
+            }),
+          },
+          {
+            path: "/forgot-password",
+            lazy: async () => ({
+              Component: (await import("./pages/ForgotPassword")).default,
+            }),
+          },
+        ],
+      },
+      {
+        Component: RequireAdmin,
+        children: [
+          {
+            path: "/admin",
+            lazy: async () => ({
+              Component: (await import("./pages/Admin")).default,
+            }),
+          },
+        ],
+      },
+      {
+        Component: RequireAuth,
+        children: [
+          {
+            path: "/dashboard",
+            lazy: async () => ({
+              Component: (await import("./pages/Dashboard")).default,
+            }),
+          },
+          {
+            path: "/topic/new",
+            lazy: async () => ({
+              Component: (await import("./pages/NewTopic")).default,
+            }),
+          },
+          {
+            path: "/workspace/:id",
+            lazy: async () => ({
+              Component: (await import("./pages/Workspace")).default,
+            }),
+          },
+          {
+            path: "/quiz/:id/take",
+            lazy: async () => ({
+              Component: (await import("./pages/QuizTaking")).default,
+            }),
+          },
+          {
+            path: "/attempt/:attemptId",
+            lazy: async () => ({
+              Component: (await import("./pages/QuizTaking")).default,
+            }),
+          },
+          {
+            path: "/classrooms",
+            lazy: async () => ({
+              Component: (await import("./pages/Classrooms")).default,
+            }),
+          },
+          {
+            path: "/classrooms/:classroomId",
+            lazy: async () => ({
+              Component: (await import("./pages/ClassroomDetail")).default,
+            }),
+          },
+          {
+            path: "/classrooms/:classroomId/resources/topics/:topicShareId",
+            lazy: async () => ({
+              Component: (await import("./pages/SharedClassroomResource"))
+                .default,
+            }),
+          },
+          {
+            path: "/classrooms/:classroomId/resources/quizzes/:assignmentId",
+            lazy: async () => ({
+              Component: (await import("./pages/SharedClassroomResource"))
+                .default,
+            }),
+          },
+          {
+            path: "/quizzes/:quizId/analytics",
+            lazy: async () => ({
+              Component: (await import("./pages/QuizAnalytics")).default,
+            }),
+          },
+        ],
+      },
     ],
   },
 ]);

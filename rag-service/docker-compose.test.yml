@@ -1,0 +1,38 @@
+services:
+  fake-gemini:
+    build: .
+    command: ["uvicorn", "integration.fake_gemini:app", "--host", "0.0.0.0", "--port", "9009"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9009/docs')"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  rag-api:
+    environment:
+      GEMINI_API_KEY: fake-key
+      GEMINI_MODEL: fake-model
+      GEMINI_API_BASE_URL: http://fake-gemini:9009
+      SPRING_BOOT_INTERNAL_API_KEY: integration-secret
+      RAG_MIN_SCORE: -1
+      RERANKER_ENABLED: "false"
+    depends_on:
+      fake-gemini: {condition: service_healthy}
+
+  rag-worker:
+    environment:
+      GEMINI_API_KEY: fake-key
+      GEMINI_MODEL: fake-model
+      SPRING_BOOT_INTERNAL_API_KEY: integration-secret
+      RAG_MIN_SCORE: -1
+      RERANKER_ENABLED: "false"
+
+  integration-test:
+    build: .
+    command: ["python", "integration/smoke.py"]
+    environment:
+      RAG_BASE_URL: http://rag-api:8000/api/v2
+      SPRING_BOOT_INTERNAL_API_KEY: integration-secret
+    depends_on:
+      rag-api: {condition: service_healthy}
+      rag-worker: {condition: service_started}

@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.text.Normalizer;
 import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,13 +20,29 @@ public class QuestionService {
     private final QuestionOptionRepository options;
     private final AcceptedAnswerRepository acceptedAnswers;
     private final QuizService quizzes;
+    private final QuestionCitationRepository citations;
+    private final com.genquiz.bk.source.SourceChunkRepository sourceChunks;
+    private final com.genquiz.bk.source.SourceDocumentRepository sourceDocuments;
+    private final QuizSourceRepository quizSources;
 
+    @Autowired
     public QuestionService(QuestionRepository questions, QuestionOptionRepository options,
-                           AcceptedAnswerRepository acceptedAnswers, QuizService quizzes) {
+                           AcceptedAnswerRepository acceptedAnswers, QuizService quizzes,
+                           QuestionCitationRepository citations,
+                           com.genquiz.bk.source.SourceChunkRepository sourceChunks,
+                           com.genquiz.bk.source.SourceDocumentRepository sourceDocuments,
+                           QuizSourceRepository quizSources) {
         this.questions = questions;
         this.options = options;
         this.acceptedAnswers = acceptedAnswers;
         this.quizzes = quizzes;
+        this.citations = citations; this.sourceChunks = sourceChunks; this.sourceDocuments = sourceDocuments;
+        this.quizSources = quizSources;
+    }
+
+    QuestionService(QuestionRepository questions, QuestionOptionRepository options,
+                    AcceptedAnswerRepository acceptedAnswers, QuizService quizzes) {
+        this(questions, options, acceptedAnswers, quizzes, null, null, null, null);
     }
 
     @Transactional(readOnly = true)
@@ -43,6 +60,7 @@ public class QuestionService {
         Question question = questions.save(new Question(quizId, request.sourceChunkId(), request.type(),
                 request.prompt(), request.explanation(), request.points(), position, request.difficulty()));
         replaceAnswers(question, request);
+        if (citations != null) citations.deleteByQuestionId(question.getId());
         return authorResponse(question);
     }
 
@@ -55,6 +73,7 @@ public class QuestionService {
         question.update(request.sourceChunkId(), request.type(), request.prompt(), request.explanation(),
                 request.points(), request.difficulty());
         replaceAnswers(question, request);
+        if (citations != null) citations.deleteByQuestionId(question.getId());
         return authorResponse(question);
     }
 
@@ -64,6 +83,7 @@ public class QuestionService {
         requireEditable(quizzes.getOwned(actorId, question.getQuizId()));
         options.deleteByQuestionId(questionId);
         acceptedAnswers.deleteByQuestionId(questionId);
+        if (citations != null) citations.deleteByQuestionId(questionId);
         questions.delete(question);
         normalizePositions(question.getQuizId());
     }
@@ -91,6 +111,7 @@ public class QuestionService {
         if (!oldIds.isEmpty()) {
             options.deleteByQuestionIdIn(oldIds);
             acceptedAnswers.deleteByQuestionIdIn(oldIds);
+            if (citations != null) citations.deleteByQuestionIdIn(oldIds);
             questions.deleteAll(old);
         }
         for (int index = 0; index < generated.size(); index++) {
@@ -99,6 +120,66 @@ public class QuestionService {
                     request.prompt(), request.explanation(), request.points(), index, request.difficulty()));
             replaceAnswers(question, request);
         }
+    }
+
+    @Transactional
+    public void replaceGrounded(UUID quizId, List<QuizDtos.GroundedQuestion> generated,
+                                QuizDtos.QuestionCounts expected) {
+        validateGeneratedBatch(generated.stream().map(QuizDtos.GroundedQuestion::question).toList(), expected);
+        if (generated.stream().anyMatch(item -> item.citations() == null
+                || item.citations().stream().noneMatch(c -> c.role() == CitationRole.QUESTION)
+                || item.citations().stream().noneMatch(c -> c.role() == CitationRole.ANSWER)
+                || item.citations().stream().noneMatch(c -> c.role() == CitationRole.EXPLANATION))) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "Câu hỏi AI phải có nguồn cho câu hỏi, đáp án và giải thích");
+        }
+        Set<UUID> allowedSources = quizSources.findByQuizId(quizId).stream()
+                .map(QuizSource::getSourceDocumentId).collect(java.util.stream.Collectors.toSet());
+        for (var item : generated) for (var citation : item.citations()) {
+            var chunk = sourceChunks.findById(citation.sourceChunkId())
+                    .orElseThrow(() -> invalidCitation());
+            if (!allowedSources.contains(chunk.getSourceDocumentId())
+                    || citation.evidenceQuote() == null || citation.evidenceQuote().isBlank()
+                    || !containsNormalized(chunk.getContent(), citation.evidenceQuote())) {
+                throw invalidCitation();
+            }
+        }
+        List<Question> old = questions.findByQuizIdOrderByPosition(quizId);
+        List<UUID> oldIds = old.stream().map(Question::getId).toList();
+        if (!oldIds.isEmpty()) {
+            options.deleteByQuestionIdIn(oldIds); acceptedAnswers.deleteByQuestionIdIn(oldIds);
+            citations.deleteByQuestionIdIn(oldIds); questions.deleteAll(old);
+        }
+        for (int index = 0; index < generated.size(); index++) {
+            var item = generated.get(index); var request = item.question();
+            UUID primary = item.citations().get(0).sourceChunkId();
+            Question question = questions.save(new Question(quizId, primary, request.type(), request.prompt(),
+                    request.explanation(), request.points(), index, request.difficulty()));
+            replaceAnswers(question, request);
+            List<QuestionCitation> values = new ArrayList<>();
+            java.util.Map<CitationRole, Integer> positions = new java.util.EnumMap<>(CitationRole.class);
+            for (var citation : item.citations()) {
+                int position = positions.merge(citation.role(), 1, Integer::sum) - 1;
+                values.add(new QuestionCitation(question.getId(), citation.sourceChunkId(), citation.role(),
+                        citation.evidenceQuote(), position));
+            }
+            citations.saveAll(values);
+        }
+    }
+
+    private static ResponseStatusException invalidCitation() {
+        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "Nguồn trích dẫn không hợp lệ");
+    }
+
+    private static boolean containsNormalized(String text, String quote) {
+        String normalizedText = normalizeEvidence(text);
+        String normalizedQuote = normalizeEvidence(quote);
+        return normalizedQuote.length() >= 8 && normalizedText.contains(normalizedQuote);
+    }
+
+    private static String normalizeEvidence(String value) {
+        return java.text.Normalizer.normalize(value == null ? "" : value, java.text.Normalizer.Form.NFKC)
+                .replaceAll("\\s+", " ").trim().toLowerCase(java.util.Locale.ROOT);
     }
 
     private void replaceAnswers(Question question, QuizDtos.QuestionRequest request) {
@@ -124,6 +205,10 @@ public class QuestionService {
         if (request == null || request.type() == null || request.prompt() == null || request.prompt().isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
                     "Câu hỏi phải có loại và nội dung hợp lệ");
+        }
+        if (request.difficulty() == null || request.difficulty() == Difficulty.MIXED) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "QUESTION_DIFFICULTY_INVALID");
         }
         List<QuizDtos.OptionRequest> optionValues = request.options() == null ? List.of() : request.options();
         List<String> answerValues = request.acceptedAnswers() == null ? List.of() : request.acceptedAnswers();
@@ -208,9 +293,18 @@ public class QuestionService {
                         option.getPosition())).toList();
         var answers = acceptedAnswers.findByQuestionIdOrderByPosition(question.getId()).stream()
                 .map(AcceptedAnswer::getAnswerText).toList();
+        List<QuizDtos.CitationResponse> citationDtos = citations == null ? List.of()
+                : citations.findByQuestionIdOrderByRoleAscPositionAsc(question.getId()).stream().map(citation -> {
+                    var chunk = sourceChunks.findById(citation.getSourceChunkId()).orElseThrow();
+                    var document = sourceDocuments.findById(chunk.getSourceDocumentId()).orElseThrow();
+                    return new QuizDtos.CitationResponse(chunk.getId(), chunk.getSourceDocumentId(), document.getName(),
+                            chunk.getPageNumber(), chunk.getSlideNumber(), chunk.getChunkIndex(), chunk.getHeading(),
+                            citation.getRole(), citation.getEvidenceQuote());
+                }).toList();
         return new QuizDtos.QuestionResponse(question.getId(), question.getQuizId(), question.getType(),
                 question.getPrompt(), question.getExplanation(), question.getPoints(), question.getPosition(),
-                question.getDifficulty(), question.getSourceChunkId(), optionDtos, answers, question.getVersion());
+                question.getDifficulty(), question.getSourceChunkId(), optionDtos, answers, citationDtos,
+                question.getVersion());
     }
 
     private Question require(UUID questionId) {

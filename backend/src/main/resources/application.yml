@@ -10,8 +10,12 @@ spring:
     username: ${DATABASE_USERNAME:${BKQUIZ_DATABASE_USERNAME:bkquiz}}
     password: ${DATABASE_PASSWORD:${BKQUIZ_DATABASE_PASSWORD:bkquiz}}
     hikari:
-      maximum-pool-size: ${DATABASE_POOL_SIZE:15}
+      maximum-pool-size: ${DATABASE_POOL_SIZE:6}
+      minimum-idle: ${DATABASE_MIN_IDLE:1}
       connection-timeout: 10000
+      idle-timeout: 60000
+      data-source-properties:
+        reWriteBatchedInserts: true
   jpa:
     open-in-view: false
     hibernate:
@@ -20,6 +24,13 @@ spring:
       hibernate:
         jdbc:
           time_zone: UTC
+          batch_size: ${DATABASE_JDBC_BATCH_SIZE:50}
+        order_inserts: true
+        order_updates: true
+        session:
+          events:
+            log:
+              LOG_QUERIES_SLOWER_THAN_MS: ${DATABASE_SLOW_QUERY_MS:300}
         format_sql: false
   flyway:
     enabled: true
@@ -107,11 +118,24 @@ bkquiz:
     max-questions: ${MAX_QUESTIONS_PER_QUIZ:50}
     max-sources: ${MAX_SOURCES_PER_GENERATION:10}
     min-source-characters: ${MIN_SOURCE_CHARACTERS:100}
+  quiz-generation:
+    batch-max-questions: ${QUIZ_BATCH_MAX_QUESTIONS:4}
+    batch-max-attempts: ${QUIZ_BATCH_MAX_ATTEMPTS:3}
+    batch-retry-delay: ${QUIZ_BATCH_RETRY_DELAY:5m}
+    batch-success-delay: ${QUIZ_BATCH_SUCCESS_DELAY:15s}
   jobs:
     worker-enabled: ${WORKER_ENABLED:true}
-    poll-delay: ${JOB_POLL_DELAY:1s}
+    poll-delay: ${JOB_POLL_DELAY:2s}
+    heartbeat-delay: ${JOB_WORKER_HEARTBEAT_DELAY:10s}
     lease-duration: ${JOB_LEASE_DURATION:2m}
     max-attempts: ${JOB_MAX_ATTEMPTS:5}
+  rag:
+    enabled: ${RAG_ENABLED:false}
+    base-url: ${RAG_SERVICE_URL:http://127.0.0.1:8090}
+    internal-api-key: ${RAG_INTERNAL_API_KEY:}
+    connect-timeout: ${RAG_CONNECT_TIMEOUT:5s}
+    read-timeout: ${RAG_READ_TIMEOUT:120s}
+    health-poll-delay: ${RAG_HEALTH_POLL_DELAY:10s}
   admin-bootstrap:
     enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
     email: ${ADMIN_BOOTSTRAP_EMAIL:}

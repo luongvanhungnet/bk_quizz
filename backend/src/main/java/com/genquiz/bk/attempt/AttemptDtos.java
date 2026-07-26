@@ -12,7 +12,7 @@ import java.util.UUID;
 public final class AttemptDtos {
     private AttemptDtos() {}
 
-    public record StartRequest(UUID assignmentId) {}
+    public record StartRequest(UUID assignmentId, AttemptMode mode) {}
 
     public record Option(UUID id, String text, int position) {}
 
@@ -25,7 +25,8 @@ public final class AttemptDtos {
             int position,
             List<Option> options) {}
 
-    public record SavedAnswer(UUID snapshotId, List<UUID> selectedOptionIds, String textAnswer, long version) {}
+    public record SavedAnswer(UUID snapshotId, List<UUID> selectedOptionIds, String textAnswer,
+                              long version, Instant answeredAt, Instant confirmedAt) {}
 
     public record AttemptResponse(
             UUID id,
@@ -35,9 +36,11 @@ public final class AttemptDtos {
             Instant startedAt,
             Instant expiresAt,
             Instant submittedAt,
+            AttemptMode mode,
             long version,
             List<Question> questions,
-            List<SavedAnswer> answers) {}
+            List<SavedAnswer> answers,
+            List<AnswerFeedback> confirmedFeedback) {}
 
     public record AnswerInput(
             @NotNull UUID snapshotId,
@@ -46,6 +49,22 @@ public final class AttemptDtos {
 
     public record AutosaveRequest(long attemptVersion, @NotNull List<@Valid AnswerInput> answers) {}
 
+    public record ConfirmAnswerRequest(
+            long attemptVersion,
+            @Size(max = 4) List<UUID> selectedOptionIds,
+            @Size(max = 5000) String textAnswer) {}
+
+    public record AnswerFeedback(
+            UUID snapshotId,
+            boolean correct,
+            BigDecimal awardedPoints,
+            BigDecimal maxPoints,
+            List<UUID> correctOptionIds,
+            List<String> acceptedAnswers,
+            String explanation,
+            List<Citation> citations,
+            Instant confirmedAt) {}
+
     public record QuestionResult(
             UUID snapshotId,
             Boolean correct,
@@ -53,7 +72,12 @@ public final class AttemptDtos {
             BigDecimal maxPoints,
             List<UUID> correctOptionIds,
             List<String> acceptedAnswers,
-            String explanation) {}
+            String explanation,
+            List<Citation> citations) {}
+
+    public record Citation(UUID sourceChunkId, UUID sourceDocumentId, String filename, Integer pageNumber,
+                           Integer slideNumber, int chunkIndex, String heading, String role,
+                           String evidenceQuote) {}
 
     public record ResultResponse(
             UUID attemptId,

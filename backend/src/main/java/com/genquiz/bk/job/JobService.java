@@ -5,6 +5,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +50,20 @@ public class JobService {
     }
 
     @Transactional
+    public Job retryOwnedQuizGeneration(UUID actorId, UUID quizId) {
+        Job job = jobs.findFirstByResourceIdAndSubjectUserIdAndTypeOrderByCreatedAtDesc(
+                        quizId, actorId, JobType.QUIZ_GENERATION)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy tác vụ sinh quiz"));
+        try {
+            job.retryByOwner(Instant.now(clock));
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage());
+        }
+        return job;
+    }
+
+    @Transactional
     public Optional<Job> claimNext(String workerId) {
         Instant now = Instant.now(clock);
         Optional<Job> job = jobs.lockNextAvailable(now);
@@ -69,6 +84,21 @@ public class JobService {
     }
 
     @Transactional
+    public void progress(UUID jobId, int progress, String step) {
+        requireJob(jobId).progress(progress, step, Instant.now(clock));
+    }
+
+    @Transactional
+    public void checkpoint(UUID jobId, String checkpointPayload) {
+        requireJob(jobId).checkpoint(checkpointPayload, Instant.now(clock));
+    }
+
+    @Transactional
+    public void defer(UUID jobId, Duration delay) {
+        requireJob(jobId).defer(Instant.now(clock), delay);
+    }
+
+    @Transactional
     public void fail(UUID jobId, String safeCode, String safeMessage) {
         requireJob(jobId).fail(safeCode, safeMessage, Instant.now(clock));
     }
@@ -79,6 +109,13 @@ public class JobService {
     }
 
     @Transactional
+    public void fail(UUID jobId, String safeCode, String safeMessage, Duration retryAfter,
+                     boolean permanent, String upstreamRequestId) {
+        requireJob(jobId).fail(safeCode, safeMessage, Instant.now(clock), retryAfter,
+                permanent, upstreamRequestId);
+    }
+
+    @Transactional
     public int reclaimStale(Duration leaseTimeout) {
         Instant now = Instant.now(clock);
         var staleJobs = jobs.findStaleRunning(now.minus(leaseTimeout));
@@ -86,8 +123,21 @@ public class JobService {
         return staleJobs.size();
     }
 
+    @Transactional(readOnly = true)
+    public DocumentQueueHealth documentQueueHealth() {
+        Set<JobType> types = Set.of(JobType.SOURCE_INGESTION, JobType.RAG_INDEX_POLL);
+        Set<JobStatus> statuses = Set.of(JobStatus.QUEUED, JobStatus.RETRY);
+        long queued = jobs.countByTypesAndStatuses(types, statuses);
+        Instant oldest = jobs.findOldestCreatedAt(types, statuses);
+        long oldestSeconds = oldest == null ? 0
+                : Math.max(0, Duration.between(oldest, Instant.now(clock)).toSeconds());
+        return new DocumentQueueHealth(queued, oldestSeconds);
+    }
+
     private Job requireJob(UUID jobId) {
         return jobs.findById(jobId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tác vụ"));
     }
+
+    public record DocumentQueueHealth(long queuedJobs, long oldestQueuedSeconds) {}
 }

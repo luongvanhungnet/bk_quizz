@@ -37,6 +37,10 @@ export default function NewTopic() {
             .then((source) => ({ source, jobId: "" })),
         );
       const results = await Promise.allSettled(uploads);
+      const labels = [...files.map((file) => file.name), ...(pasteText.trim() ? [pasteName.trim() || "Văn bản đã dán"] : [])];
+      const uploadErrors = results.flatMap((result, index) => result.status === "rejected"
+        ? [{ name: labels[index] ?? "Tài liệu", message: result.reason instanceof Error ? result.reason.message : "Không thể tải tài liệu." }]
+        : []);
       const failed = results.filter(
         (result) => result.status === "rejected",
       ).length;
@@ -45,7 +49,7 @@ export default function NewTopic() {
           ? `Đã tạo chủ đề; ${failed} nguồn tải lên chưa thành công.`
           : "Đã tạo chủ đề và gửi tài liệu xử lý.",
       );
-      navigate(`/workspace/${topic.id}`);
+      navigate(`/workspace/${topic.id}`, { state: { uploadErrors } });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Không thể tạo chủ đề.",

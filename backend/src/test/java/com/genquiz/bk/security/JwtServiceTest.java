@@ -36,7 +36,10 @@ class JwtServiceTest {
         User user = new User("Sinh viên BK", "student@example.com", "hashed-password-value-value");
         JwtService service = new JwtService(properties);
         String token = service.issueAccessToken(user);
-        assertThatThrownBy(() -> service.verifyAccessToken(token.substring(0, token.length() - 2) + "xx"))
+        String[] parts = token.split("\\.");
+        char replacement = parts[2].charAt(0) == 'A' ? 'B' : 'A';
+        String tampered = parts[0] + "." + parts[1] + "." + replacement + parts[2].substring(1);
+        assertThatThrownBy(() -> service.verifyAccessToken(tampered))
                 .isInstanceOf(JwtService.JwtValidationException.class);
     }
 }

@@ -52,6 +52,16 @@ class QuestionServiceValidationTest {
     }
 
     @Test
+    void rejectsMixedDifficultyBeforeWritingAQuestion() {
+        var mixed = new QuizDtos.QuestionRequest(QuestionType.SINGLE_CHOICE, "Câu hỏi?", "Giải thích",
+                BigDecimal.ONE, Difficulty.MIXED, null,
+                List.of(option("A", true), option("B", false), option("C", false), option("D", false)),
+                List.of());
+
+        assertThrows(ResponseStatusException.class, () -> QuestionService.validate(mixed));
+    }
+
+    @Test
     void rejectsGeneratedBatchWithWrongCounts() {
         var single = request(QuestionType.SINGLE_CHOICE,
                 List.of(option("A", true), option("B", false), option("C", false), option("D", false)), List.of());

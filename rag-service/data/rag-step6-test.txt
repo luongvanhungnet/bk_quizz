@@ -1,0 +1,10 @@
+Functional Cohesion là loại cohesion trong đó tất cả các thành phần của một
+module cùng phối hợp để thực hiện một chức năng duy nhất và được xác định rõ.
+Đây thường được xem là loại cohesion tốt nhất vì module có trách nhiệm rõ ràng,
+dễ kiểm thử, dễ bảo trì và ít bị ảnh hưởng khi chức năng khác trong hệ thống thay đổi.
+
+Data Coupling xảy ra khi các module chỉ truyền cho nhau dữ liệu cần thiết thông
+qua tham số. Control Coupling xảy ra khi một module truyền cờ điều khiển để quyết
+định luồng xử lý bên trong module khác. Content Coupling là loại coupling mạnh
+và không mong muốn, xảy ra khi một module truy cập trực tiếp dữ liệu hoặc mã nội
+bộ của module khác.

@@ -27,6 +27,9 @@ public class SourceChunk {
 
     @Column(name = "token_count", nullable = false)
     private int tokenCount;
+    @Column(name = "page_number") private Integer pageNumber;
+    @Column(name = "slide_number") private Integer slideNumber;
+    @Column(length = 1000) private String heading;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -43,10 +46,19 @@ public class SourceChunk {
         this.createdAt = Instant.now();
     }
 
+    public SourceChunk(UUID id, UUID sourceDocumentId, UUID topicId, int chunkIndex, String content,
+                       int tokenCount, Integer pageNumber, Integer slideNumber, String heading) {
+        this(sourceDocumentId, topicId, chunkIndex, content, tokenCount);
+        this.id = id; this.pageNumber = pageNumber; this.slideNumber = slideNumber; this.heading = heading;
+    }
+
     public UUID getId() { return id; }
     public UUID getSourceDocumentId() { return sourceDocumentId; }
     public UUID getTopicId() { return topicId; }
     public int getChunkIndex() { return chunkIndex; }
     public String getContent() { return content; }
     public int getTokenCount() { return tokenCount; }
+    public Integer getPageNumber() { return pageNumber; }
+    public Integer getSlideNumber() { return slideNumber; }
+    public String getHeading() { return heading; }
 }

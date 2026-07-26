@@ -52,6 +52,15 @@ public class SourceDocument {
     @Column(name = "error_message", length = 1000)
     private String errorMessage;
 
+    @Column(name = "rag_document_id") private UUID ragDocumentId;
+    @Column(name = "rag_job_id") private UUID ragJobId;
+    @Column(name = "indexing_progress", nullable = false) private int indexingProgress;
+    @Column(name = "indexing_step", length = 64) private String indexingStep;
+    @Column(name = "indexing_progress_at", nullable = false) private Instant indexingProgressAt;
+    @Column(name = "page_count") private Integer pageCount;
+    @Column(name = "chunk_count", nullable = false) private int chunkCount;
+    @Column(name = "indexed_at") private Instant indexedAt;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
@@ -79,7 +88,9 @@ public class SourceDocument {
     public static SourceDocument uploaded(UUID topicId, UUID ownerId, String name, String contentType,
                                           long sizeBytes, String objectKey) {
         SourceDocument source = base(topicId, ownerId, name, SourceKind.FILE);
-        source.status = SourceStatus.EXTRACTING;
+        source.status = SourceStatus.UPLOADED;
+        source.indexingProgress = 0;
+        source.indexingStep = "QUEUED";
         source.contentType = contentType;
         source.sizeBytes = sizeBytes;
         source.objectKey = objectKey;
@@ -96,6 +107,7 @@ public class SourceDocument {
         source.status = SourceStatus.UPLOADED;
         source.createdAt = Instant.now();
         source.updatedAt = source.createdAt;
+        source.indexingProgressAt = source.createdAt;
         return source;
     }
 
@@ -110,8 +122,61 @@ public class SourceDocument {
         updatedAt = now;
     }
 
+    public void startRagIndex(UUID documentId, UUID jobId, Instant now) {
+        ragDocumentId = documentId; ragJobId = jobId; status = SourceStatus.EMBEDDING;
+        indexingProgress = 0; indexingStep = "PENDING"; indexingProgressAt = now; updatedAt = now;
+    }
+
+    public void beginRagUpload(Instant now) {
+        status = SourceStatus.EXTRACTING;
+        indexingProgress = Math.max(indexingProgress, 5);
+        indexingStep = "UPLOADING_TO_RAG";
+        indexingProgressAt = now;
+        updatedAt = now;
+    }
+
+    public void beginRagSync(Instant now) {
+        status = SourceStatus.EMBEDDING;
+        indexingProgress = Math.max(indexingProgress, 95);
+        indexingStep = "SYNCING";
+        indexingProgressAt = now;
+        updatedAt = now;
+    }
+
+    public void updateRagProgress(int progress, String step, Instant now) {
+        int normalizedProgress = Math.max(0, Math.min(100, progress));
+        boolean changed = status != SourceStatus.EMBEDDING
+                || indexingProgress != normalizedProgress
+                || !java.util.Objects.equals(indexingStep, step);
+        if (!changed) return;
+        status = SourceStatus.EMBEDDING;
+        indexingProgress = normalizedProgress;
+        indexingStep = step;
+        indexingProgressAt = now;
+        updatedAt = now;
+    }
+
+    public void completeRagIndex(int pages, int chunks, String indexedText, Instant now) {
+        if (indexedText == null || indexedText.trim().length() < 100) {
+            throw new IllegalArgumentException("Tài liệu phải có ít nhất 100 ký tự hữu ích");
+        }
+        extractedText = indexedText.trim();
+        status = SourceStatus.READY; pageCount = pages > 0 ? pages : null; chunkCount = chunks;
+        indexingProgress = 100; indexingStep = "SUCCEEDED"; indexedAt = now;
+        indexingProgressAt = now;
+        errorCode = null; errorMessage = null; updatedAt = now;
+    }
+
+    public void queueReindex(Instant now) {
+        ragDocumentId = null; ragJobId = null; status = SourceStatus.UPLOADED;
+        indexingProgress = 0; indexingStep = "QUEUED"; indexingProgressAt = now;
+        errorCode = null; errorMessage = null; updatedAt = now;
+    }
+
     public void fail(String safeCode, String safeMessage, Instant now) {
         status = SourceStatus.FAILED;
+        indexingStep = "FAILED";
+        indexingProgressAt = now;
         errorCode = safeCode;
         errorMessage = safeMessage == null ? null : safeMessage.substring(0, Math.min(1000, safeMessage.length()));
         updatedAt = now;
@@ -141,4 +206,12 @@ public class SourceDocument {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public long getVersion() { return version; }
+    public UUID getRagDocumentId() { return ragDocumentId; }
+    public UUID getRagJobId() { return ragJobId; }
+    public int getIndexingProgress() { return indexingProgress; }
+    public String getIndexingStep() { return indexingStep; }
+    public Instant getIndexingProgressAt() { return indexingProgressAt; }
+    public Integer getPageCount() { return pageCount; }
+    public int getChunkCount() { return chunkCount; }
+    public Instant getIndexedAt() { return indexedAt; }
 }

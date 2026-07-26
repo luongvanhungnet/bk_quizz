@@ -65,6 +65,15 @@ export interface Source {
   sizeBytes: number | null;
   errorCode: string | null;
   errorMessage: string | null;
+  indexingProgress: number;
+  indexingStep: string | null;
+  processingStage: string;
+  processingDelayed: boolean;
+  processorAvailable: boolean;
+  indexingProgressAt: string;
+  pageCount: number | null;
+  chunkCount: number;
+  indexedAt: string | null;
   createdAt: string;
   updatedAt: string;
   version: number;
@@ -76,8 +85,12 @@ export interface Job {
   resourceId: string;
   attempts: number;
   maxAttempts: number;
+  progress: number;
+  step: string | null;
   errorCode: string | null;
   errorMessage: string | null;
+  upstreamRequestId: string | null;
+  availableAt: string | null;
 }
 export interface QuestionOption {
   id: string;
@@ -96,7 +109,19 @@ export interface Question {
   difficulty: Difficulty;
   options: QuestionOption[];
   acceptedAnswers: string[];
+  citations: Citation[];
   version: number;
+}
+export interface Citation {
+  sourceChunkId: string;
+  sourceDocumentId: string;
+  filename: string;
+  pageNumber: number | null;
+  slideNumber: number | null;
+  chunkIndex: number;
+  heading: string | null;
+  role: "QUESTION" | "ANSWER" | "EXPLANATION";
+  evidenceQuote: string;
 }
 export interface PublicQuiz {
   id: string;
@@ -167,6 +192,19 @@ export interface SavedAnswer {
   selectedOptionIds: string[];
   textAnswer: string | null;
   version: number;
+  answeredAt: string;
+  confirmedAt: string | null;
+}
+export interface AnswerFeedback {
+  snapshotId: string;
+  correct: boolean;
+  awardedPoints: number;
+  maxPoints: number;
+  correctOptionIds: string[];
+  acceptedAnswers: string[];
+  explanation: string | null;
+  citations: Citation[];
+  confirmedAt: string;
 }
 export interface Attempt {
   id: string;
@@ -176,9 +214,11 @@ export interface Attempt {
   startedAt: string;
   expiresAt: string;
   submittedAt: string | null;
+  mode: "STANDARD" | "LIVE_FEEDBACK";
   version: number;
   questions: AttemptQuestion[];
   answers: SavedAnswer[];
+  confirmedFeedback: AnswerFeedback[];
 }
 export interface AttemptResult {
   attemptId: string;
@@ -198,6 +238,7 @@ export interface AttemptResult {
     correctOptionIds: string[] | null;
     acceptedAnswers: string[] | null;
     explanation: string | null;
+    citations: Citation[];
   }>;
 }
 
@@ -235,6 +276,24 @@ export interface ClassroomAttachment {
   image: boolean;
   accessUrl: string | null;
 }
+export interface SharedResourcePreview {
+  kind: "TOPIC" | "QUIZ";
+  resourceId: string | null;
+  referenceId: string | null;
+  title: string;
+  description: string | null;
+  ownerUsername: string | null;
+  available: boolean;
+  unavailableReason: string | null;
+  quizCount: number;
+  questionCount: number;
+  difficulty: Difficulty | null;
+  durationMinutes: number | null;
+  assignmentStatus: "DRAFT" | "PUBLISHED" | "CLOSED" | null;
+  opensAt: string | null;
+  dueAt: string | null;
+  maxAttempts: number | null;
+}
 export interface ClassroomMessage {
   id: string;
   classroomId: string;
@@ -244,11 +303,22 @@ export interface ClassroomMessage {
   content: string | null;
   topicShareId: string | null;
   assignmentId: string | null;
+  resourcePreview: SharedResourcePreview | null;
   attachments: ClassroomAttachment[];
   editedAt: string | null;
   deletedAt: string | null;
   createdAt: string;
   version: number;
+}
+export interface SharedTopicDetail {
+  preview: SharedResourcePreview;
+  topic: Topic;
+  quizzes: Quiz[];
+}
+export interface SharedQuizDetail {
+  preview: SharedResourcePreview;
+  quiz: Quiz;
+  assignment: Assignment;
 }
 export interface ClassroomMessagesPage {
   items: ClassroomMessage[];
@@ -262,6 +332,7 @@ export interface TopicShare {
   topicId: string;
   sharedBy: string;
   createdAt: string;
+  resourcePreview: SharedResourcePreview;
 }
 export interface Assignment {
   id: string;
@@ -431,6 +502,8 @@ export const bkquizApi = {
   },
   deleteSource: (id: string) =>
     apiClient.request<void>(`/sources/${id}`, { method: "DELETE" }),
+  reindexSource: (id: string) =>
+    apiClient.request<{ source: Source; jobId: string }>(`/sources/${id}/reindex`, { method: "POST" }),
   job: (id: string) => apiClient.request<Job>(`/jobs/${id}`),
   quizzes: (topicId: string) =>
     requestPage<Quiz>(
@@ -442,6 +515,7 @@ export const bkquizApi = {
       }),
     ),
   quiz: (id: string) => apiClient.request<Quiz>(`/quizzes/${id}`),
+  quizSources: (id: string) => apiClient.request<Source[]>(`/quizzes/${id}/sources`),
   createQuiz: (body: {
     topicId: string;
     title: string;
@@ -471,6 +545,14 @@ export const bkquizApi = {
       },
       body: JSON.stringify(body),
     }),
+  retryLastQuizGeneration: (quizId: string) =>
+    apiClient.request<{ quiz: Quiz; jobId: string }>(
+      `/quizzes/${quizId}/generation/retry-last`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": crypto.randomUUID() },
+      },
+    ),
   publishQuiz: (id: string) =>
     apiClient.request<Quiz>(`/quizzes/${id}/publish`, { method: "POST" }),
   deleteQuiz: (id: string) =>
@@ -484,10 +566,14 @@ export const bkquizApi = {
     }),
   deleteQuestion: (id: string) =>
     apiClient.request<void>(`/questions/${id}`, { method: "DELETE" }),
-  startAttempt: (quizId: string, assignmentId?: string) =>
+  startAttempt: (
+    quizId: string,
+    assignmentId?: string,
+    mode: "STANDARD" | "LIVE_FEEDBACK" = "STANDARD",
+  ) =>
     apiClient.request<Attempt>(`/quizzes/${quizId}/attempts`, {
       method: "POST",
-      ...json(assignmentId ? { assignmentId } : {}),
+      ...json({ ...(assignmentId ? { assignmentId } : {}), mode }),
     }),
   attempt: (id: string) => apiClient.request<Attempt>(`/attempts/${id}`),
   autosave: (
@@ -503,6 +589,19 @@ export const bkquizApi = {
       method: "PUT",
       ...json({ attemptVersion, answers }),
     }),
+  confirmAnswer: (
+    attemptId: string,
+    snapshotId: string,
+    attemptVersion: number,
+    answer: { selectedOptionIds: string[]; textAnswer?: string },
+  ) =>
+    apiClient.request<AnswerFeedback>(
+      `/attempts/${attemptId}/answers/${snapshotId}/confirm`,
+      {
+        method: "POST",
+        ...json({ attemptVersion, ...answer }),
+      },
+    ),
   submit: (id: string, key: string) =>
     apiClient.request<AttemptResult>(`/attempts/${id}/submit`, {
       method: "POST",
@@ -588,6 +687,14 @@ export const bkquizApi = {
     apiClient.request<void>(`/classrooms/${id}/topic-shares/${shareId}`, {
       method: "DELETE",
     }),
+  sharedTopic: (classroomId: string, shareId: string) =>
+    apiClient.request<SharedTopicDetail>(
+      `/classrooms/${classroomId}/shared-resources/topics/${shareId}`,
+    ),
+  sharedQuiz: (classroomId: string, assignmentId: string) =>
+    apiClient.request<SharedQuizDetail>(
+      `/classrooms/${classroomId}/shared-resources/quizzes/${assignmentId}`,
+    ),
   assignments: (id: string, page = 1) =>
     requestPage<Assignment>(
       pageQuery(`/classrooms/${id}/assignments`, { page, limit: 50 }),

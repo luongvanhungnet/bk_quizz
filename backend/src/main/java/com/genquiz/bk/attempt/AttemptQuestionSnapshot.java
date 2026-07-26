@@ -51,6 +51,9 @@ public class AttemptQuestionSnapshot {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "answer_key", nullable = false, columnDefinition = "jsonb")
     private String answerKey;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "citations_snapshot", nullable = false, columnDefinition = "jsonb")
+    private String citationsPayload;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -60,6 +63,13 @@ public class AttemptQuestionSnapshot {
     public AttemptQuestionSnapshot(UUID attemptId, UUID sourceQuestionId, UUID sourceChunkId, QuestionType questionType,
                                    String prompt, String explanation, BigDecimal points, int position,
                                    String optionsPayload, String answerKey) {
+        this(attemptId, sourceQuestionId, sourceChunkId, questionType, prompt, explanation, points, position,
+                optionsPayload, answerKey, "[]");
+    }
+
+    public AttemptQuestionSnapshot(UUID attemptId, UUID sourceQuestionId, UUID sourceChunkId, QuestionType questionType,
+                                   String prompt, String explanation, BigDecimal points, int position,
+                                   String optionsPayload, String answerKey, String citationsPayload) {
         this.id = UUID.randomUUID();
         this.attemptId = attemptId;
         this.sourceQuestionId = sourceQuestionId;
@@ -71,6 +81,7 @@ public class AttemptQuestionSnapshot {
         this.position = position;
         this.optionsPayload = optionsPayload;
         this.answerKey = answerKey;
+        this.citationsPayload = citationsPayload == null ? "[]" : citationsPayload;
         this.createdAt = Instant.now();
     }
 
@@ -85,4 +96,5 @@ public class AttemptQuestionSnapshot {
     public int getPosition() { return position; }
     public String getOptionsPayload() { return optionsPayload; }
     public String getAnswerKey() { return answerKey; }
+    public String getCitationsPayload() { return citationsPayload; }
 }

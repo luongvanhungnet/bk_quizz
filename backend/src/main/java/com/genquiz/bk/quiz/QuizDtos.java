@@ -88,6 +88,12 @@ public final class QuizDtos {
 
     public record OptionResponse(UUID id, String text, boolean correct, int position) {}
 
+    public record CitationRequest(UUID sourceChunkId, CitationRole role, String evidenceQuote) {}
+    public record GroundedQuestion(QuestionRequest question, List<CitationRequest> citations) {}
+    public record CitationResponse(UUID sourceChunkId, UUID sourceDocumentId, String filename,
+                                   Integer pageNumber, Integer slideNumber, int chunkIndex, String heading,
+                                   CitationRole role, String evidenceQuote) {}
+
     /** Author/editor representation. Attempt endpoints deliberately use separate redacted DTOs. */
     public record QuestionResponse(
             UUID id,
@@ -101,6 +107,7 @@ public final class QuizDtos {
             UUID sourceChunkId,
             List<OptionResponse> options,
             List<String> acceptedAnswers,
+            List<CitationResponse> citations,
             long version) {}
 
     public record ReorderRequest(@NotEmpty List<UUID> questionIds) {}
