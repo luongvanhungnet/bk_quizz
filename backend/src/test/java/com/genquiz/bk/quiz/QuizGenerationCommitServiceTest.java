@@ -43,4 +43,17 @@ class QuizGenerationCommitServiceTest {
 
         verify(quizzes, never()).markReady(quizId);
     }
+
+    @Test
+    void commitsGroundedQuestionsAndCitationsBeforeMarkingReady() {
+        UUID quizId = UUID.randomUUID();
+        List<QuizDtos.GroundedQuestion> generated = List.of();
+        QuizDtos.QuestionCounts expected = new QuizDtos.QuestionCounts(0, 0, 0);
+
+        service.replaceGroundedAndComplete(quizId, generated, expected);
+
+        var calls = inOrder(questions, quizzes);
+        calls.verify(questions).replaceGrounded(quizId, generated, expected);
+        calls.verify(quizzes).markReady(quizId);
+    }
 }

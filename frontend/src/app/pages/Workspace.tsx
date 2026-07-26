@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BookOpen,
@@ -18,15 +18,44 @@ import {
   type Difficulty,
   type QuestionType,
   type Quiz,
+  type Source,
   type Visibility,
 } from "../../api/bkquiz";
+import { ApiRequestError } from "../../api/client";
+import { citationLocation } from "./citationLocation";
+import { describeSourceProcessing } from "./sourceProcessing";
+import { adaptivePollInterval } from "./polling";
+import { describeQuizGenerationError } from "./quizGenerationError";
+import { describeQuizBatchStatus } from "./quizBatchStatus";
 import { Badge, Button, Card, Checkbox, Input, Modal } from "../components/ui";
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : "Thao tác thất bại.";
+const formatBytes = (bytes: number) =>
+  new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(
+    bytes < 1024 * 1024 ? bytes / 1024 : bytes / (1024 * 1024),
+  ) + (bytes < 1024 * 1024 ? " KB" : " MB");
+const formatWaitingTime = (seconds: number) =>
+  seconds < 60 ? `${seconds} giây` : `${Math.floor(seconds / 60)} phút`;
+
+function WaitingTime({ createdAt }: { createdAt: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 10_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const seconds = Math.max(
+    0,
+    Math.floor((now - new Date(createdAt).getTime()) / 1000),
+  );
+  return <>Đã chờ {formatWaitingTime(seconds)}</>;
+}
+
 export default function Workspace() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const uploadErrors = (location.state as { uploadErrors?: Array<{ name: string; message: string }> } | null)?.uploadErrors ?? [];
   const client = useQueryClient();
   const { user, resendVerification } = useAuth();
   const [selectedQuiz, setSelectedQuiz] = useState<string | null>(null);
@@ -45,12 +74,17 @@ export default function Workspace() {
     queryKey: ["sources", id],
     queryFn: () => bkquizApi.sources(id),
     enabled: Boolean(id),
-    refetchInterval: (query) =>
-      query.state.data?.some((source) =>
+    refetchInterval: (query) => {
+      const terminal = !query.state.data?.some((source) =>
         ["UPLOADED", "SCANNING", "EXTRACTING", "EMBEDDING"].includes(source.status),
-      )
-        ? 3000
-        : false,
+      );
+      return adaptivePollInterval(
+        query.state.dataUpdateCount,
+        terminal,
+        typeof document !== "undefined" && document.visibilityState === "hidden",
+      );
+    },
+    refetchIntervalInBackground: false,
   });
   const quizzes = useQuery({
     queryKey: ["quizzes", id],
@@ -68,20 +102,20 @@ export default function Workspace() {
     queryFn: () => bkquizApi.job(jobId!),
     enabled: Boolean(jobId),
     refetchInterval: (query) =>
-      query.state.data &&
-      ["SUCCEEDED", "FAILED"].includes(query.state.data.status)
-        ? false
-        : 2000,
+      adaptivePollInterval(
+        query.state.dataUpdateCount,
+        Boolean(query.state.data && ["SUCCEEDED", "FAILED"].includes(query.state.data.status)),
+        typeof document !== "undefined" && document.visibilityState === "hidden",
+      ),
+    refetchIntervalInBackground: false,
   });
   useEffect(() => {
-    if (job.data?.status === "SUCCEEDED") {
-      toast.success("Đã xử lý xong.");
+    if (job.data?.status === "SUCCEEDED" && job.data.type === "QUIZ_GENERATION") {
+      toast.success("Đã sinh quiz xong.");
       void client.invalidateQueries({ queryKey: ["quizzes", id] });
       void client.invalidateQueries({ queryKey: ["questions"] });
     }
-    if (job.data?.status === "FAILED")
-      toast.error(job.data.errorMessage || "Job xử lý thất bại.");
-  }, [client, id, job.data?.errorMessage, job.data?.status]);
+  }, [client, id, job.data?.status, job.data?.type]);
   useEffect(() => {
     if (resendCooldown < 1) return;
     const timer = window.setTimeout(() => setResendCooldown((value) => value - 1), 1000);
@@ -105,11 +139,38 @@ export default function Workspace() {
     },
     onError: (e) => toast.error(message(e)),
   });
+  const retryGeneration = useMutation({
+    mutationFn: bkquizApi.retryLastQuizGeneration,
+    onSuccess: async (result) => {
+      setSelectedQuiz(result.quiz.id);
+      setJobId(result.jobId);
+      await client.invalidateQueries({ queryKey: ["job", result.jobId] });
+      await refresh();
+      toast.success("Đã đưa yêu cầu sinh quiz trở lại hàng đợi.");
+    },
+    onError: (error) => toast.error(message(error)),
+  });
+  const reindexQuizSources = useMutation({
+    mutationFn: async (quizId: string) => {
+      const selected = await bkquizApi.quizSources(quizId);
+      if (!selected.length) throw new Error("Quiz không còn tài liệu nguồn.");
+      return Promise.all(selected.map((source) => bkquizApi.reindexSource(source.id)));
+    },
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["sources", id] });
+      toast.success("Đã đưa tài liệu vào hàng đợi lập chỉ mục lại.");
+    },
+    onError: (error) => toast.error(message(error)),
+  });
   if (topic.isLoading) return <Centered text="Đang tải Workspace..." />;
   if (topic.error || !topic.data)
     return <Centered text={message(topic.error)} error />;
   const currentQuiz = quizzes.data?.items.find(
     (quiz) => quiz.id === activeQuizId,
+  );
+  const quizBatchStatus = describeQuizBatchStatus(
+    job.data?.step,
+    job.data?.availableAt,
   );
   return (
     <div className="min-h-screen bg-[#F7F7F8] text-[#111827]">
@@ -175,6 +236,10 @@ export default function Workspace() {
           </Button>
         </div>
       )}
+      {uploadErrors.length > 0 && <div className="border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-800">
+        <b>Một số tài liệu chưa tải lên được:</b>
+        <ul className="mt-1 list-disc pl-5">{uploadErrors.map((item) => <li key={item.name}><b>{item.name}:</b> {item.message}</li>)}</ul>
+      </div>}
       <div className="grid min-h-[calc(100vh-4rem)] lg:grid-cols-[260px_1fr_240px]">
         <aside className="border-r bg-white p-4">
           <h2 className="mb-3 font-black">
@@ -214,16 +279,68 @@ export default function Workspace() {
                 </Button>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                {sources.data?.map((source) => (
-                  <Card key={source.id} className="flex items-center gap-3 p-4">
+                {sources.data?.map((source) => {
+                  const processing = describeSourceProcessing(source);
+                  return (
+                  <Card key={source.id} className="flex items-start gap-3 p-4">
                     <BookOpen className="h-5 w-5 text-[#C8102E]" />
                     <div className="min-w-0 flex-1">
                       <b className="block truncate text-sm">{source.name}</b>
-                      <span className="text-xs text-[#6B7280]">
-                        {source.status}
-                        {source.errorMessage ? ` · ${source.errorMessage}` : ""}
+                      <Badge className={
+                        source.status === "READY"
+                          ? "mt-1 bg-green-100 text-green-800"
+                          : source.status === "FAILED"
+                            ? "mt-1 bg-red-100 text-red-800"
+                            : "mt-1 bg-blue-100 text-blue-800"
+                      }>{processing.label}</Badge>
+                      <span className="block text-xs text-[#6B7280]">
+                        {source.contentType ?? "Không rõ định dạng"}
+                        {source.sizeBytes != null ? ` · ${formatBytes(source.sizeBytes)}` : ""}
+                        {source.chunkCount ? ` · ${source.chunkCount} đoạn` : ""}
+                        {source.pageCount ? ` · ${source.pageCount} trang` : ""}
                       </span>
+                      {!["READY", "FAILED", "DELETED"].includes(source.status) && (
+                        <span className="block text-xs text-[#6B7280]">
+                          <WaitingTime createdAt={source.createdAt} />
+                        </span>
+                      )}
+                      {!["READY", "FAILED", "DELETED"].includes(source.status) && (
+                        <div className="mt-2 h-1.5 overflow-hidden rounded bg-gray-100">
+                          <div
+                            className={`h-full bg-[#C8102E] ${source.indexingProgress === 0 ? "w-full animate-pulse opacity-50" : ""}`}
+                            style={source.indexingProgress > 0 ? { width: `${source.indexingProgress}%` } : undefined}
+                          />
+                        </div>
+                      )}
+                      {source.indexingProgress > 0 && source.status !== "READY" && (
+                        <span className="text-xs text-[#6B7280]">{source.indexingProgress}%</span>
+                      )}
+                      {processing.warning && (
+                        <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
+                          <b>DOCUMENT_PROCESSOR_UNAVAILABLE</b>
+                          <p>{processing.warning}</p>
+                          <Button size="sm" variant="outline" className="mt-2" onClick={() => void sources.refetch()}>
+                            Kiểm tra lại
+                          </Button>
+                        </div>
+                      )}
+                      {source.errorCode && (
+                        <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800">
+                          <b>{source.errorCode}</b>
+                          <p>{source.errorMessage ?? "Không thể xử lý tài liệu."}</p>
+                        </div>
+                      )}
                     </div>
+                    {(source.status === "FAILED" || (source.status === "READY" && !source.indexedAt)) && (
+                      <Button size="sm" variant="outline" onClick={async () => {
+                        try {
+                          await bkquizApi.reindexSource(source.id);
+                          toast.success("Đã xếp tài liệu vào hàng đợi xử lý.");
+                          await refresh();
+                        }
+                        catch (error) { toast.error(message(error)); }
+                      }}>Lập chỉ mục</Button>
+                    )}
                     <button
                       onClick={async () => {
                         try {
@@ -237,7 +354,8 @@ export default function Workspace() {
                       <Trash2 className="h-4 w-4 text-red-500" />
                     </button>
                   </Card>
-                ))}
+                  );
+                })}
                 {!sources.isLoading && !sources.data?.length && (
                   <Card className="p-5 text-sm text-[#6B7280]">
                     Chưa có tài liệu.
@@ -277,8 +395,74 @@ export default function Workspace() {
               />
               {jobId && (
                 <Card className="mt-3 border-blue-200 bg-blue-50 p-4 text-sm">
-                  Job {job.data?.status ?? "QUEUED"} · lần thử{" "}
-                  {job.data?.attempts ?? 0}/{job.data?.maxAttempts ?? 3}
+                  <b>{quizBatchStatus.label}</b>
+                  {quizBatchStatus.detail && (
+                    <p className="mt-1">{quizBatchStatus.detail}</p>
+                  )}
+                  <p className="mt-1 text-xs text-blue-800">
+                    Job {job.data?.status ?? "QUEUED"} · lần thử{" "}
+                    {job.data?.attempts ?? 0}/{job.data?.maxAttempts ?? 3}
+                  </p>
+                  <div className="mt-2 h-2 overflow-hidden rounded bg-blue-100"><div className="h-full bg-blue-600" style={{width:`${job.data?.progress ?? 0}%`}} /></div>
+                  <p className="mt-1">{job.data?.progress ?? 0}%</p>
+                  {job.data?.status === "RETRY" && job.data.errorCode && (
+                    <p className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-amber-900">
+                      Lỗi gần nhất: {job.data.errorMessage ?? job.data.errorCode}.
+                      Hệ thống sẽ tự thử lại, bạn không cần giữ trang này mở.
+                    </p>
+                  )}
+                  {job.data?.status === "FAILED" && job.data.errorCode && (() => {
+                    const details = describeQuizGenerationError(job.data.errorCode);
+                    return <div className="mt-3 rounded border border-red-200 bg-red-50 p-3 text-red-800">
+                      <b>{details.title}</b>
+                      <p>{details.message}</p>
+                      {job.data.errorMessage && (
+                        <p className="mt-1">{job.data.errorMessage}</p>
+                      )}
+                      <small className="block">Giai đoạn: {job.data.step ?? "FAILED"}</small>
+                      <small className="block">Mã lỗi: {job.data.errorCode}</small>
+                      {job.data.upstreamRequestId && (
+                        <small className="block">Mã yêu cầu: {job.data.upstreamRequestId}</small>
+                      )}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {details.action === "REINDEX" && job.data.resourceId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={reindexQuizSources.isPending}
+                            onClick={() => reindexQuizSources.mutate(job.data!.resourceId)}
+                          >
+                            Lập chỉ mục lại
+                          </Button>
+                        )}
+                        {details.action === "RETRY" && job.data.resourceId && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={retryGeneration.isPending}
+                            onClick={() => retryGeneration.mutate(job.data!.resourceId)}
+                          >
+                            Thử lại
+                          </Button>
+                        )}
+                        {details.action === "ADJUST" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setMode("AI");
+                              document.getElementById("quiz-form")?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                            }}
+                          >
+                            Điều chỉnh và sinh lại
+                          </Button>
+                        )}
+                      </div>
+                    </div>;
+                  })()}
                 </Card>
               )}
             </section>
@@ -348,7 +532,15 @@ export default function Workspace() {
                 </div>
                 {currentQuiz.status === "FAILED" && (
                   <Card className="mb-3 border-red-200 p-4 text-red-700">
-                    {currentQuiz.errorMessage || currentQuiz.errorCode}
+                    <b>
+                      {describeQuizGenerationError(currentQuiz.errorCode).title}
+                    </b>
+                    <p>
+                      {describeQuizGenerationError(currentQuiz.errorCode).message}
+                    </p>
+                    {currentQuiz.errorCode && (
+                      <small>Mã lỗi: {currentQuiz.errorCode}</small>
+                    )}
                   </Card>
                 )}
                 <div className="space-y-3">
@@ -382,6 +574,24 @@ export default function Workspace() {
                             <p className="mt-2 text-sm text-green-700">
                               Đáp án: {question.acceptedAnswers.join(", ")}
                             </p>
+                          )}
+                          {question.citations?.length > 0 && (
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                              {(["QUESTION", "ANSWER"] as const).map((role) => {
+                                const values = question.citations.filter((item) => role === "QUESTION"
+                                  ? item.role === "QUESTION"
+                                  : item.role === "ANSWER" || item.role === "EXPLANATION");
+                                if (!values.length) return null;
+                                return <details key={role} className="rounded border bg-gray-50 p-2 text-xs">
+                                  <summary className="cursor-pointer font-bold">{role === "QUESTION" ? "Nguồn câu hỏi" : "Nguồn đáp án và giải thích"}</summary>
+                                  {values.map((citation) => <div key={`${role}-${citation.sourceChunkId}`} className="mt-2">
+                                    <b>{citation.filename} · {citationLocation(citation)}</b>
+                                    {citation.heading && <span> · {citation.heading}</span>}
+                                    <blockquote className="mt-1 border-l-2 pl-2 text-[#6B7280]">{citation.evidenceQuote}</blockquote>
+                                  </div>)}
+                                </details>;
+                              })}
+                            </div>
                           )}
                         </div>
                         <button
@@ -440,7 +650,7 @@ export default function Workspace() {
           onClose={() => setAddSource(false)}
           onDone={async (job) => {
             setAddSource(false);
-            if (job) setJobId(job);
+            if (job) toast.success("Đã tải lên. Tài liệu đang chờ xử lý nền.");
             await refresh();
           }}
         />
@@ -468,7 +678,7 @@ function QuizForm({
 }: {
   mode: "AI" | "MANUAL";
   topicId: string;
-  sources: Array<{ id: string; status: string }>;
+  sources: Source[];
   verified: boolean;
   onCreated: (result: Quiz | { quiz: Quiz; jobId: string }) => Promise<void>;
 }) {
@@ -482,22 +692,23 @@ function QuizForm({
     fillBlank: 5,
   });
   const [saving, setSaving] = useState(false);
-  const ready = sources
-    .filter((source) => source.status === "READY")
-    .map((source) => source.id);
+  const [formError, setFormError] = useState<ApiRequestError | null>(null);
+  const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const ready = sources.filter((source) => source.status === "READY" && source.indexedAt);
   const submit = async () => {
     if (!title.trim()) return toast.error("Nhập tên quiz.");
     if (mode === "AI" && !verified)
       return toast.error("Bạn cần xác minh email trước khi dùng AI.");
-    if (mode === "AI" && ready.length === 0)
-      return toast.error("Cần ít nhất một tài liệu READY.");
+    if (mode === "AI" && selectedSources.length === 0)
+      return toast.error("Hãy chọn ít nhất một tài liệu đã lập chỉ mục.");
     setSaving(true);
+    setFormError(null);
     try {
       const result =
         mode === "AI"
           ? await bkquizApi.generateQuiz({
               topicId,
-              sourceIds: ready.slice(0, 10),
+              sourceIds: selectedSources.slice(0, 10),
               title,
               difficulty,
               durationMinutes: duration,
@@ -517,13 +728,14 @@ function QuizForm({
         mode === "AI" ? "Đã gửi yêu cầu sinh quiz." : "Đã tạo quiz thủ công.",
       );
     } catch (e) {
-      toast.error(message(e));
+      if (e instanceof ApiRequestError) setFormError(e);
+      else toast.error(message(e));
     } finally {
       setSaving(false);
     }
   };
   return (
-    <Card className="grid gap-4 p-5 md:grid-cols-2">
+    <Card id="quiz-form" className="grid gap-4 p-5 md:grid-cols-2">
       <label className="text-sm font-black md:col-span-2">
         Tên quiz
         <Input value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -562,6 +774,16 @@ function QuizForm({
         </select>
       </label>
       {mode === "AI" && (
+        <div className="space-y-2 md:col-span-2">
+          <b className="text-sm">Tài liệu dùng để sinh quiz</b>
+          {ready.map((source) => <label key={source.id} className="flex items-center gap-2 rounded border p-2 text-sm">
+            <Checkbox checked={selectedSources.includes(source.id)} onChange={(event) => setSelectedSources((current) => event.target.checked ? [...new Set([...current, source.id])] : current.filter((id) => id !== source.id))} />
+            <span>{source.name} · {source.chunkCount} đoạn</span>
+          </label>)}
+          {!ready.length && <p className="text-sm text-amber-700">Chưa có tài liệu READY đã lập chỉ mục.</p>}
+        </div>
+      )}
+      {mode === "AI" && (
         <div className="grid grid-cols-3 gap-2 md:col-span-2">
           {(["singleChoice", "multipleSelect", "fillBlank"] as const).map(
             (key) => (
@@ -591,8 +813,15 @@ function QuizForm({
             ? "Sinh quiz bằng AI"
             : "Tạo quiz thủ công"}
       </Button>
+      {formError && <div className="md:col-span-2"><ErrorPanel error={formError} /></div>}
     </Card>
   );
+}
+
+function ErrorPanel({ error }: { error: ApiRequestError }) {
+  return <div className="mt-2 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+    <b>{error.code}</b><p>{error.message}</p>{error.traceId && <small>Mã yêu cầu: {error.traceId}</small>}
+  </div>;
 }
 
 function SourceModal({
@@ -607,6 +836,7 @@ function SourceModal({
   const [name, setName] = useState("");
   const [text, setText] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sourceError, setSourceError] = useState<unknown>(null);
   return (
     <Modal title="Thêm tài liệu" onClose={onClose}>
       <div className="space-y-4 p-5">
@@ -621,11 +851,12 @@ function SourceModal({
               const file = e.target.files?.[0];
               if (!file) return;
               setSaving(true);
+              setSourceError(null);
               try {
                 const result = await bkquizApi.uploadSource(topicId, file);
                 await onDone(result.jobId);
               } catch (error) {
-                toast.error(message(error));
+                setSourceError(error);
               } finally {
                 setSaving(false);
               }
@@ -643,11 +874,19 @@ function SourceModal({
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        {sourceError instanceof ApiRequestError ? (
+          <ErrorPanel error={sourceError} />
+        ) : sourceError ? (
+          <div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            {message(sourceError)}
+          </div>
+        ) : null}
         <Button
           className="w-full"
           disabled={saving || text.trim().length < 100}
           onClick={async () => {
             setSaving(true);
+            setSourceError(null);
             try {
               await bkquizApi.pasteSource(
                 topicId,
@@ -656,7 +895,7 @@ function SourceModal({
               );
               await onDone();
             } catch (error) {
-              toast.error(message(error));
+              setSourceError(error);
             } finally {
               setSaving(false);
             }

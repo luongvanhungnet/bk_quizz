@@ -9,8 +9,10 @@ import com.genquiz.bk.quiz.QuestionOption;
 import com.genquiz.bk.quiz.QuestionOptionRepository;
 import com.genquiz.bk.quiz.QuestionRepository;
 import com.genquiz.bk.quiz.QuestionType;
+import com.genquiz.bk.quiz.QuestionCitationRepository;
 import com.genquiz.bk.quiz.Quiz;
 import com.genquiz.bk.quiz.QuizService;
+import com.genquiz.bk.common.error.ApiException;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -46,15 +48,20 @@ public class AttemptService {
     private final AssignmentPolicyGateway assignmentPolicies;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final QuestionCitationRepository citations;
+    private final com.genquiz.bk.source.SourceChunkRepository sourceChunks;
+    private final com.genquiz.bk.source.SourceDocumentRepository sourceDocuments;
 
     @Autowired
     public AttemptService(AttemptRepository attempts, AttemptQuestionSnapshotRepository snapshots,
                           AttemptAnswerRepository answers, QuestionRepository questions,
                           QuestionOptionRepository options, AcceptedAnswerRepository acceptedAnswers,
                           QuizService quizzes, ObjectProvider<AssignmentPolicyGateway> assignmentPolicies,
-                          ObjectMapper objectMapper) {
+                          ObjectMapper objectMapper, QuestionCitationRepository citations,
+                          com.genquiz.bk.source.SourceChunkRepository sourceChunks,
+                          com.genquiz.bk.source.SourceDocumentRepository sourceDocuments) {
         this(attempts, snapshots, answers, questions, options, acceptedAnswers, quizzes,
-                assignmentPolicies.getIfAvailable(), objectMapper, Clock.systemUTC());
+                assignmentPolicies.getIfAvailable(), objectMapper, Clock.systemUTC(), citations, sourceChunks, sourceDocuments);
     }
 
     AttemptService(AttemptRepository attempts, AttemptQuestionSnapshotRepository snapshots,
@@ -62,6 +69,17 @@ public class AttemptService {
                    QuestionOptionRepository options, AcceptedAnswerRepository acceptedAnswers,
                    QuizService quizzes, AssignmentPolicyGateway assignmentPolicies,
                    ObjectMapper objectMapper, Clock clock) {
+        this(attempts, snapshots, answers, questions, options, acceptedAnswers, quizzes, assignmentPolicies,
+                objectMapper, clock, null, null, null);
+    }
+
+    AttemptService(AttemptRepository attempts, AttemptQuestionSnapshotRepository snapshots,
+                   AttemptAnswerRepository answers, QuestionRepository questions,
+                   QuestionOptionRepository options, AcceptedAnswerRepository acceptedAnswers,
+                   QuizService quizzes, AssignmentPolicyGateway assignmentPolicies,
+                   ObjectMapper objectMapper, Clock clock, QuestionCitationRepository citations,
+                   com.genquiz.bk.source.SourceChunkRepository sourceChunks,
+                   com.genquiz.bk.source.SourceDocumentRepository sourceDocuments) {
         this.attempts = attempts;
         this.snapshots = snapshots;
         this.answers = answers;
@@ -72,11 +90,24 @@ public class AttemptService {
         this.assignmentPolicies = assignmentPolicies;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.citations = citations; this.sourceChunks = sourceChunks; this.sourceDocuments = sourceDocuments;
     }
 
     @Transactional
     public AttemptDtos.AttemptResponse start(UUID actorId, UUID quizId, UUID assignmentId) {
+        return start(actorId, quizId, assignmentId, AttemptMode.STANDARD);
+    }
+
+    @Transactional
+    public AttemptDtos.AttemptResponse start(
+            UUID actorId, UUID quizId, UUID assignmentId, AttemptMode requestedMode) {
         Instant now = Instant.now(clock);
+        AttemptMode mode = requestedMode == null ? AttemptMode.STANDARD : requestedMode;
+        if (assignmentId != null && mode == AttemptMode.LIVE_FEEDBACK) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "LIVE_FEEDBACK_NOT_ALLOWED",
+                    "Bài tập trong lớp không cho phép tự bật đáp án trực tiếp.");
+        }
         AssignmentPolicyGateway.Policy policy = assignmentId == null ? null
                 : authorizeAssignment(assignmentId, quizId, actorId, now);
         Quiz quiz = quizzes.getForAttempt(actorId, quizId, policy != null);
@@ -118,7 +149,8 @@ public class AttemptService {
         boolean showScore = policy == null || policy.showScore();
         boolean allowReview = policy == null || policy.allowReview();
         Attempt attempt = attempts.save(new Attempt(quizId, assignmentId, actorId, attemptNumber,
-                sourceQuestions.size(), now, deadline, releasePolicy, dueAt, showScore, allowReview));
+                sourceQuestions.size(), now, deadline, releasePolicy, dueAt,
+                showScore, allowReview, mode));
         List<Question> orderedQuestions = new ArrayList<>(sourceQuestions);
         Random random = new Random(attempt.getId().getMostSignificantBits() ^ attempt.getId().getLeastSignificantBits());
         if (policy != null && policy.shuffleQuestions()) Collections.shuffle(orderedQuestions, random);
@@ -170,6 +202,12 @@ public class AttemptService {
             validateAnswer(snapshot, input);
             AttemptAnswer answer = answers.findByAttemptIdAndSnapshotId(attemptId, snapshot.getId())
                     .orElseGet(() -> new AttemptAnswer(attemptId, snapshot.getId()));
+            if (answer.getConfirmedAt() != null) {
+                if (answerMatches(answer, input.selectedOptionIds(), input.textAnswer())) continue;
+                throw new ApiException(HttpStatus.CONFLICT,
+                        "ANSWER_ALREADY_CONFIRMED",
+                        "Câu trả lời đã được xác nhận và không thể thay đổi.");
+            }
             answer.save(write(input.selectedOptionIds() == null ? List.of() : input.selectedOptionIds()),
                     input.textAnswer(), now);
             answers.save(answer);
@@ -178,6 +216,66 @@ public class AttemptService {
         attempts.saveAndFlush(attempt);
         return takingResponse(attempt, snapshots.findByAttemptIdOrderByPosition(attemptId),
                 answers.findByAttemptId(attemptId));
+    }
+
+    @Transactional
+    public AttemptDtos.AnswerFeedback confirmAnswer(
+            UUID actorId,
+            UUID attemptId,
+            UUID snapshotId,
+            AttemptDtos.ConfirmAnswerRequest request) {
+        Attempt attempt = requireOwned(actorId, attemptId);
+        if (attempt.getStatus() != AttemptStatus.IN_PROGRESS) {
+            throw new ApiException(HttpStatus.CONFLICT, "ATTEMPT_NOT_IN_PROGRESS",
+                    "Lượt làm bài đã kết thúc.");
+        }
+        if (attempt.getMode() != AttemptMode.LIVE_FEEDBACK || attempt.getAssignmentId() != null) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "LIVE_FEEDBACK_NOT_ALLOWED",
+                    "Lượt làm bài này không bật đáp án trực tiếp.");
+        }
+        Instant now = Instant.now(clock);
+        if (now.isAfter(attempt.getExpiresAt())) {
+            throw new ApiException(HttpStatus.CONFLICT, "ATTEMPT_EXPIRED",
+                    "Đã hết thời gian làm bài.");
+        }
+        AttemptQuestionSnapshot snapshot = snapshots.findByIdAndAttemptId(snapshotId, attemptId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND,
+                        "ATTEMPT_QUESTION_NOT_FOUND",
+                        "Không tìm thấy câu hỏi trong lượt làm bài."));
+        AttemptDtos.AnswerInput input = new AttemptDtos.AnswerInput(
+                snapshotId,
+                request.selectedOptionIds() == null ? List.of() : request.selectedOptionIds(),
+                request.textAnswer());
+        validateAnswer(snapshot, input);
+        if (input.selectedOptionIds().isEmpty()
+                && (input.textAnswer() == null || input.textAnswer().isBlank())) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "ANSWER_REQUIRED", "Hãy nhập hoặc chọn câu trả lời trước khi xác nhận.");
+        }
+        AttemptAnswer answer = answers.findByAttemptIdAndSnapshotId(attemptId, snapshotId)
+                .orElseGet(() -> new AttemptAnswer(attemptId, snapshotId));
+        if (answer.getConfirmedAt() != null) {
+            if (answerMatches(answer, input.selectedOptionIds(), input.textAnswer())) {
+                return feedback(snapshot, answer);
+            }
+            throw new ApiException(HttpStatus.CONFLICT, "ANSWER_ALREADY_CONFIRMED",
+                    "Câu trả lời đã được xác nhận và không thể thay đổi.");
+        }
+        if (attempt.getVersion() != request.attemptVersion()) {
+            throw new ApiException(HttpStatus.CONFLICT, "ATTEMPT_VERSION_CONFLICT",
+                    "Dữ liệu làm bài đã thay đổi ở thiết bị khác; vui lòng tải lại.");
+        }
+        answer.save(write(input.selectedOptionIds()), input.textAnswer(), now);
+        AnswerKey key = read(snapshot.getAnswerKey(), AnswerKey.class);
+        boolean correct = ScoringPolicy.isCorrect(
+                snapshot.getQuestionType(), input.selectedOptionIds(), input.textAnswer(),
+                key.correctOptionIds(), key.acceptedAnswers());
+        answer.confirm(correct, snapshot.getPoints(), now);
+        answers.save(answer);
+        attempt.touch(now);
+        attempts.saveAndFlush(attempt);
+        return feedback(snapshot, answer);
     }
 
     @Transactional
@@ -268,7 +366,7 @@ public class AttemptService {
                 .map(value -> value.getAnswerText()).toList();
         return new AttemptQuestionSnapshot(attemptId, question.getId(), question.getSourceChunkId(), question.getType(),
                 question.getPrompt(), question.getExplanation(), question.getPoints(), position,
-                write(safeOptions), write(new AnswerKey(correctIds, accepted)));
+                write(safeOptions), write(new AnswerKey(correctIds, accepted)), write(citationSnapshots(question.getId())));
     }
 
     private void validateAnswer(AttemptQuestionSnapshot snapshot, AttemptDtos.AnswerInput input) {
@@ -310,10 +408,42 @@ public class AttemptService {
         List<AttemptDtos.SavedAnswer> safeAnswers = savedAnswers.stream().map(answer ->
                 new AttemptDtos.SavedAnswer(answer.getSnapshotId(),
                         read(answer.getSelectedOptionIds(), new TypeReference<>() {}), answer.getTextAnswer(),
-                        answer.getVersion())).toList();
+                        answer.getVersion(), answer.getAnsweredAt(), answer.getConfirmedAt())).toList();
+        List<AttemptDtos.AnswerFeedback> confirmedFeedback =
+                attempt.getMode() == AttemptMode.LIVE_FEEDBACK
+                        ? savedAnswers.stream()
+                        .filter(answer -> answer.getConfirmedAt() != null)
+                        .map(answer -> {
+                            AttemptQuestionSnapshot snapshot = questionSnapshots.stream()
+                                    .filter(value -> value.getId().equals(answer.getSnapshotId()))
+                                    .findFirst().orElseThrow();
+                            return feedback(snapshot, answer);
+                        }).toList()
+                        : List.of();
         return new AttemptDtos.AttemptResponse(attempt.getId(), attempt.getQuizId(), attempt.getAssignmentId(),
                 attempt.getStatus(), attempt.getStartedAt(), attempt.getExpiresAt(), attempt.getSubmittedAt(),
-                attempt.getVersion(), safeQuestions, safeAnswers);
+                attempt.getMode(), attempt.getVersion(), safeQuestions, safeAnswers, confirmedFeedback);
+    }
+
+    private AttemptDtos.AnswerFeedback feedback(
+            AttemptQuestionSnapshot snapshot, AttemptAnswer answer) {
+        AnswerKey key = read(snapshot.getAnswerKey(), AnswerKey.class);
+        return new AttemptDtos.AnswerFeedback(
+                snapshot.getId(), Boolean.TRUE.equals(answer.getCorrect()),
+                answer.getAwardedPoints(), snapshot.getPoints(),
+                key.correctOptionIds(), key.acceptedAnswers(), snapshot.getExplanation(),
+                read(snapshot.getCitationsPayload(), new TypeReference<>() {}),
+                answer.getConfirmedAt());
+    }
+
+    private boolean answerMatches(
+            AttemptAnswer answer, List<UUID> selectedOptionIds, String textAnswer) {
+        List<UUID> expected = selectedOptionIds == null ? List.of() : selectedOptionIds;
+        List<UUID> saved = read(answer.getSelectedOptionIds(), new TypeReference<>() {});
+        String normalized = textAnswer == null || textAnswer.isBlank() ? null : textAnswer.trim();
+        String savedText = answer.getTextAnswer() == null || answer.getTextAnswer().isBlank()
+                ? null : answer.getTextAnswer().trim();
+        return saved.equals(expected) && java.util.Objects.equals(savedText, normalized);
     }
 
     private AttemptDtos.ResultResponse resultResponse(Attempt attempt, Instant now) {
@@ -327,7 +457,8 @@ public class AttemptService {
                 AnswerKey key = read(snapshot.getAnswerKey(), AnswerKey.class);
                 return new AttemptDtos.QuestionResult(snapshot.getId(), answer == null ? Boolean.FALSE : answer.getCorrect(),
                         answer == null ? BigDecimal.ZERO : answer.getAwardedPoints(), snapshot.getPoints(),
-                        key.correctOptionIds(), key.acceptedAnswers(), snapshot.getExplanation());
+                        key.correctOptionIds(), key.acceptedAnswers(), snapshot.getExplanation(),
+                        read(snapshot.getCitationsPayload(), new TypeReference<>() {}));
             }).toList();
         }
         return new AttemptDtos.ResultResponse(attempt.getId(), attempt.getQuizId(), attempt.getStatus(),
@@ -335,6 +466,17 @@ public class AttemptService {
                 attempt.isShowScore() ? attempt.getMaxScore() : null,
                 attempt.isShowScore() ? attempt.getPercentage() : null, attempt.isTimedOut(), released,
                 attempt.getSubmittedAt(), detail);
+    }
+
+    private List<AttemptDtos.Citation> citationSnapshots(UUID questionId) {
+        if (citations == null) return List.of();
+        return citations.findByQuestionIdOrderByRoleAscPositionAsc(questionId).stream().map(citation -> {
+            var chunk = sourceChunks.findById(citation.getSourceChunkId()).orElseThrow();
+            var document = sourceDocuments.findById(chunk.getSourceDocumentId()).orElseThrow();
+            return new AttemptDtos.Citation(chunk.getId(), chunk.getSourceDocumentId(), document.getName(),
+                    chunk.getPageNumber(), chunk.getSlideNumber(), chunk.getChunkIndex(), chunk.getHeading(),
+                    citation.getRole().name(), citation.getEvidenceQuote());
+        }).toList();
     }
 
     private Attempt requireOwned(UUID actorId, UUID attemptId) {

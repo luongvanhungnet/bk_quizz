@@ -12,9 +12,10 @@ public class ClassroomCollaborationService {
  private final ClassroomAttachmentRepository attachments; private final ClassroomTopicShareRepository shares; private final TopicRepository topics;
  private final UserRepository users; private final ClassroomObjectStorage storage; private final ApplicationEventPublisher events;
  private final StoredFileRepository storedFiles;
+ private final ClassroomResourcePresentationService resourcePresentation;
  public ClassroomCollaborationService(ClassroomRepository classrooms,ClassroomMemberRepository members,ClassroomMessageRepository messages,
-  ClassroomAttachmentRepository attachments,ClassroomTopicShareRepository shares,TopicRepository topics,UserRepository users,ClassroomObjectStorage storage,ApplicationEventPublisher events,StoredFileRepository storedFiles){
-  this.classrooms=classrooms;this.members=members;this.messages=messages;this.attachments=attachments;this.shares=shares;this.topics=topics;this.users=users;this.storage=storage;this.events=events;this.storedFiles=storedFiles;}
+  ClassroomAttachmentRepository attachments,ClassroomTopicShareRepository shares,TopicRepository topics,UserRepository users,ClassroomObjectStorage storage,ApplicationEventPublisher events,StoredFileRepository storedFiles,ClassroomResourcePresentationService resourcePresentation){
+  this.classrooms=classrooms;this.members=members;this.messages=messages;this.attachments=attachments;this.shares=shares;this.topics=topics;this.users=users;this.storage=storage;this.events=events;this.storedFiles=storedFiles;this.resourcePresentation=resourcePresentation;}
 
  @Transactional(readOnly=true)
  public ClassroomCollaborationDtos.MessagesPage list(UUID actor,UUID classroomId,Instant before,UUID beforeId,int limit){
@@ -23,7 +24,8 @@ public class ClassroomCollaborationService {
   List<ClassroomMessage> values=before==null?messages.findByClassroomIdOrderByCreatedAtDescIdDesc(classroomId,pageable):messages.pageBefore(classroomId,before,beforeId,pageable);
   long unread=messages.countByClassroomIdAndCreatedAtAfter(classroomId,member.getLastReadMessageAt()==null?member.getJoinedAt():member.getLastReadMessageAt());
   ClassroomMessage tail=values.isEmpty()?null:values.get(values.size()-1);
-  return new ClassroomCollaborationDtos.MessagesPage(values.stream().map(this::response).toList(),tail==null?null:tail.getCreatedAt(),tail==null?null:tail.getId(),unread);
+  Map<UUID,ClassroomCollaborationDtos.ResourcePreview> previews=resourcePresentation.previews(values);
+  return new ClassroomCollaborationDtos.MessagesPage(values.stream().map(value->response(value,previews.get(value.getId()))).toList(),tail==null?null:tail.getCreatedAt(),tail==null?null:tail.getId(),unread);
  }
  @Transactional
  public ClassroomCollaborationDtos.MessageResponse send(UUID actor,UUID classroomId,ClassroomCollaborationDtos.MessageRequest request){
@@ -70,13 +72,16 @@ public class ClassroomCollaborationService {
   ClassroomTopicShare share=shares.findByClassroomIdAndTopicIdAndRevokedAtIsNull(classroomId,topic.getId()).orElseGet(()->shares.save(new ClassroomTopicShare(classroomId,topic.getId(),actor,Instant.now())));
   ClassroomMessage message=messages.save(new ClassroomMessage(classroomId,actor,ClassroomMessageType.TOPIC_SHARE,request.message(),share.getId(),null,Instant.now()));
   events.publishEvent(new ClassroomRealtimeEvent(classroomId,"CREATED",response(message)));
-  return new ClassroomCollaborationDtos.TopicShareResponse(share.getId(),classroomId,topic.getId(),actor,share.getCreatedAt());
+  return new ClassroomCollaborationDtos.TopicShareResponse(share.getId(),classroomId,topic.getId(),actor,share.getCreatedAt(),resourcePresentation.topicPreviews(classroomId,List.of(share)).get(share.getId()));
  }
  @Transactional public void revokeTopic(UUID actor,UUID classroomId,UUID shareId){ClassroomTopicShare share=shares.findByIdAndClassroomId(shareId,classroomId).orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"SHARE_NOT_FOUND","Không tìm thấy chia sẻ."));
   ClassroomMember member=requireMember(classroomId,actor);if(!share.getSharedBy().equals(actor)&&!member.isTeacher())throw forbidden();share.revoke(Instant.now());}
- @Transactional(readOnly=true) public List<ClassroomCollaborationDtos.TopicShareResponse> topicShares(UUID actor,UUID classroomId){requireMember(classroomId,actor);return shares.findByClassroomIdAndRevokedAtIsNullOrderByCreatedAtDesc(classroomId).stream().map(s->new ClassroomCollaborationDtos.TopicShareResponse(s.getId(),s.getClassroomId(),s.getTopicId(),s.getSharedBy(),s.getCreatedAt())).toList();}
+ @Transactional(readOnly=true) public List<ClassroomCollaborationDtos.TopicShareResponse> topicShares(UUID actor,UUID classroomId){requireMember(classroomId,actor);List<ClassroomTopicShare> values=shares.findByClassroomIdAndRevokedAtIsNullOrderByCreatedAtDesc(classroomId);Map<UUID,ClassroomCollaborationDtos.ResourcePreview> previews=resourcePresentation.topicPreviews(classroomId,values);return values.stream().map(s->new ClassroomCollaborationDtos.TopicShareResponse(s.getId(),s.getClassroomId(),s.getTopicId(),s.getSharedBy(),s.getCreatedAt(),previews.get(s.getId()))).toList();}
+ @Transactional(readOnly=true) public ClassroomCollaborationDtos.TopicResourceDetail topicResource(UUID actor,UUID classroomId,UUID shareId){return resourcePresentation.topicDetail(actor,classroomId,shareId);}
+ @Transactional(readOnly=true) public ClassroomCollaborationDtos.QuizResourceDetail quizResource(UUID actor,UUID classroomId,UUID assignmentId){return resourcePresentation.quizDetail(actor,classroomId,assignmentId);}
 
- private ClassroomCollaborationDtos.MessageResponse response(ClassroomMessage m){String username=users.findById(m.getSenderId()).map(User::getUsername).orElse("Người dùng");return new ClassroomCollaborationDtos.MessageResponse(m.getId(),m.getClassroomId(),m.getSenderId(),username,m.getType(),m.getDeletedAt()==null?m.getContent():null,m.getTopicShareId(),m.getAssignmentId(),attachments.findByMessageId(m.getId()).stream().map(this::attachment).toList(),m.getEditedAt(),m.getDeletedAt(),m.getCreatedAt(),m.getVersion());}
+ ClassroomCollaborationDtos.MessageResponse response(ClassroomMessage m){return response(m,resourcePresentation.previews(List.of(m)).get(m.getId()));}
+ private ClassroomCollaborationDtos.MessageResponse response(ClassroomMessage m,ClassroomCollaborationDtos.ResourcePreview preview){String username=users.findById(m.getSenderId()).map(User::getUsername).orElse("Người dùng");return new ClassroomCollaborationDtos.MessageResponse(m.getId(),m.getClassroomId(),m.getSenderId(),username,m.getType(),m.getDeletedAt()==null?m.getContent():null,m.getTopicShareId(),m.getAssignmentId(),preview,attachments.findByMessageId(m.getId()).stream().map(this::attachment).toList(),m.getEditedAt(),m.getDeletedAt(),m.getCreatedAt(),m.getVersion());}
  private ClassroomCollaborationDtos.AttachmentResponse attachment(ClassroomAttachment a){return new ClassroomCollaborationDtos.AttachmentResponse(a.getId(),a.getOriginalName(),a.getMediaType(),a.getSizeBytes(),a.isImage(),signedAccess(a));}
  private ClassroomMessage requireMessage(UUID classroomId,UUID id){return messages.findByIdAndClassroomId(id,classroomId).orElseThrow(()->new ApiException(HttpStatus.NOT_FOUND,"MESSAGE_NOT_FOUND","Không tìm thấy tin nhắn."));}
  private ClassroomMember requireMember(UUID classroomId,UUID actor){return members.findByClassroomIdAndUserId(classroomId,actor).filter(ClassroomMember::isActive).orElseThrow(this::forbidden);}

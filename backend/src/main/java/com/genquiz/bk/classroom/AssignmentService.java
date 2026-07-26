@@ -37,13 +37,15 @@ public class AssignmentService implements AssignmentPolicyGateway {
     private final ClassroomMessageRepository messages;
     private final ApplicationEventPublisher events;
     private final UserRepository users;
+    private final ClassroomCollaborationService collaboration;
 
     @Autowired
     public AssignmentService(AssignmentRepository assignments, AssignmentSubmissionRepository submissions,
                              ClassroomRepository classrooms, ClassroomMemberRepository members,
                              QuizRepository quizzes, AttemptRepository attempts, NotificationService notifications,
                              VerifiedAccountGuard verifiedAccounts, ObjectProvider<ClassroomMessageRepository> messages,
-                             ApplicationEventPublisher events, ObjectProvider<UserRepository> users) {
+                             ApplicationEventPublisher events, ObjectProvider<UserRepository> users,
+                             ObjectProvider<ClassroomCollaborationService> collaboration) {
         this.assignments = assignments;
         this.submissions = submissions;
         this.classrooms = classrooms;
@@ -55,6 +57,7 @@ public class AssignmentService implements AssignmentPolicyGateway {
         this.messages = messages.getIfAvailable();
         this.events = events;
         this.users = users.getIfAvailable();
+        this.collaboration = collaboration.getIfAvailable();
     }
 
     AssignmentService(AssignmentRepository assignments, AssignmentSubmissionRepository submissions,
@@ -71,6 +74,7 @@ public class AssignmentService implements AssignmentPolicyGateway {
         this.messages = null;
         this.events = null;
         this.users = null;
+        this.collaboration = null;
     }
 
     @Transactional
@@ -148,9 +152,13 @@ public class AssignmentService implements AssignmentPolicyGateway {
             throw new ApiException(HttpStatus.CONFLICT, "ASSIGNMENT_NOT_PUBLISHABLE", exception.getMessage());
         }
         if (messages != null) {
-            messages.save(new ClassroomMessage(classroom.getId(), actorId, ClassroomMessageType.QUIZ_SHARE,
-                    assignment.getTitle(), null, assignment.getId(), Instant.now()));
-            if (events != null) events.publishEvent(new ClassroomRealtimeEvent(classroom.getId(), "ASSIGNMENT_PUBLISHED", null));
+            ClassroomMessage message = messages.save(new ClassroomMessage(classroom.getId(), actorId,
+                    ClassroomMessageType.QUIZ_SHARE, null, null,
+                    assignment.getId(), Instant.now()));
+            ClassroomCollaborationDtos.MessageResponse payload =
+                    collaboration == null ? null : collaboration.response(message);
+            if (events != null) events.publishEvent(new ClassroomRealtimeEvent(
+                    classroom.getId(), "CREATED", payload));
         }
         for (ClassroomMember member : members.findByClassroomIdAndStatusOrderByJoinedAtAsc(
                 classroom.getId(), ClassroomMemberStatus.ACTIVE)) {

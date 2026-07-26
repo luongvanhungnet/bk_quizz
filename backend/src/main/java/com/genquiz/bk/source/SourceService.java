@@ -22,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import com.genquiz.bk.storage.StoredFile;
 import com.genquiz.bk.storage.StoredFileRepository;
+import com.genquiz.bk.rag.RagDtos;
 
 @Service
 public class SourceService {
@@ -58,7 +59,9 @@ public class SourceService {
     public SourceDocument paste(UUID actorId, UUID topicId, SourceDtos.PasteRequest request) {
         topics.getOwned(actorId, topicId);
         SourceDocument source = sources.save(SourceDocument.pasted(topicId, actorId, request.name(), request.text()));
-        chunks.saveAll(chunk(source.getId(), source.getTopicId(), source.getExtractedText()));
+        source.queueReindex(Instant.now());
+        jobs.enqueue(JobType.SOURCE_INGESTION, actorId, source.getId(), jsonPayload(source),
+                "source-ingestion:" + source.getId(), 3);
         return source;
     }
 
@@ -124,6 +127,55 @@ public class SourceService {
         chunks.saveAll(chunk(sourceId, source.getTopicId(), extractedText));
     }
 
+    @Transactional(readOnly = true)
+    public SourceDocument getForWorker(UUID sourceId) { return require(sourceId); }
+
+    @Transactional
+    public void beginRagUpload(UUID sourceId) {
+        require(sourceId).beginRagUpload(Instant.now());
+    }
+
+    @Transactional
+    public Job startRagIndex(UUID sourceId, RagDtos.Upload upload) {
+        SourceDocument source = require(sourceId);
+        source.startRagIndex(upload.documentId(), upload.jobId(), Instant.now());
+        String payload = "{\"sourceDocumentId\":\"" + sourceId + "\"}";
+        return jobs.enqueue(JobType.RAG_INDEX_POLL, source.getOwnerId(), sourceId, payload,
+                "rag-index-poll:" + sourceId + ":" + upload.jobId(), 120);
+    }
+
+    @Transactional
+    public void updateRagProgress(UUID sourceId, int progress, String step) {
+        require(sourceId).updateRagProgress(progress, step, Instant.now());
+    }
+
+    @Transactional
+    public void beginRagSync(UUID sourceId) {
+        require(sourceId).beginRagSync(Instant.now());
+    }
+
+    @Transactional
+    public void completeRagIndex(UUID sourceId, RagDtos.Document document, List<RagDtos.Chunk> ragChunks) {
+        SourceDocument source = require(sourceId);
+        String indexedText = ragChunks.stream()
+                .map(RagDtos.Chunk::text)
+                .collect(java.util.stream.Collectors.joining("\n\n"));
+        chunks.deleteBySourceDocumentId(sourceId);
+        chunks.saveAll(ragChunks.stream().map(chunk -> new SourceChunk(chunk.chunkId(), sourceId,
+                source.getTopicId(), chunk.chunkIndex(), chunk.text(), Math.max(1, chunk.text().split("\\s+").length),
+                chunk.pageNumber(), chunk.slideNumber(), chunk.heading())).toList());
+        source.completeRagIndex(document.pageCount() == null ? 0 : document.pageCount(), ragChunks.size(),
+                indexedText, Instant.now());
+    }
+
+    @Transactional
+    public Job reindex(UUID actorId, UUID sourceId) {
+        SourceDocument source = getOwned(actorId, sourceId);
+        source.queueReindex(Instant.now());
+        return jobs.enqueue(JobType.SOURCE_INGESTION, actorId, sourceId, jsonPayload(source),
+                "source-reindex:" + sourceId + ":" + source.getVersion(), 3);
+    }
+
     @Transactional
     public void markFailed(UUID sourceId, String code, String message) {
         require(sourceId).fail(code, message, Instant.now());
@@ -161,8 +213,7 @@ public class SourceService {
     private String jsonPayload(SourceDocument source) {
         try {
             return objectMapper.writeValueAsString(java.util.Map.of(
-                    "sourceDocumentId", source.getId(), "objectKey", source.getObjectKey(),
-                    "contentType", source.getContentType()));
+                    "sourceDocumentId", source.getId()));
         } catch (JacksonException exception) {
             throw new IllegalStateException("Không thể tạo payload xử lý tài liệu", exception);
         }

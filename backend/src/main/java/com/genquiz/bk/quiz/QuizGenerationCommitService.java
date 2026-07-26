@@ -22,4 +22,11 @@ public class QuizGenerationCommitService {
         questions.replaceGenerated(quizId, generated, expected);
         quizzes.markReady(quizId);
     }
+
+    @Transactional
+    public void replaceGroundedAndComplete(UUID quizId, List<QuizDtos.GroundedQuestion> generated,
+                                           QuizDtos.QuestionCounts expected) {
+        questions.replaceGrounded(quizId, generated, expected);
+        quizzes.markReady(quizId);
+    }
 }

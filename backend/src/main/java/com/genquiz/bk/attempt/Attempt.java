@@ -61,6 +61,10 @@ public class Attempt {
     @Column(name = "show_score", nullable = false) private boolean showScore = true;
     @Column(name = "allow_review", nullable = false) private boolean allowReview = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+    private AttemptMode mode = AttemptMode.STANDARD;
+
     @Column(precision = 10, scale = 2)
     private BigDecimal score;
 
@@ -100,6 +104,14 @@ public class Attempt {
     public Attempt(UUID quizId, UUID assignmentId, UUID userId, int attemptNumber, int totalQuestions,
                    Instant startedAt, Instant expiresAt, AnswerReleasePolicy releasePolicy, Instant assignmentDueAt,
                    boolean showScore, boolean allowReview) {
+        this(quizId, assignmentId, userId, attemptNumber, totalQuestions, startedAt,
+                expiresAt, releasePolicy, assignmentDueAt, showScore, allowReview,
+                AttemptMode.STANDARD);
+    }
+
+    public Attempt(UUID quizId, UUID assignmentId, UUID userId, int attemptNumber, int totalQuestions,
+                   Instant startedAt, Instant expiresAt, AnswerReleasePolicy releasePolicy, Instant assignmentDueAt,
+                   boolean showScore, boolean allowReview, AttemptMode mode) {
         this.id = UUID.randomUUID();
         this.quizId = quizId;
         this.assignmentId = assignmentId;
@@ -113,6 +125,7 @@ public class Attempt {
         this.assignmentDueAt = assignmentDueAt;
         this.showScore = showScore;
         this.allowReview = allowReview;
+        this.mode = mode == null ? AttemptMode.STANDARD : mode;
         this.createdAt = startedAt;
         this.updatedAt = startedAt;
         this.lastSavedAt = startedAt;
@@ -167,6 +180,7 @@ public class Attempt {
     public boolean isTimedOut() { return timedOut; }
     public boolean isShowScore() { return showScore; }
     public boolean isAllowReview() { return allowReview; }
+    public AttemptMode getMode() { return mode; }
     public BigDecimal getScore() { return score; }
     public BigDecimal getMaxScore() { return maxScore; }
     public BigDecimal getPercentage() { return percentage; }

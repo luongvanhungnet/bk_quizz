@@ -24,13 +24,51 @@ public final class SourceDtos {
             Long sizeBytes,
             String errorCode,
             String errorMessage,
+            int indexingProgress,
+            String indexingStep,
+            String processingStage,
+            boolean processingDelayed,
+            boolean processorAvailable,
+            Instant indexingProgressAt,
+            Integer pageCount,
+            int chunkCount,
+            Instant indexedAt,
             Instant createdAt,
             Instant updatedAt,
             long version) {
-        public static Response from(SourceDocument source) {
+        public static Response from(SourceDocument source, boolean processorAvailable, Instant now) {
+            boolean processing = source.getStatus() != SourceStatus.READY
+                    && source.getStatus() != SourceStatus.FAILED
+                    && source.getStatus() != SourceStatus.DELETED;
+            boolean delayed = processing && source.getIndexingProgressAt().isBefore(now.minusSeconds(30));
             return new Response(source.getId(), source.getTopicId(), source.getName(), source.getKind(),
                     source.getStatus(), source.getContentType(), source.getSizeBytes(), source.getErrorCode(),
-                    source.getErrorMessage(), source.getCreatedAt(), source.getUpdatedAt(), source.getVersion());
+                    source.getErrorMessage(), source.getIndexingProgress(), source.getIndexingStep(),
+                    stage(source), delayed, processorAvailable,
+                    source.getIndexingProgressAt(),
+                    source.getPageCount(), source.getChunkCount(), source.getIndexedAt(),
+                    source.getCreatedAt(), source.getUpdatedAt(), source.getVersion());
+        }
+
+        private static String stage(SourceDocument source) {
+            if (source.getStatus() == SourceStatus.READY) return "READY";
+            if (source.getStatus() == SourceStatus.FAILED) return "FAILED";
+            if (source.getStatus() == SourceStatus.DELETED) return "DELETED";
+            String step = source.getIndexingStep();
+            if (step == null || step.isBlank()) {
+                return source.getStatus() == SourceStatus.UPLOADED ? "QUEUED" : source.getStatus().name();
+            }
+            return switch (step) {
+                case "PENDING" -> "QUEUED";
+                case "VALIDATING", "SCANNING" -> "VALIDATING";
+                case "PARSING", "EXTRACTING" -> "PARSING";
+                case "CHUNKING" -> "CHUNKING";
+                case "EMBEDDING" -> "EMBEDDING";
+                case "COMMITTING", "SYNCING" -> "SYNCING";
+                case "SUCCEEDED" -> "READY";
+                case "FAILED" -> "FAILED";
+                default -> step;
+            };
         }
     }
 

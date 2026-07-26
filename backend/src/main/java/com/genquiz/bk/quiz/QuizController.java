@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.genquiz.bk.security.CurrentUser;
 import org.springframework.web.bind.annotation.RequestParam;
+import com.genquiz.bk.source.SourceDtos;
+import com.genquiz.bk.source.SourcePresentationService;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/quizzes")
@@ -28,11 +31,14 @@ public class QuizController {
     private final QuizService service;
     private final ActorIdentityService actors;
     private final CurrentUser currentUser;
+    private final SourcePresentationService sourcePresentation;
 
-    public QuizController(QuizService service, ActorIdentityService actors, CurrentUser currentUser) {
+    public QuizController(QuizService service, ActorIdentityService actors, CurrentUser currentUser,
+                          SourcePresentationService sourcePresentation) {
         this.service = service;
         this.actors = actors;
         this.currentUser = currentUser;
+        this.sourcePresentation = sourcePresentation;
     }
 
     @PostMapping
@@ -57,6 +63,12 @@ public class QuizController {
     public QuizDtos.QuizResponse get(@PathVariable UUID quizId, Principal principal) {
         Quiz quiz = service.getAccessible(actors.requireUserId(principal), quizId);
         return QuizDtos.QuizResponse.from(quiz, service.questionCount(quizId));
+    }
+
+    @GetMapping("/{quizId}/sources")
+    public List<SourceDtos.Response> sources(@PathVariable UUID quizId, Principal principal) {
+        return service.listSources(actors.requireUserId(principal), quizId).stream()
+                .map(sourcePresentation::response).toList();
     }
 
     @PutMapping("/{quizId}")
@@ -100,6 +112,20 @@ public class QuizController {
                 .header(HttpHeaders.LOCATION, "/api/jobs/" + result.job().getId())
                 .body(new QuizDtos.GenerateResponse(
                         QuizDtos.QuizResponse.from(result.quiz(), service.questionCount(quizId)), result.job().getId()));
+    }
+
+    @PostMapping("/{quizId}/generation/retry-last")
+    public ResponseEntity<QuizDtos.GenerateResponse> retryLast(
+            @PathVariable UUID quizId,
+            Principal principal) {
+        currentUser.requireVerified();
+        var result = service.retryLast(actors.requireUserId(principal), quizId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .header(HttpHeaders.LOCATION, "/api/jobs/" + result.job().getId())
+                .body(new QuizDtos.GenerateResponse(
+                        QuizDtos.QuizResponse.from(
+                                result.quiz(), service.questionCount(quizId)),
+                        result.job().getId()));
     }
 
     @DeleteMapping("/{quizId}")

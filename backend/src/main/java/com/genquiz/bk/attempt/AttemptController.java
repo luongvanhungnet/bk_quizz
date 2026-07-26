@@ -33,7 +33,9 @@ public class AttemptController {
                                                              AttemptDtos.StartRequest request,
                                                              Principal principal) {
         UUID assignmentId = request == null ? null : request.assignmentId();
-        var response = service.start(actors.requireUserId(principal), quizId, assignmentId);
+        AttemptMode mode = request == null || request.mode() == null
+                ? AttemptMode.STANDARD : request.mode();
+        var response = service.start(actors.requireUserId(principal), quizId, assignmentId, mode);
         return ResponseEntity.created(java.net.URI.create("/api/attempts/" + response.id())).body(response);
     }
 
@@ -47,6 +49,16 @@ public class AttemptController {
                                                 @Valid @RequestBody AttemptDtos.AutosaveRequest request,
                                                 Principal principal) {
         return service.autosave(actors.requireUserId(principal), attemptId, request);
+    }
+
+    @PostMapping("/attempts/{attemptId}/answers/{snapshotId}/confirm")
+    public AttemptDtos.AnswerFeedback confirm(
+            @PathVariable UUID attemptId,
+            @PathVariable UUID snapshotId,
+            @Valid @RequestBody AttemptDtos.ConfirmAnswerRequest request,
+            Principal principal) {
+        return service.confirmAnswer(
+                actors.requireUserId(principal), attemptId, snapshotId, request);
     }
 
     @PostMapping("/attempts/{attemptId}/submit")

@@ -1,0 +1,92 @@
+name: bkquiz-rag
+
+x-rag-env: &rag-env
+  APP_ENV: production
+  APP_HOST: 0.0.0.0
+  APP_PORT: 8000
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  GEMINI_MODEL: ${GEMINI_MODEL:-}
+  GEMINI_MAX_RETRIES: ${GEMINI_MAX_RETRIES:-3}
+  SPRING_BOOT_INTERNAL_API_KEY: ${SPRING_BOOT_INTERNAL_API_KEY:-}
+  SPRING_BOOT_PREVIOUS_INTERNAL_API_KEY: ${SPRING_BOOT_PREVIOUS_INTERNAL_API_KEY:-}
+  REDIS_URL: redis://redis:6379/0
+  REDIS_CONNECT_TIMEOUT_SECONDS: 1
+  REDIS_SOCKET_TIMEOUT_SECONDS: 2
+  INDEX_LOCK_MODE: redis
+  INDEX_LOCK_FALLBACK_COOLDOWN_SECONDS: 30
+  DATABASE_URL: sqlite:////app/data/rag.db
+  USER_UPLOAD_DIR: /app/data/uploads/users
+  USER_INDEX_DIR: /app/data/indexes/users
+  SYSTEM_DOCUMENTS_DIR: /app/data/system-documents
+  SYSTEM_INDEX_DIR: /app/data/indexes/system
+  EMBEDDING_BACKEND: onnx
+  EMBEDDING_PRECISION: int8
+  EMBEDDING_ONNX_MODEL_PATH: /app/models/embedding-onnx
+  RAG_PRELOAD_EMBEDDING: "true"
+  RAG_CPU_THREADS: 2
+  RERANK_MIN_CANDIDATES: 3
+  RERANKER_ENABLED: "false"
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+
+    ports:
+      - "127.0.0.1:6379:6379"
+
+    volumes:
+      - rag-redis:/data
+
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rag-api:
+    build: .
+    environment: *rag-env
+    depends_on:
+      redis: {condition: service_healthy}
+    ports: ["8000:8000"]
+    volumes:
+      - rag-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  rag-worker:
+    build: .
+    command: ["celery", "-A", "app.worker.celery_app:celery_app", "worker", "--loglevel=INFO", "--pool=solo", "--concurrency=1"]
+    environment:
+      <<: *rag-env
+      WORKER_METRICS_PORT: 9101
+    depends_on:
+      rag-api: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - rag-data:/app/data
+    ports: ["9101:9101"]
+
+  rag-beat:
+    build: .
+    command: ["celery", "-A", "app.worker.celery_app:celery_app", "beat", "--loglevel=INFO"]
+    environment: *rag-env
+    depends_on:
+      rag-api: {condition: service_healthy}
+      redis: {condition: service_healthy}
+    volumes:
+      - rag-data:/app/data
+
+volumes:
+  rag-data:
+  rag-redis:
