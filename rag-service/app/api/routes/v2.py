@@ -1,8 +1,18 @@
-from typing import Literal
+import asyncio
+import json
+import traceback
+import uuid
+from datetime import datetime, timezone
+from typing import Any, AsyncIterator, Literal
 
 from fastapi import APIRouter, Depends, File, Header, Query, Request, Response, UploadFile, status
+from fastapi.responses import StreamingResponse
 
-from app.api.dependencies import require_user_context
+from app.api.dependencies import require_internal_api_key, require_user_context
+from app.core.contracts import (
+    QUIZ_GENERATION_CAPABILITIES,
+    QUIZ_GENERATION_CONTRACT,
+)
 from app.core.exceptions import ServiceError
 from app.models.user_context import UserContext
 from app.schemas.indexing_job import AsyncUploadResponse, IndexingJobDto, JobMutationResponse
@@ -15,11 +25,98 @@ from app.schemas.user_document import (
     UserDocumentDto,
     UserDocumentListResponse,
 )
+from app.services.citation_matcher import CitationMatcher
 from app.services.grounded_quiz_service import GroundedQuizService
 from app.services.quiz_context_selector import QuizContextSelector
 from app.utils.rag_logging import log_quiz_generation
 
 router = APIRouter(tags=["v2-production"])
+
+
+async def _stream_ndjson(
+    queue: asyncio.Queue[dict[str, Any] | None],
+    task: asyncio.Task[Any],
+    *,
+    heartbeat_seconds: float = 15.0,
+) -> AsyncIterator[bytes]:
+    """Keep the NDJSON connection active while CPU-bound stages are silent."""
+    try:
+        while True:
+            try:
+                event = await asyncio.wait_for(
+                    queue.get(), timeout=heartbeat_seconds
+                )
+            except TimeoutError:
+                event = {
+                    "type": "HEARTBEAT",
+                    "level": "INFO",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            if event is None:
+                break
+            yield (
+                json.dumps(event, ensure_ascii=False, separators=(",", ":"))
+                + "\n"
+            ).encode("utf-8")
+    finally:
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
+
+
+def _unexpected_stream_failure(
+    *, request_id: str, stage: str, error_id: str
+) -> dict[str, Any]:
+    return {
+        "type": "FAILED",
+        "level": "ERROR",
+        "message": "RAG gặp lỗi nội bộ khi xử lý kết quả quiz.",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "requestId": request_id,
+        "errorCode": "RAG_INTERNAL_ERROR",
+        "retryable": False,
+        "retryAfterSeconds": None,
+        "stage": stage,
+        "errorId": error_id,
+        "details": [{
+            "reason": "UNEXPECTED_INTERNAL_ERROR",
+            "stage": stage,
+            "errorId": error_id,
+        }],
+    }
+
+
+def _citation_matcher(request: Request) -> CitationMatcher:
+    existing = getattr(request.app.state, "citation_matcher", None)
+    if existing is not None:
+        return existing
+    settings = request.app.state.settings
+    return CitationMatcher(
+        mode=settings.citation_match_mode,
+        embedding_service=request.app.state.embedding_service,
+        lexical_min_score=settings.citation_lexical_min_score,
+        semantic_same_source_min_score=(
+            settings.citation_semantic_same_source_min_score
+        ),
+        semantic_cross_source_min_score=(
+            settings.citation_semantic_cross_source_min_score
+        ),
+        uniqueness_margin=settings.citation_uniqueness_margin,
+        max_window_chars=settings.citation_max_window_chars,
+        max_candidates_per_source=settings.citation_max_candidates_per_source,
+    )
+
+
+@router.get(
+    "/capabilities",
+    dependencies=[Depends(require_internal_api_key)],
+)
+def capabilities(request: Request) -> dict[str, Any]:
+    return {
+        "quizGenerationContract": QUIZ_GENERATION_CONTRACT,
+        "capabilities": QUIZ_GENERATION_CAPABILITIES,
+        "buildRevision": request.app.state.settings.app_build_revision,
+    }
 
 
 def async_documents(request: Request):
@@ -102,6 +199,8 @@ async def list_document_chunks(
             chunkIndex=chunk.chunk_index,
             heading=chunk.heading,
             text=chunk.text,
+            rawText=chunk.raw_content,
+            mathEnhanced=chunk.math_enhanced,
         ) for chunk in items],
         pagination=PaginationDto(
             page=page,
@@ -134,6 +233,10 @@ async def generate_grounded_quiz(
             context=selection.context,
             gemini_service=request.app.state.gemini_service,
             trace_id=request.state.trace_id,
+            quiz_llm_router=request.app.state.quiz_llm_router,
+            gemini_batch_size=request.app.state.settings.gemini_batch_size,
+            ollama_max_questions=request.app.state.settings.ollama_max_questions_per_call,
+            citation_matcher=_citation_matcher(request),
         )
     except ServiceError as error:
         log_quiz_generation(
@@ -153,8 +256,138 @@ async def generate_grounded_quiz(
         model=result["model"],
         secret=request.app.state.settings.spring_boot_internal_api_key,
         success=True,
+        providers_used=result.get("providersUsed", []),
+        generated_by_provider=result.get("generatedByProvider", {}),
     )
     return GroundedQuizResponse(**result)
+
+
+@router.post("/user-rag/generate-quiz/stream")
+async def stream_grounded_quiz(
+    payload: GroundedQuizRequest,
+    request: Request,
+    context: UserContext = Depends(require_user_context),
+    service=Depends(user_rag),
+) -> StreamingResponse:
+    queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
+    current_stage = {"value": "RETRIEVING"}
+
+    async def emit(event: dict[str, Any]) -> None:
+        stage = event.get("stage")
+        if isinstance(stage, str) and stage:
+            current_stage["value"] = stage
+        await queue.put(event)
+
+    async def run() -> None:
+        try:
+            await emit({
+                "type": "STAGE",
+                "level": "INFO",
+                "message": "Đang chuẩn bị ngữ cảnh từ tài liệu đã chọn.",
+                "stage": "RETRIEVING",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            corpora = await service.prepare_corpora(
+                context.owner_id,
+                payload.documentIds,
+                False,
+            )
+            selection = QuizContextSelector(
+                request.app.state.settings.rag_max_context_chars,
+                min_useful_chars=request.app.state.settings.rag_quiz_min_useful_chars,
+            ).select(payload.title, corpora)
+            await emit({
+                "type": "STAGE",
+                "level": "INFO",
+                "message": (
+                    f"Đã chọn {len(selection.context.sources)} đoạn nguồn phù hợp."
+                ),
+                "stage": "CONTEXT_READY",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            current_stage["value"] = "GENERATING"
+            result = await GroundedQuizService().generate(
+                request=payload,
+                context=selection.context,
+                gemini_service=request.app.state.gemini_service,
+                trace_id=request.state.trace_id,
+                quiz_llm_router=request.app.state.quiz_llm_router,
+                gemini_batch_size=request.app.state.settings.gemini_batch_size,
+                ollama_max_questions=request.app.state.settings.ollama_max_questions_per_call,
+                citation_matcher=_citation_matcher(request),
+                event_sink=emit,
+            )
+            await emit({
+                "type": "RESULT",
+                "level": "SUCCESS",
+                "message": "AI đã tạo và kiểm tra xong nhóm câu hỏi.",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "requestId": request.state.trace_id,
+                "data": result,
+            })
+        except ServiceError as error:
+            await emit({
+                "type": "FAILED",
+                "level": "ERROR",
+                "message": error.message,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "requestId": request.state.trace_id,
+                "errorCode": error.code,
+                "retryable": error.retryable,
+                "retryAfterSeconds": error.retry_after_seconds,
+                "details": error.details,
+            })
+        except (TimeoutError, ConnectionError):
+            await emit({
+                "type": "FAILED",
+                "level": "ERROR",
+                "message": "RAG tạm thời không thể hoàn tất bước xử lý hiện tại.",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "requestId": request.state.trace_id,
+                "errorCode": "RAG_TRANSIENT_ERROR",
+                "retryable": True,
+                "retryAfterSeconds": 300,
+                "stage": current_stage["value"],
+                "details": [{
+                    "reason": "TRANSIENT_PROCESSING_FAILURE",
+                    "stage": current_stage["value"],
+                }],
+            })
+        except Exception as error:
+            error_id = f"rag-{uuid.uuid4()}"
+            safe_frames = [
+                f"{frame.name}:{frame.lineno}"
+                for frame in traceback.extract_tb(error.__traceback__)[-12:]
+            ]
+            request.app.state.logger.error(
+                "Quiz stream internal failure trace_id=%s stage=%s error_id=%s type=%s frames=%s",
+                request.state.trace_id,
+                current_stage["value"],
+                error_id,
+                type(error).__name__,
+                safe_frames,
+            )
+            await emit(_unexpected_stream_failure(
+                request_id=request.state.trace_id,
+                stage=current_stage["value"],
+                error_id=error_id,
+            ))
+        finally:
+            await queue.put(None)
+
+    async def lines() -> AsyncIterator[bytes]:
+        task = asyncio.create_task(run())
+        async for chunk in _stream_ndjson(queue, task):
+            yield chunk
+
+    return StreamingResponse(
+        lines(),
+        media_type="application/x-ndjson",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.delete("/user-documents/{document_id}", status_code=status.HTTP_204_NO_CONTENT)

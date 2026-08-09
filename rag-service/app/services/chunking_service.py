@@ -27,12 +27,15 @@ class ChunkingService:
                     end = min(start + self._chunk_size, len(text))
                 value = text[start:end].strip()
                 if value:
+                    raw_value = self._raw_slice(section.raw_text, start, end, len(text))
                     chunks.append(
                         ChunkDraft(
                             section.page_number,
                             section.heading,
                             value,
                             section.slide_number,
+                            raw_value,
+                            section.math_enhanced,
                         )
                     )
                 if end >= len(text):
@@ -42,6 +45,17 @@ class ChunkingService:
                     next_start += 1
                 start = min(next_start, end)
         return chunks
+
+    @staticmethod
+    def _raw_slice(raw_text: str | None, start: int, end: int, enhanced_length: int) -> str | None:
+        if raw_text is None:
+            return None
+        cleaned = ChunkingService._clean(raw_text)
+        if not cleaned or enhanced_length <= 0:
+            return cleaned or None
+        raw_start = round(start * len(cleaned) / enhanced_length)
+        raw_end = round(end * len(cleaned) / enhanced_length)
+        return cleaned[raw_start:raw_end].strip() or None
 
     @staticmethod
     def _clean(text: str) -> str:

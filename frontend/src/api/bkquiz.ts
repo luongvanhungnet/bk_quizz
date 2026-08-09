@@ -15,6 +15,17 @@ export type QuizStatus =
   | "PUBLISHED"
   | "ARCHIVED";
 export type Difficulty = "EASY" | "MEDIUM" | "HARD" | "MIXED";
+export type CognitiveLevel = "L1" | "L2" | "L3" | "L4" | "L5";
+export type CognitiveMode = CognitiveLevel | "BALANCED";
+export type AiValidationStatus = "VERIFIED" | "WARNING" | "REVIEWED";
+export interface AiValidationWarning {
+  code: string;
+  role: string | null;
+  expected: unknown;
+  actual: unknown;
+  sourceId: string | null;
+  message: string;
+}
 export type QuestionType = "SINGLE_CHOICE" | "MULTIPLE_SELECT" | "FILL_BLANK";
 
 export interface Topic {
@@ -39,10 +50,13 @@ export interface Quiz {
   visibility: Visibility;
   generationMode: "MANUAL" | "AI";
   difficulty: Difficulty;
+  cognitiveMode: CognitiveMode;
   durationMinutes: number;
   questionCount: number;
   errorCode: string | null;
   errorMessage: string | null;
+  aiValidationStatus?: AiValidationStatus;
+  aiValidationWarnings?: AiValidationWarning[];
   publishedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -73,6 +87,9 @@ export interface Source {
   indexingProgressAt: string;
   pageCount: number | null;
   chunkCount: number;
+  mathExtractionStatus: "NOT_DETECTED" | "ENHANCED" | "PARTIAL" | "FAILED";
+  mathFormulaCount: number;
+  mathWarningCount: number;
   indexedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -91,6 +108,29 @@ export interface Job {
   errorMessage: string | null;
   upstreamRequestId: string | null;
   availableAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+}
+export type JobEventLevel = "INFO" | "WARNING" | "ERROR" | "SUCCESS";
+export interface JobEvent {
+  id: number;
+  jobId: string;
+  occurredAt: string;
+  level: JobEventLevel;
+  code: string;
+  message: string;
+  progress: number | null;
+  provider: string | null;
+  batchIndex?: number | null;
+  partIndex?: number | null;
+  requestId: string | null;
+  metadata: Record<string, unknown>;
+}
+export interface JobEventPage {
+  items: JobEvent[];
+  nextCursor: number;
+  hasMore: boolean;
 }
 export interface QuestionOption {
   id: string;
@@ -107,9 +147,26 @@ export interface Question {
   points: number;
   position: number;
   difficulty: Difficulty;
+  cognitiveLevel: CognitiveLevel;
+  complexityProfile: {
+    conceptCount: number;
+    reasoningStepCount: number;
+    requiresNovelScenario: boolean;
+    answerDirectlyPresent: boolean;
+    requiresComparison: boolean;
+    conceptsUsed: string[];
+    novelScenarioSummary: string | null;
+    verified: boolean;
+  } | null;
+  complexityScore: number | null;
   options: QuestionOption[];
   acceptedAnswers: string[];
   citations: Citation[];
+  validationStatus?: AiValidationStatus;
+  validationWarnings?: AiValidationWarning[];
+  validationReviewedAt?: string | null;
+  validationReviewedBy?: string | null;
+  validationReviewNote?: string | null;
   version: number;
 }
 export interface Citation {
@@ -127,6 +184,7 @@ export interface PublicQuiz {
   id: string;
   title: string;
   difficulty: Difficulty;
+  cognitiveMode: CognitiveMode;
   durationMinutes: number;
   questionCount: number;
   publishedAt: string;
@@ -288,6 +346,7 @@ export interface SharedResourcePreview {
   quizCount: number;
   questionCount: number;
   difficulty: Difficulty | null;
+  cognitiveMode: CognitiveMode | null;
   durationMinutes: number | null;
   assignmentStatus: "DRAFT" | "PUBLISHED" | "CLOSED" | null;
   opensAt: string | null;
@@ -505,6 +564,10 @@ export const bkquizApi = {
   reindexSource: (id: string) =>
     apiClient.request<{ source: Source; jobId: string }>(`/sources/${id}/reindex`, { method: "POST" }),
   job: (id: string) => apiClient.request<Job>(`/jobs/${id}`),
+  jobEvents: (id: string, afterId = 0, limit = 100) =>
+    apiClient.request<JobEventPage>(
+      `/jobs/${id}/events?afterId=${afterId}&limit=${limit}`,
+    ),
   quizzes: (topicId: string) =>
     requestPage<Quiz>(
       pageQuery("/quizzes", {
@@ -515,12 +578,18 @@ export const bkquizApi = {
       }),
     ),
   quiz: (id: string) => apiClient.request<Quiz>(`/quizzes/${id}`),
+  latestQuizGenerationJob: (id: string) =>
+    apiClient.request<Job>(`/quizzes/${id}/generation/job`),
+  quizGenerationJobs: (id: string, limit = 20) =>
+    apiClient.request<Job[]>(
+      `/quizzes/${id}/generation/jobs?limit=${limit}`,
+    ),
   quizSources: (id: string) => apiClient.request<Source[]>(`/quizzes/${id}/sources`),
   createQuiz: (body: {
     topicId: string;
     title: string;
     description?: string;
-    difficulty: Difficulty;
+    cognitiveMode: CognitiveMode;
     durationMinutes: number;
     visibility: Visibility;
   }) => apiClient.request<Quiz>("/quizzes", { method: "POST", ...json(body) }),
@@ -528,7 +597,7 @@ export const bkquizApi = {
     topicId: string;
     sourceIds: string[];
     title: string;
-    difficulty: Difficulty;
+    cognitiveMode: CognitiveMode;
     durationMinutes: number;
     visibility: Visibility;
     questionCounts: {
@@ -545,6 +614,29 @@ export const bkquizApi = {
       },
       body: JSON.stringify(body),
     }),
+  appendQuizGeneration: (
+    quizId: string,
+    body: {
+      sourceIds: string[];
+      cognitiveMode: CognitiveMode;
+      questionCounts: {
+        singleChoice: number;
+        multipleSelect: number;
+        fillBlank: number;
+      };
+    },
+  ) =>
+    apiClient.request<{ quiz: Quiz; jobId: string }>(
+      `/quizzes/${quizId}/generation/append`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: JSON.stringify(body),
+      },
+    ),
   retryLastQuizGeneration: (quizId: string) =>
     apiClient.request<{ quiz: Quiz; jobId: string }>(
       `/quizzes/${quizId}/generation/retry-last`,
@@ -566,6 +658,15 @@ export const bkquizApi = {
     }),
   deleteQuestion: (id: string) =>
     apiClient.request<void>(`/questions/${id}`, { method: "DELETE" }),
+  reviewQuestionValidation: (id: string, note?: string) =>
+    apiClient.request<Question>(`/questions/${id}/validation-review`, {
+      method: "PUT",
+      ...json({ note: note || null }),
+    }),
+  undoQuestionValidationReview: (id: string) =>
+    apiClient.request<Question>(`/questions/${id}/validation-review`, {
+      method: "DELETE",
+    }),
   startAttempt: (
     quizId: string,
     assignmentId?: string,
@@ -746,7 +847,7 @@ export const bkquizApi = {
 export interface AdminSummary { users: number; topics: number; quizzes: number; classrooms: number; attempts: number; jobs: number; storedFiles: number; storageBytes: number; }
 export interface AdminFile { id: string; ownerId: string | null; purpose: string; provider: string; originalName: string; mediaType: string; sizeBytes: number; sha256: string; status: string; createdAt: string; }
 export interface AuditLog { id: string; actorUserId: string | null; action: string; targetType: string; targetId: string; detailsJson: string; createdAt: string; }
-export interface AdminContent { id: string; owner_id: string; title: string; moderation_status: string; moderation_reason?: string | null; created_at: string; }
+export interface AdminContent { id: string; owner_id: string; title: string; moderation_status: string; moderation_reason?: string | null; ai_validation_status?: AiValidationStatus; ai_validation_warning_count?: number; created_at: string; }
 export interface AdminJob { id: string; type: string; status: string; subjectUserId: string; resourceId?: string | null; attempts: number; maxAttempts: number; errorCode?: string | null; errorMessage?: string | null; createdAt: string; }
 export const adminApi = {
   summary: () => apiClient.request<AdminSummary>("/admin/summary"),

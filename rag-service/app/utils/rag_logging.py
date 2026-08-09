@@ -68,6 +68,8 @@ def log_quiz_generation(
     secret: str,
     success: bool,
     error_code: str | None = None,
+    providers_used: list[str] | None = None,
+    generated_by_provider: dict[str, int] | None = None,
 ) -> None:
     user_hash = hmac.new(
         secret.encode("utf-8"), user_id.encode("utf-8"), hashlib.sha256
@@ -84,4 +86,6 @@ def log_quiz_generation(
         "geminiModel": model,
         "success": success,
         "errorCode": error_code,
+        "providersUsed": providers_used or [],
+        "generatedByProvider": generated_by_provider or {},
     }, ensure_ascii=False, separators=(",", ":")))

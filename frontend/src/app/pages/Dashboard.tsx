@@ -23,6 +23,7 @@ import {
 } from "../../api/bkquiz";
 import { Badge, Button, Card, Checkbox, Input, Modal } from "../components/ui";
 import { EmailVerificationAction } from "../components/EmailVerificationAction";
+import { cognitiveLabel } from "../lib/cognitive";
 
 type View = "dashboard" | "explore" | "saved" | "settings" | "profile";
 const errorMessage = (error: unknown) =>
@@ -414,10 +415,7 @@ export default function Dashboard() {
             : renderSettings();
   return (
     <div className="min-h-screen bg-[#F7F7F8] text-[#111827]">
-      <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b bg-white px-5">
-        <Link to="/" className="text-xl font-black text-[#C8102E]">
-          BKQuiz
-        </Link>
+      <header className="sticky top-0 z-20 flex h-16 items-center justify-end border-b bg-white px-5">
         <button
           onClick={() => setView("profile")}
           className="flex items-center gap-2 font-bold"
@@ -512,7 +510,7 @@ export default function Dashboard() {
                                 <p className="text-xs text-[#6B7280]">
                                   {quiz.questionCount} câu ·{" "}
                                   {quiz.durationMinutes} phút ·{" "}
-                                  {quiz.difficulty}
+                                  {cognitiveLabel(quiz.cognitiveMode)}
                                 </p>
                               </div>
                               <Link to={`/quiz/${quiz.id}/take`}>

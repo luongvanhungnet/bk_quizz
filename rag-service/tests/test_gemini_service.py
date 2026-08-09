@@ -75,3 +75,53 @@ async def test_rate_limit_is_mapped_after_last_attempt(settings: Settings) -> No
     assert raised.value.status_code == 429
     assert raised.value.code == "GEMINI_QUOTA_EXHAUSTED"
     assert client.aio.models.generate_content.await_count == 4
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [401, 403])
+async def test_authentication_errors_have_specific_public_code(
+    settings: Settings,
+    status: int,
+) -> None:
+    client = fake_client(errors.APIError(status, {"message": "credential rejected"}))
+    service = GeminiService(
+        settings.model_copy(update={"gemini_api_key": "secret"}), client=client
+    )
+
+    with pytest.raises(ServiceError) as raised:
+        await service.generate("Xin chao", system_instruction="Tra loi ngan.")
+
+    assert raised.value.code == "GEMINI_API_AUTHENTICATION_FAILED"
+    assert raised.value.status_code == 503
+
+
+@pytest.mark.asyncio
+async def test_model_not_available_has_specific_public_code(settings: Settings) -> None:
+    client = fake_client(errors.APIError(404, {"message": "model not found"}))
+    service = GeminiService(
+        settings.model_copy(update={"gemini_api_key": "secret"}), client=client
+    )
+
+    with pytest.raises(ServiceError) as raised:
+        await service.generate("Xin chao", system_instruction="Tra loi ngan.")
+
+    assert raised.value.code == "GEMINI_MODEL_NOT_AVAILABLE"
+
+
+@pytest.mark.asyncio
+async def test_invalid_argument_is_provider_compatibility_error(
+    settings: Settings,
+) -> None:
+    client = fake_client(errors.APIError(
+        400,
+        {"error": {"status": "INVALID_ARGUMENT", "message": "invalid schema"}},
+    ))
+    service = GeminiService(
+        settings.model_copy(update={"gemini_api_key": "secret"}), client=client
+    )
+
+    with pytest.raises(ServiceError) as raised:
+        await service.generate("Xin chao", system_instruction="Tra loi ngan.")
+
+    assert raised.value.code == "GEMINI_API_REQUEST_INCOMPATIBLE"
+    assert raised.value.retryable is False

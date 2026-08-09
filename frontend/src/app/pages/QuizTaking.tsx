@@ -12,6 +12,8 @@ import {
 import { citationLocation } from "./citationLocation";
 import { questionVisualState } from "./attemptQuestionState";
 import { Badge, Button, Card, Checkbox, Input, Modal } from "../components/ui";
+import { cognitiveLabel } from "../lib/cognitive";
+import { MathMarkdown } from "../components/MathMarkdown";
 
 type AnswerValue = { selectedOptionIds: string[]; textAnswer: string };
 const errorText = (error: unknown) =>
@@ -74,7 +76,7 @@ function AttemptStarter({
               <h1 className="text-2xl font-black">{quiz.data.title}</h1>
               <p className="mt-3 text-[#6B7280]">
                 {quiz.data.questionCount} câu · {quiz.data.durationMinutes} phút
-                · {quiz.data.difficulty}
+                · {cognitiveLabel(quiz.data.cognitiveMode)}
               </p>
               <p className="mt-5 text-sm">
                 Timer bắt đầu khi bạn xác nhận. Reload sau đó sẽ tiếp tục cùng
@@ -433,7 +435,7 @@ function AttemptSession({ attemptId }: { attemptId: string }) {
                       <Flag className="h-5 w-5" />
                     </button>
                   </div>
-                  <p className="mb-6 text-lg font-bold leading-8">{question.prompt}</p>
+                  <MathMarkdown className="mb-6 text-lg font-bold leading-8" normalizeLegacy>{question.prompt}</MathMarkdown>
                   {question.type === "FILL_BLANK" ? (
                     <Input
                       disabled={locked}
@@ -469,7 +471,7 @@ function AttemptSession({ attemptId }: { attemptId: string }) {
                                 })
                               }
                             />
-                            <span>{option.text}</span>
+                            <MathMarkdown inline normalizeLegacy>{option.text}</MathMarkdown>
                           </label>
                         );
                       })}
@@ -650,17 +652,17 @@ function LiveFeedbackView({
         {feedback.correct ? "Chính xác" : "Chưa chính xác"}
       </div>
       {correctOptions.length > 0 && (
-        <p className="mt-2 text-sm">Đáp án đúng: {correctOptions.join(", ")}</p>
+        <div className="mt-2 flex gap-1 text-sm">Đáp án đúng: <MathMarkdown inline normalizeLegacy>{correctOptions.join(", ")}</MathMarkdown></div>
       )}
       {feedback.acceptedAnswers.length > 0 && (
-        <p className="mt-2 text-sm">
-          Đáp án chấp nhận: {feedback.acceptedAnswers.join(", ")}
-        </p>
+        <div className="mt-2 flex gap-1 text-sm">
+          Đáp án chấp nhận: <MathMarkdown inline normalizeLegacy>{feedback.acceptedAnswers.join(", ")}</MathMarkdown>
+        </div>
       )}
       {(feedback.explanation || feedback.citations.length > 0) && (
         <details className="mt-3 rounded border bg-white p-3 text-sm">
           <summary className="cursor-pointer font-bold">Xem giải thích đáp án</summary>
-          {feedback.explanation && <p className="mt-2">{feedback.explanation}</p>}
+          {feedback.explanation && <MathMarkdown className="mt-2" normalizeLegacy>{feedback.explanation}</MathMarkdown>}
           {feedback.citations
             .filter((citation) => citation.role !== "QUESTION")
             .map((citation) => (
@@ -669,7 +671,7 @@ function LiveFeedbackView({
                 className="mt-2 border-l-2 pl-3 text-[#6B7280]"
               >
                 <b>{citation.filename} · {citationLocation(citation)}</b>
-                <span className="block">{citation.evidenceQuote}</span>
+                <MathMarkdown className="block" normalizeLegacy>{citation.evidenceQuote}</MathMarkdown>
               </blockquote>
             ))}
         </details>
@@ -745,14 +747,12 @@ function ResultView({
                   </p>
                 ) : null}
                 {item.acceptedAnswers?.length ? (
-                  <p className="mt-2 text-sm">
-                    Đáp án chấp nhận: {item.acceptedAnswers.join(", ")}
-                  </p>
+                  <div className="mt-2 flex gap-1 text-sm">
+                    Đáp án chấp nhận: <MathMarkdown inline normalizeLegacy>{item.acceptedAnswers.join(", ")}</MathMarkdown>
+                  </div>
                 ) : null}
                 {item.explanation && (
-                  <p className="mt-2 text-sm text-[#6B7280]">
-                    {item.explanation}
-                  </p>
+                  <MathMarkdown className="mt-2 text-sm text-[#6B7280]" normalizeLegacy>{item.explanation}</MathMarkdown>
                 )}
                 {item.citations?.length > 0 && (
                   <details className="mt-3 rounded border bg-gray-50 p-3 text-sm">
@@ -761,7 +761,7 @@ function ResultView({
                       <div key={`${citation.role}-${citation.sourceChunkId}`} className="mt-2">
                         <b>{citation.filename} · {citationLocation(citation)}</b>
                         {citation.heading && <span> · {citation.heading}</span>}
-                        <blockquote className="mt-1 border-l-2 pl-2 text-[#6B7280]">{citation.evidenceQuote}</blockquote>
+                        <blockquote className="mt-1 border-l-2 pl-2 text-[#6B7280]"><MathMarkdown normalizeLegacy>{citation.evidenceQuote}</MathMarkdown></blockquote>
                       </div>
                     ))}
                   </details>

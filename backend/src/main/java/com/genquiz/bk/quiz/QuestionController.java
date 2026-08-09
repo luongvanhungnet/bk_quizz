@@ -15,16 +15,21 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.genquiz.bk.security.CurrentUser;
+import com.genquiz.bk.user.Role;
 
 @RestController
 @RequestMapping("/api")
 public class QuestionController {
     private final QuestionService service;
     private final ActorIdentityService actors;
+    private final CurrentUser currentUser;
 
-    public QuestionController(QuestionService service, ActorIdentityService actors) {
+    public QuestionController(QuestionService service, ActorIdentityService actors,
+                              CurrentUser currentUser) {
         this.service = service;
         this.actors = actors;
+        this.currentUser = currentUser;
     }
 
     @GetMapping("/quizzes/{quizId}/questions")
@@ -58,5 +63,25 @@ public class QuestionController {
     public ResponseEntity<Void> delete(@PathVariable UUID questionId, Principal principal) {
         service.delete(actors.requireUserId(principal), questionId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/questions/{questionId}/validation-review")
+    public QuizDtos.QuestionResponse reviewValidation(
+            @PathVariable UUID questionId,
+            @Valid @RequestBody QuizDtos.ValidationReviewRequest request,
+            Principal principal) {
+        currentUser.requireVerified();
+        var user = currentUser.require();
+        return service.reviewValidation(actors.requireUserId(principal),
+                user.getRole() == Role.ADMIN, questionId, request.note());
+    }
+
+    @DeleteMapping("/questions/{questionId}/validation-review")
+    public QuizDtos.QuestionResponse undoValidationReview(
+            @PathVariable UUID questionId, Principal principal) {
+        currentUser.requireVerified();
+        var user = currentUser.require();
+        return service.undoValidationReview(actors.requireUserId(principal),
+                user.getRole() == Role.ADMIN, questionId);
     }
 }

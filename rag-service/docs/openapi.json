@@ -5,6 +5,57 @@
     "version": "2.0.0"
   },
   "paths": {
+    "/api/v1/health/llm": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Llm Health",
+        "operationId": "llm_health_api_v1_health_llm_get",
+        "parameters": [
+          {
+            "name": "x-internal-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Llm Health Api V1 Health Llm Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/health/retrieval": {
       "get": {
         "tags": [
@@ -1099,6 +1150,57 @@
         }
       }
     },
+    "/api/v2/capabilities": {
+      "get": {
+        "tags": [
+          "v2-production"
+        ],
+        "summary": "Capabilities",
+        "operationId": "capabilities_api_v2_capabilities_get",
+        "parameters": [
+          {
+            "name": "x-internal-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Capabilities Api V2 Capabilities Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/user-documents": {
       "post": {
         "tags": [
@@ -1691,6 +1793,95 @@
                 "schema": {
                   "$ref": "#/components/schemas/GroundedQuizResponse"
                 }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/user-rag/generate-quiz/stream": {
+      "post": {
+        "tags": [
+          "v2-production"
+        ],
+        "summary": "Stream Grounded Quiz",
+        "operationId": "stream_grounded_quiz_api_v2_user_rag_generate_quiz_stream_post",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          },
+          {
+            "name": "x-classroom-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Classroom-Id"
+            }
+          },
+          {
+            "name": "x-internal-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroundedQuizRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           },
@@ -2430,6 +2621,198 @@
         ],
         "title": "ChatResponse"
       },
+      "CognitiveConstraintPlan": {
+        "properties": {
+          "cognitiveLevel": {
+            "type": "string",
+            "enum": [
+              "L1",
+              "L2",
+              "L3",
+              "L4",
+              "L5"
+            ],
+            "title": "Cognitivelevel"
+          },
+          "conceptMin": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 1.0,
+            "title": "Conceptmin"
+          },
+          "conceptMax": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 1.0,
+            "title": "Conceptmax"
+          },
+          "reasoningMin": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Reasoningmin"
+          },
+          "reasoningMax": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Reasoningmax"
+          },
+          "requiresNovelScenario": {
+            "type": "boolean",
+            "title": "Requiresnovelscenario"
+          },
+          "answerDirectlyPresent": {
+            "type": "boolean",
+            "title": "Answerdirectlypresent"
+          },
+          "requiresComparison": {
+            "type": "boolean",
+            "title": "Requirescomparison"
+          },
+          "scoreMin": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Scoremin"
+          },
+          "scoreMax": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scoremax"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cognitiveLevel",
+          "conceptMin",
+          "conceptMax",
+          "reasoningMin",
+          "reasoningMax",
+          "requiresNovelScenario",
+          "answerDirectlyPresent",
+          "requiresComparison",
+          "scoreMin"
+        ],
+        "title": "CognitiveConstraintPlan"
+      },
+      "CognitiveProfileOutput": {
+        "properties": {
+          "conceptCount": {
+            "type": "integer",
+            "maximum": 6.0,
+            "minimum": 1.0,
+            "title": "Conceptcount"
+          },
+          "reasoningStepCount": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Reasoningstepcount"
+          },
+          "requiresNovelScenario": {
+            "type": "boolean",
+            "title": "Requiresnovelscenario"
+          },
+          "answerDirectlyPresent": {
+            "type": "boolean",
+            "title": "Answerdirectlypresent"
+          },
+          "requiresComparison": {
+            "type": "boolean",
+            "title": "Requirescomparison"
+          },
+          "conceptsUsed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Conceptsused"
+          },
+          "novelScenarioSummary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Novelscenariosummary"
+          },
+          "cognitiveRationale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cognitiverationale"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conceptCount",
+          "reasoningStepCount",
+          "requiresNovelScenario",
+          "answerDirectlyPresent",
+          "requiresComparison",
+          "conceptsUsed"
+        ],
+        "title": "CognitiveProfileOutput"
+      },
+      "CognitiveQuestionPlan": {
+        "properties": {
+          "planSlotId": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Planslotid"
+          },
+          "questionType": {
+            "type": "string",
+            "enum": [
+              "SINGLE_CHOICE",
+              "MULTIPLE_SELECT",
+              "FILL_BLANK"
+            ],
+            "title": "Questiontype"
+          },
+          "cognitiveLevel": {
+            "type": "string",
+            "enum": [
+              "L1",
+              "L2",
+              "L3",
+              "L4",
+              "L5"
+            ],
+            "title": "Cognitivelevel"
+          },
+          "constraint": {
+            "$ref": "#/components/schemas/CognitiveConstraintPlan"
+          }
+        },
+        "type": "object",
+        "required": [
+          "planSlotId",
+          "questionType",
+          "cognitiveLevel",
+          "constraint"
+        ],
+        "title": "CognitiveQuestionPlan"
+      },
       "ConversationMessage": {
         "properties": {
           "role": {
@@ -2469,6 +2852,10 @@
             "minimum": 0.0,
             "title": "Latencyms"
           },
+          "credentialSource": {
+            "type": "string",
+            "title": "Credentialsource"
+          },
           "message": {
             "type": "string",
             "title": "Message"
@@ -2479,6 +2866,7 @@
           "status",
           "model",
           "latencyMs",
+          "credentialSource",
           "message"
         ],
         "title": "GeminiHealthResponse"
@@ -2537,6 +2925,30 @@
           "evidenceQuote": {
             "type": "string",
             "title": "Evidencequote"
+          },
+          "chunkText": {
+            "type": "string",
+            "title": "Chunktext"
+          },
+          "rawText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawtext"
+          },
+          "mathEnhanced": {
+            "type": "boolean",
+            "title": "Mathenhanced",
+            "default": false
+          },
+          "snapshotFingerprint": {
+            "type": "string",
+            "title": "Snapshotfingerprint"
           }
         },
         "type": "object",
@@ -2548,7 +2960,9 @@
           "slideNumber",
           "chunkIndex",
           "heading",
-          "evidenceQuote"
+          "evidenceQuote",
+          "chunkText",
+          "snapshotFingerprint"
         ],
         "title": "GroundedQuizCitation"
       },
@@ -2559,8 +2973,49 @@
             "title": "Type"
           },
           "difficulty": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Difficulty"
+          },
+          "planSlotId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planslotid"
+          },
+          "cognitiveLevel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cognitivelevel"
+          },
+          "complexityProfile": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complexityprofile"
           },
           "prompt": {
             "type": "string",
@@ -2605,12 +3060,33 @@
             },
             "type": "array",
             "title": "Explanationcitations"
+          },
+          "validationStatus": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "WARNING"
+            ],
+            "title": "Validationstatus",
+            "default": "VERIFIED"
+          },
+          "validationWarnings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Validationwarnings"
+          },
+          "complexityVerified": {
+            "type": "boolean",
+            "title": "Complexityverified",
+            "default": true
           }
         },
         "type": "object",
         "required": [
           "type",
-          "difficulty",
           "prompt",
           "explanation",
           "options",
@@ -2620,6 +3096,128 @@
           "explanationCitations"
         ],
         "title": "GroundedQuizQuestion"
+      },
+      "GroundedQuizQuestionOutput": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "SINGLE_CHOICE",
+              "MULTIPLE_SELECT",
+              "FILL_BLANK"
+            ],
+            "title": "Type"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "EASY",
+                  "MEDIUM",
+                  "HARD"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "planSlotId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planslotid"
+          },
+          "cognitiveLevel": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "L1",
+                  "L2",
+                  "L3",
+                  "L4",
+                  "L5"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cognitivelevel"
+          },
+          "complexityProfile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CognitiveProfileOutput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "explanation": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Explanation"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/QuizOptionOutput"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "acceptedAnswers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Acceptedanswers"
+          },
+          "questionCitations": {
+            "items": {
+              "$ref": "#/components/schemas/QuizCitationOutput"
+            },
+            "type": "array",
+            "title": "Questioncitations"
+          },
+          "answerCitations": {
+            "items": {
+              "$ref": "#/components/schemas/QuizCitationOutput"
+            },
+            "type": "array",
+            "title": "Answercitations"
+          },
+          "explanationCitations": {
+            "items": {
+              "$ref": "#/components/schemas/QuizCitationOutput"
+            },
+            "type": "array",
+            "title": "Explanationcitations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "prompt",
+          "explanation"
+        ],
+        "title": "GroundedQuizQuestionOutput"
       },
       "GroundedQuizRequest": {
         "properties": {
@@ -2639,19 +3237,94 @@
             "title": "Title"
           },
           "difficulty": {
-            "type": "string",
-            "pattern": "^(EASY|MEDIUM|HARD|MIXED)$",
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(EASY|MEDIUM|HARD|MIXED)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Difficulty"
+          },
+          "cognitiveMode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(L1|L2|L3|L4|L5|BALANCED)$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cognitivemode"
           },
           "questionCounts": {
             "$ref": "#/components/schemas/QuizQuestionCounts"
+          },
+          "batchIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Batchindex",
+            "default": 0
+          },
+          "totalBatches": {
+            "type": "integer",
+            "maximum": 13.0,
+            "minimum": 1.0,
+            "title": "Totalbatches",
+            "default": 1
+          },
+          "difficultyPlan": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficultyplan"
+          },
+          "questionPlan": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CognitiveQuestionPlan"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Questionplan"
+          },
+          "excludedPrompts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Excludedprompts"
+          },
+          "acceptedQuestions": {
+            "items": {
+              "$ref": "#/components/schemas/GroundedQuizQuestionOutput"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Acceptedquestions"
           }
         },
         "type": "object",
         "required": [
           "documentIds",
           "title",
-          "difficulty",
           "questionCounts"
         ],
         "title": "GroundedQuizRequest"
@@ -2675,6 +3348,38 @@
             },
             "type": "object",
             "title": "Usage"
+          },
+          "validationStatus": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "WARNING"
+            ],
+            "title": "Validationstatus",
+            "default": "VERIFIED"
+          },
+          "validationWarnings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Validationwarnings"
+          },
+          "requestedCount": {
+            "type": "integer",
+            "title": "Requestedcount",
+            "default": 0
+          },
+          "savedCount": {
+            "type": "integer",
+            "title": "Savedcount",
+            "default": 0
+          },
+          "warningCount": {
+            "type": "integer",
+            "title": "Warningcount",
+            "default": 0
           }
         },
         "type": "object",
@@ -2889,6 +3594,46 @@
           "totalPages"
         ],
         "title": "PaginationDto"
+      },
+      "QuizCitationOutput": {
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "title": "Sourceid"
+          },
+          "evidenceQuote": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Evidencequote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceId",
+          "evidenceQuote"
+        ],
+        "title": "QuizCitationOutput"
+      },
+      "QuizOptionOutput": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "correct": {
+            "type": "boolean",
+            "title": "Correct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "correct"
+        ],
+        "title": "QuizOptionOutput"
       },
       "QuizQuestionCounts": {
         "properties": {
@@ -3465,6 +4210,22 @@
           "text": {
             "type": "string",
             "title": "Text"
+          },
+          "rawText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawtext"
+          },
+          "mathEnhanced": {
+            "type": "boolean",
+            "title": "Mathenhanced",
+            "default": false
           }
         },
         "type": "object",
@@ -3584,6 +4345,21 @@
               }
             ],
             "title": "Indexedat"
+          },
+          "mathExtractionStatus": {
+            "type": "string",
+            "title": "Mathextractionstatus",
+            "default": "NOT_DETECTED"
+          },
+          "mathFormulaCount": {
+            "type": "integer",
+            "title": "Mathformulacount",
+            "default": 0
+          },
+          "mathWarningCount": {
+            "type": "integer",
+            "title": "Mathwarningcount",
+            "default": 0
           }
         },
         "type": "object",

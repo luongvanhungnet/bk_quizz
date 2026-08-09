@@ -5,6 +5,7 @@ import com.genquiz.bk.config.RagProperties;
 import com.genquiz.bk.config.QuizGenerationBatchProperties;
 import com.genquiz.bk.source.SourceService;
 import com.genquiz.bk.quiz.QuizService;
+import com.genquiz.bk.quiz.QuizGenerationOperation;
 import com.genquiz.bk.rag.RagServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.net.InetAddress;
 import java.time.Duration;
@@ -97,6 +99,10 @@ public class JobWorker {
             if (exception instanceof RagServiceException rag && rag.upstreamRequestId() != null) {
                 log.error("RAG upstream requestId={} cho job {}.", rag.upstreamRequestId(), job.getId());
             }
+            if (exception instanceof RagServiceException rag && rag.details() != null) {
+                log.warn("RAG failure details jobId={} code={} fields={}",
+                        job.getId(), rag.code(), safeRagDetailSummary(rag.details()));
+            }
             String code = safeCode(job.getType(), exception);
             String message = safeMessage(job.getType(), exception);
             boolean terminal = job.getAttempts() >= job.getMaxAttempts()
@@ -107,7 +113,10 @@ public class JobWorker {
                     && terminal) {
                 sources.markFailed(job.getResourceId(), code, message);
             }
-            if (job.getType() == JobType.QUIZ_GENERATION && terminal) {
+            if (job.getType() == JobType.QUIZ_GENERATION
+                    && terminal
+                    && QuizGenerationOperation.fromPayload(job.getPayload())
+                    != QuizGenerationOperation.APPEND) {
                 quizzes.markFailed(job.getResourceId(), code, message);
             }
             if (exception instanceof NonRetryableJobException
@@ -145,9 +154,14 @@ public class JobWorker {
             case "RAG_CONTEXT_INSUFFICIENT" -> "Tài liệu không có đủ thông tin để sinh quiz.";
             case "RAG_INDEX_INCONSISTENT" -> "Chỉ mục tài liệu không nhất quán. Vui lòng lập chỉ mục lại.";
             case "RAG_DOCUMENT_TEXT_INSUFFICIENT" -> "Tài liệu có quá ít nội dung hữu ích để sinh quiz.";
+            case "COGNITIVE_CONSTRAINT_VIOLATION" -> "Một số câu hỏi AI chưa đáp ứng mức độ tư duy đã chọn.";
             case "GROUNDED_QUIZ_INVALID" -> "AI không tạo được quiz có nguồn trích dẫn hợp lệ.";
+            case "INVALID_CITATION_QUOTE" -> "Một số câu hỏi chưa có nguồn trích dẫn đủ chắc chắn.";
             case "RAG_RATE_LIMITED" -> "Dịch vụ AI đang giới hạn yêu cầu. Vui lòng thử lại sau.";
             case "RAG_UNAVAILABLE" -> "Không thể kết nối dịch vụ RAG.";
+            case "RAG_STREAM_READ_TIMEOUT" -> "RAG không gửi trạng thái mới trước thời hạn chờ của backend.";
+            case "QUIZ_CITATION_SOURCE_FORBIDDEN" -> "Trích dẫn không thuộc nguồn đã chọn cho Quiz.";
+            case "RAG_CONTRACT_MISMATCH" -> "Backend và dịch vụ RAG chưa dùng cùng contract sinh quiz.";
             default -> "Không thể hoàn tất tác vụ. Vui lòng thử lại.";
         };
     }
@@ -156,7 +170,33 @@ public class JobWorker {
         catch (Exception ignored) { return "worker"; }
     }
 
+    private static String safeRagDetailSummary(tools.jackson.databind.JsonNode details) {
+        if (details.isArray()) {
+            var values = new java.util.ArrayList<String>();
+            for (tools.jackson.databind.JsonNode detail : details) {
+                String field = detail.path("field").stringValue("");
+                String type = detail.path("type").stringValue("");
+                if (!field.isBlank() || !type.isBlank()) values.add(field + ":" + type);
+            }
+            return values.toString();
+        }
+        return "expected=" + details.path("expectedContract").stringValue("unknown")
+                + ",actual=" + details.path("actualContract").stringValue("unknown")
+                + ",build=" + details.path("actualBuildRevision").stringValue("unknown");
+    }
+
     static String failureCode(JobType type, Exception exception) {
+        if (type == JobType.QUIZ_GENERATION
+                && exception instanceof ResponseStatusException response
+                && response.getReason() != null
+                && java.util.Set.of(
+                        "QUIZ_CHANGED_DURING_GENERATION",
+                        "QUIZ_QUESTION_LIMIT_EXCEEDED",
+                        "DUPLICATE_QUESTION_PROMPT",
+                        "QUIZ_CITATION_SOURCE_FORBIDDEN")
+                .contains(response.getReason())) {
+            return response.getReason();
+        }
         if (type == JobType.QUIZ_GENERATION && exception instanceof DataIntegrityViolationException) {
             return "QUIZ_PERSISTENCE_FAILED";
         }
@@ -170,6 +210,14 @@ public class JobWorker {
     static boolean isPermanentFailure(JobType type, Exception exception) {
         return type == JobType.QUIZ_GENERATION
                 && (exception instanceof DataIntegrityViolationException
+                || (exception instanceof ResponseStatusException response
+                && response.getReason() != null
+                && java.util.Set.of(
+                        "QUIZ_CHANGED_DURING_GENERATION",
+                        "QUIZ_QUESTION_LIMIT_EXCEEDED",
+                        "DUPLICATE_QUESTION_PROMPT",
+                        "QUIZ_CITATION_SOURCE_FORBIDDEN")
+                .contains(response.getReason()))
                 || (exception instanceof IllegalArgumentException
                 && "QUESTION_DIFFICULTY_INVALID".equals(exception.getMessage())));
     }

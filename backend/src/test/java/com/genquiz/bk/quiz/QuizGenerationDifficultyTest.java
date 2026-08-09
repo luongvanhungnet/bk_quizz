@@ -16,4 +16,33 @@ class QuizGenerationDifficultyTest {
         assertEquals(Difficulty.MEDIUM,
                 QuizGenerationHandler.resolveQuestionDifficulty("MEDIUM", Difficulty.MIXED, 0, 4));
     }
+
+
+    @Test
+    void distinguishesCognitiveRepairWaitingFromProviderRetry() {
+        assertEquals(
+                "WAITING_COGNITIVE_RETRY",
+                QuizGenerationHandler.retryStage(
+                        "COGNITIVE_CONSTRAINT_VIOLATION", true));
+        assertEquals(
+                "WAITING_GEMINI_RETRY",
+                QuizGenerationHandler.retryStage("GEMINI_TIMEOUT", true));
+        assertEquals(
+                "WAITING_CITATION_RETRY",
+                QuizGenerationHandler.retryStage("INVALID_CITATION_QUOTE", true));
+        assertEquals(
+                "WAITING_RAG_RETRY",
+                QuizGenerationHandler.retryStage("RAG_TRANSIENT_ERROR", true));
+        assertEquals(
+                "WAITING_RAG_RETRY",
+                QuizGenerationHandler.retryStage(
+                        "RAG_STREAM_READ_TIMEOUT", true));
+        assertEquals(
+                "BATCH_FAILED",
+                QuizGenerationHandler.retryStage("RAG_INTERNAL_ERROR", false));
+        assertEquals(
+                "BATCH_FAILED",
+                QuizGenerationHandler.retryStage(
+                        "COGNITIVE_CONSTRAINT_VIOLATION", false));
+    }
 }

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.IntStream;
+import java.util.concurrent.atomic.AtomicReference;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
@@ -65,7 +66,7 @@ public class QuizGenerationHandler implements JobHandler {
             JobService jobs) {
         this(quizzes, commit, sources, mapper, rag, jobs,
                 new QuizGenerationBatchProperties(
-                        4, 3, Duration.ofMinutes(5), Duration.ofSeconds(15)));
+                        20, 3, Duration.ofMinutes(5), Duration.ofSeconds(15)));
     }
 
     @Override
@@ -77,7 +78,11 @@ public class QuizGenerationHandler implements JobHandler {
     public String handle(Job job) throws Exception {
         JsonNode payload = mapper.readTree(job.getPayload());
         UUID quizId = UUID.fromString(payload.path("quizId").stringValue());
-        quizzes.markGenerating(quizId);
+        QuizGenerationOperation operation = QuizGenerationOperation.valueOf(
+                payload.path("operation").stringValue("CREATE"));
+        if (operation == QuizGenerationOperation.CREATE) {
+            quizzes.markGenerating(quizId);
+        }
         jobs.progress(job.getId(), 10, "RETRIEVING");
         List<SourceDocument> selected = selectedSources(payload);
         if (selected.stream().anyMatch(source -> source.getRagDocumentId() == null)) {
@@ -89,11 +94,12 @@ public class QuizGenerationHandler implements JobHandler {
                 countNode.path("singleChoice").asInt(),
                 countNode.path("multipleSelect").asInt(),
                 countNode.path("fillBlank").asInt());
-        Difficulty quizDifficulty = Difficulty.valueOf(
-                payload.path("difficulty").stringValue());
+        CognitiveMode cognitiveMode = payload.hasNonNull("cognitiveMode")
+                ? CognitiveMode.valueOf(payload.path("cognitiveMode").stringValue())
+                : legacyMode(Difficulty.valueOf(payload.path("difficulty").stringValue()));
         List<QuizGenerationBatchPlanner.BatchPlan> plans =
                 QuizGenerationBatchPlanner.plan(
-                        expected, quizDifficulty, batchProperties.batchMaxQuestions());
+                        expected, cognitiveMode, batchProperties.batchMaxQuestions());
         String fingerprint = fingerprint(payload, selected);
         QuizGenerationCheckpoint checkpoint = readCheckpoint(
                 job.getCheckpointPayload(), fingerprint, plans);
@@ -125,15 +131,42 @@ public class QuizGenerationHandler implements JobHandler {
                         0, generated.questions().size())
                 .mapToObj(index -> mapQuestion(
                         generated.questions().get(index),
-                        resolveQuestionDifficulty(
-                                generated.questions().get(index).difficulty(),
-                                quizDifficulty, index, generated.questions().size())))
+                        resolveCognitiveLevel(generated.questions().get(index),
+                                plans.stream().flatMap(plan -> plan.levels().stream()).toList().get(index))))
                 .toList();
         jobs.progress(job.getId(), 95, "COMMITTING");
-        commit.replaceGroundedAndComplete(quizId, questions, expected);
+        AiValidationStatus generatedStatus = validationStatus(generated);
+        List<QuizDtos.AiValidationWarning> generatedWarnings = validationWarnings(generated);
+        boolean hasQualityWarnings = generatedStatus == AiValidationStatus.WARNING
+                || !generatedWarnings.isEmpty();
+        if (operation == QuizGenerationOperation.APPEND) {
+            if (hasQualityWarnings) {
+                commit.appendGroundedAndComplete(
+                        quizId, questions, expected,
+                        payload.path("baseQuizVersion").asLong(),
+                        payload.path("baseQuestionCount").asLong(),
+                        payload.path("baseQuestionFingerprint").stringValue(),
+                        generatedStatus, generatedWarnings);
+            } else {
+                commit.appendGroundedAndComplete(
+                        quizId, questions, expected,
+                        payload.path("baseQuizVersion").asLong(),
+                        payload.path("baseQuestionCount").asLong(),
+                        payload.path("baseQuestionFingerprint").stringValue());
+            }
+        } else {
+            if (hasQualityWarnings) {
+                commit.replaceGroundedAndComplete(
+                        quizId, questions, expected, generatedStatus, generatedWarnings);
+            } else {
+                commit.replaceGroundedAndComplete(quizId, questions, expected);
+            }
+        }
         return mapper.writeValueAsString(Map.of(
                 "quizId", quizId,
-                "questionCount", questions.size(),
+                "requestedCount", expected.total(),
+                "savedCount", questions.size(),
+                "warningCount", nullableInt(generated.warningCount()),
                 "batchCount", checkpoint.batches().size(),
                 "model", generated.model(),
                 "usage", generated.usage()));
@@ -145,6 +178,7 @@ public class QuizGenerationHandler implements JobHandler {
             List<SourceDocument> selected,
             QuizGenerationCheckpoint checkpoint,
             int batchIndex) throws Exception {
+        rag.requireQuizGenerationContract();
         QuizGenerationCheckpoint.BatchState batch =
                 checkpoint.batches().get(batchIndex);
         checkpoint = checkpoint.recordAttempt(batchIndex);
@@ -161,24 +195,46 @@ public class QuizGenerationHandler implements JobHandler {
                 selected.stream().map(SourceDocument::getRagDocumentId).toList(),
                 payload.path("title").stringValue(),
                 payload.path("difficulty").stringValue(),
+                cognitiveMode(payload).name(),
                 batch.counts(),
                 batchIndex,
                 checkpoint.batches().size(),
-                batch.difficultyPlan(),
-                checkpoint.excludedPrompts());
+                null,
+                questionPlan(batch),
+                excludedPrompts(payload, checkpoint),
+                batch.partialQuestions() == null
+                        ? mapper.createArrayNode()
+                        : batch.partialQuestions());
+        AtomicReference<QuizGenerationCheckpoint> checkpointRef =
+                new AtomicReference<>(checkpoint);
         try {
             RagDtos.GeneratedQuiz generated =
-                    rag.generate(job.getSubjectUserId(), request);
-            checkpoint = checkpoint.complete(batchIndex, generated);
+                    rag.generateStreaming(
+                            job.getSubjectUserId(), job.getId(), request,
+                            acceptedQuestions -> {
+                                QuizGenerationCheckpoint updated =
+                                        checkpointRef.get().partial(
+                                                batchIndex, acceptedQuestions);
+                                try {
+                                    saveCheckpoint(job, updated);
+                                } catch (Exception exception) {
+                                    throw new IllegalStateException(
+                                            "Không thể lưu checkpoint Cognitive.", exception);
+                                }
+                                checkpointRef.set(updated);
+                            });
+            generated = checkpointRef.get().restorePartialAccounting(
+                    batchIndex, generated);
+            checkpoint = checkpointRef.get().complete(batchIndex, generated);
             saveCheckpoint(job, checkpoint);
             return checkpoint;
         } catch (RagServiceException exception) {
+            checkpoint = checkpointRef.get();
             checkpoint = checkpoint.fail(
                     batchIndex, exception.code(), exception.upstreamRequestId());
             saveCheckpoint(job, checkpoint);
             jobs.progress(job.getId(), generationProgress(completed, totalQuestions),
-                    batchStep(exception.retryable()
-                                    ? "WAITING_GEMINI_RETRY" : "BATCH_FAILED",
+                    batchStep(retryStage(exception.code(), exception.retryable()),
                             batchIndex, checkpoint.batches().size(),
                             completed, totalQuestions));
             if (exception.retryable()
@@ -194,6 +250,27 @@ public class QuizGenerationHandler implements JobHandler {
             }
             throw exception;
         }
+    }
+
+    static String retryStage(String errorCode, boolean retryable) {
+        if (!retryable) return "BATCH_FAILED";
+        return switch (errorCode) {
+            case "COGNITIVE_CONSTRAINT_VIOLATION" -> "WAITING_COGNITIVE_RETRY";
+            case "INVALID_CITATION_QUOTE" -> "WAITING_CITATION_RETRY";
+            case "RAG_TRANSIENT_ERROR", "RAG_STREAM_INTERRUPTED",
+                    "RAG_STREAM_FAILED", "RAG_STREAM_READ_TIMEOUT",
+                    "RAG_UNAVAILABLE" -> "WAITING_RAG_RETRY";
+            default -> "WAITING_GEMINI_RETRY";
+        };
+    }
+
+    private List<String> excludedPrompts(
+            JsonNode payload, QuizGenerationCheckpoint checkpoint) {
+        var prompts = new ArrayList<String>();
+        payload.path("existingPrompts")
+                .forEach(value -> prompts.add(value.stringValue()));
+        prompts.addAll(checkpoint.excludedPrompts());
+        return List.copyOf(prompts);
     }
 
     private List<SourceDocument> selectedSources(JsonNode payload) {
@@ -239,12 +316,30 @@ public class QuizGenerationHandler implements JobHandler {
             batch.generated().usage().forEach(
                     (key, value) -> usage.merge(key, value, Integer::sum));
         }
+        List<RagDtos.QuizValidationWarning> warnings = checkpoint.batches().stream()
+                .map(QuizGenerationCheckpoint.BatchState::generated)
+                .filter(java.util.Objects::nonNull)
+                .flatMap(value -> value.validationWarnings() == null
+                        ? java.util.stream.Stream.empty()
+                        : value.validationWarnings().stream())
+                .toList();
+        int requestedCount = checkpoint.batches().stream()
+                .map(QuizGenerationCheckpoint.BatchState::generated)
+                .filter(java.util.Objects::nonNull)
+                .mapToInt(value -> value.requestedCount() == null
+                        ? (value.questions() == null ? 0 : value.questions().size())
+                        : value.requestedCount()).sum();
+        int warningCount = (int) questions.stream()
+                .filter(value -> "WARNING".equals(value.validationStatus())).count();
         return new RagDtos.GeneratedQuiz(
-                questions, model == null ? "unknown" : model, Map.copyOf(usage));
+                questions, model == null ? "unknown" : model, Map.copyOf(usage),
+                warningCount > 0 ? "WARNING" : "VERIFIED", warnings,
+                requestedCount == 0 ? questions.size() : requestedCount,
+                questions.size(), warningCount);
     }
 
     private QuizDtos.GroundedQuestion mapQuestion(
-            RagDtos.GeneratedQuestion value, Difficulty difficulty) {
+            RagDtos.GeneratedQuestion value, CognitiveLevel level) {
         QuestionType type = QuestionType.valueOf(value.type());
         List<QuizDtos.OptionRequest> options = value.options() == null
                 ? List.of()
@@ -253,26 +348,70 @@ public class QuizGenerationHandler implements JobHandler {
         List<String> accepted = value.acceptedAnswers() == null
                 ? List.of() : value.acceptedAnswers();
         List<QuizDtos.CitationRequest> citations = new ArrayList<>();
-        value.questionCitations().forEach(citation -> citations.add(
+        safe(value.questionCitations()).forEach(citation -> citations.add(
                 new QuizDtos.CitationRequest(
                         citation.chunkId(), CitationRole.QUESTION,
-                        citation.evidenceQuote())));
-        value.answerCitations().forEach(citation -> citations.add(
+                        citation.evidenceQuote(), citation.documentId(), citation.chunkIndex(),
+                        citation.pageNumber(), citation.slideNumber(), citation.heading(),
+                        citation.chunkText(), citation.rawText(), citation.mathEnhanced(),
+                        citation.snapshotFingerprint())));
+        safe(value.answerCitations()).forEach(citation -> citations.add(
                 new QuizDtos.CitationRequest(
                         citation.chunkId(), CitationRole.ANSWER,
-                        citation.evidenceQuote())));
-        value.explanationCitations().forEach(citation -> citations.add(
+                        citation.evidenceQuote(), citation.documentId(), citation.chunkIndex(),
+                        citation.pageNumber(), citation.slideNumber(), citation.heading(),
+                        citation.chunkText(), citation.rawText(), citation.mathEnhanced(),
+                        citation.snapshotFingerprint())));
+        safe(value.explanationCitations()).forEach(citation -> citations.add(
                 new QuizDtos.CitationRequest(
                         citation.chunkId(), CitationRole.EXPLANATION,
-                        citation.evidenceQuote())));
-        if (citations.isEmpty()) {
-            throw new IllegalArgumentException("GROUNDING_CITATION_REQUIRED");
-        }
-        UUID primary = citations.get(0).sourceChunkId();
+                        citation.evidenceQuote(), citation.documentId(), citation.chunkIndex(),
+                        citation.pageNumber(), citation.slideNumber(), citation.heading(),
+                        citation.chunkText(), citation.rawText(), citation.mathEnhanced(),
+                        citation.snapshotFingerprint())));
+        UUID primary = citations.isEmpty() ? null : citations.get(0).sourceChunkId();
+        RagDtos.ComplexityProfile generatedProfile = value.complexityProfile();
+        CognitiveProfile profile = generatedProfile == null
+                ? new CognitiveProfile(0, 0, false, false, false, List.of(), null, false)
+                : new CognitiveProfile(generatedProfile.conceptCount(), generatedProfile.reasoningStepCount(),
+                generatedProfile.requiresNovelScenario(), generatedProfile.answerDirectlyPresent(),
+                generatedProfile.requiresComparison(), generatedProfile.conceptsUsed(),
+                generatedProfile.novelScenarioSummary(), value.complexityVerified());
+        if (profile.verified()) CognitivePolicy.validate(level, profile);
         var question = new QuizDtos.QuestionRequest(
                 type, value.prompt(), value.explanation(), BigDecimal.ONE,
-                difficulty, primary, options, accepted);
-        return new QuizDtos.GroundedQuestion(question, citations);
+                null, level, profile, primary, options, accepted);
+        List<QuizDtos.AiValidationWarning> warnings = value.validationWarnings() == null
+                ? List.of()
+                : value.validationWarnings().stream().map(item ->
+                new QuizDtos.AiValidationWarning(
+                        item.code(), item.role(), item.expected(), item.actual(),
+                        item.sourceId(), item.message())).toList();
+        AiValidationStatus status = "WARNING".equals(value.validationStatus())
+                ? AiValidationStatus.WARNING : AiValidationStatus.VERIFIED;
+        return new QuizDtos.GroundedQuestion(question, citations, status, warnings);
+    }
+
+    private static <T> List<T> safe(List<T> values) {
+        return values == null ? List.of() : values;
+    }
+
+    private static int nullableInt(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private static AiValidationStatus validationStatus(RagDtos.GeneratedQuiz generated) {
+        return "WARNING".equals(generated.validationStatus())
+                ? AiValidationStatus.WARNING : AiValidationStatus.VERIFIED;
+    }
+
+    private static List<QuizDtos.AiValidationWarning> validationWarnings(
+            RagDtos.GeneratedQuiz generated) {
+        if (generated.validationWarnings() == null) return List.of();
+        return generated.validationWarnings().stream().map(item ->
+                new QuizDtos.AiValidationWarning(
+                        item.code(), item.role(), item.expected(), item.actual(),
+                        item.sourceId(), item.message())).toList();
     }
 
     static Difficulty resolveQuestionDifficulty(
@@ -301,6 +440,68 @@ public class QuizGenerationHandler implements JobHandler {
             case 0 -> Difficulty.EASY;
             case 1 -> Difficulty.MEDIUM;
             default -> Difficulty.HARD;
+        };
+    }
+
+    private static CognitiveLevel resolveCognitiveLevel(
+            RagDtos.GeneratedQuestion generated, CognitiveLevel planned) {
+        if (generated.cognitiveLevel() == null || generated.cognitiveLevel().isBlank()) return planned;
+        CognitiveLevel actual;
+        try {
+            actual = CognitiveLevel.valueOf(generated.cognitiveLevel());
+        } catch (IllegalArgumentException exception) {
+            throw new IllegalArgumentException("COGNITIVE_LEVEL_INVALID", exception);
+        }
+        if (actual != planned) throw new IllegalArgumentException("COGNITIVE_PLAN_INVALID");
+        return actual;
+    }
+
+    private static CognitiveMode legacyMode(Difficulty difficulty) {
+        return switch (difficulty) {
+            case EASY -> CognitiveMode.L1;
+            case MEDIUM -> CognitiveMode.L3;
+            case HARD -> CognitiveMode.L5;
+            case MIXED -> CognitiveMode.BALANCED;
+        };
+    }
+
+    private static CognitiveMode cognitiveMode(JsonNode payload) {
+        return payload.hasNonNull("cognitiveMode")
+                ? CognitiveMode.valueOf(payload.path("cognitiveMode").stringValue())
+                : legacyMode(Difficulty.valueOf(payload.path("difficulty").stringValue()));
+    }
+
+    private static List<RagDtos.QuestionPlan> questionPlan(QuizGenerationCheckpoint.BatchState batch) {
+        List<String> types = new ArrayList<>();
+        int[] remaining = {batch.counts().singleChoice(), batch.counts().multipleSelect(),
+                batch.counts().fillBlank()};
+        String[] names = {"SINGLE_CHOICE", "MULTIPLE_SELECT", "FILL_BLANK"};
+        int cursor = 0;
+        while (types.size() < batch.difficultyPlan().size()) {
+            for (int offset = 0; offset < 3; offset++) {
+                int candidate = (cursor + offset) % 3;
+                if (remaining[candidate] > 0) {
+                    types.add(names[candidate]);
+                    remaining[candidate]--;
+                    cursor = (candidate + 1) % 3;
+                    break;
+                }
+            }
+        }
+        return IntStream.range(0, batch.difficultyPlan().size()).mapToObj(index -> {
+            CognitiveLevel level = CognitiveLevel.valueOf(batch.difficultyPlan().get(index));
+            return new RagDtos.QuestionPlan("B" + (batch.index() + 1) + "Q" + (index + 1),
+                    types.get(index), level.name(), constraint(level));
+        }).toList();
+    }
+
+    private static RagDtos.CognitiveConstraint constraint(CognitiveLevel level) {
+        return switch (level) {
+            case L1 -> new RagDtos.CognitiveConstraint("L1", 1, 1, 0, 0, false, true, false, 1, 2);
+            case L2 -> new RagDtos.CognitiveConstraint("L2", 1, 2, 1, 1, false, false, false, 3, 4);
+            case L3 -> new RagDtos.CognitiveConstraint("L3", 1, 2, 1, 2, true, false, false, 5, 7);
+            case L4 -> new RagDtos.CognitiveConstraint("L4", 2, 4, 2, 3, true, false, true, 8, 10);
+            case L5 -> new RagDtos.CognitiveConstraint("L5", 3, 6, 3, 5, true, false, true, 11, null);
         };
     }
 

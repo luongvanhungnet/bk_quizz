@@ -114,7 +114,10 @@ public class AdminService {
     @Transactional(readOnly = true)
     public java.util.List<java.util.Map<String,Object>> content(String type) {
         String table=switch(type.toLowerCase()){case "topics"->"topics";case "quizzes"->"quizzes";case "classrooms"->"classrooms";default->throw new ApiException(HttpStatus.BAD_REQUEST,"INVALID_CONTENT_TYPE","Loại nội dung không hợp lệ.");};
-        return jdbc.queryForList("select id, owner_id, "+(table.equals("quizzes")?"title":"name".replace("name",table.equals("topics")?"title":"name"))+" as title, moderation_status, moderation_reason, created_at from "+table+" order by created_at desc limit 100");
+        String aiValidation = table.equals("quizzes")
+                ? ", ai_validation_status, jsonb_array_length(ai_validation_warnings) as ai_validation_warning_count"
+                : "";
+        return jdbc.queryForList("select id, owner_id, "+(table.equals("quizzes")?"title":"name".replace("name",table.equals("topics")?"title":"name"))+" as title, moderation_status, moderation_reason"+aiValidation+", created_at from "+table+" order by created_at desc limit 100");
     }
 
     @Transactional

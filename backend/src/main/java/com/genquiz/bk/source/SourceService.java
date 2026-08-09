@@ -123,7 +123,7 @@ public class SourceService {
     public void completeExtraction(UUID sourceId, String extractedText) {
         SourceDocument source = require(sourceId);
         source.completeExtraction(extractedText, Instant.now());
-        chunks.deleteBySourceDocumentId(sourceId);
+        chunks.deactivateBySourceDocumentId(sourceId);
         chunks.saveAll(chunk(sourceId, source.getTopicId(), extractedText));
     }
 
@@ -160,12 +160,31 @@ public class SourceService {
         String indexedText = ragChunks.stream()
                 .map(RagDtos.Chunk::text)
                 .collect(java.util.stream.Collectors.joining("\n\n"));
-        chunks.deleteBySourceDocumentId(sourceId);
-        chunks.saveAll(ragChunks.stream().map(chunk -> new SourceChunk(chunk.chunkId(), sourceId,
-                source.getTopicId(), chunk.chunkIndex(), chunk.text(), Math.max(1, chunk.text().split("\\s+").length),
-                chunk.pageNumber(), chunk.slideNumber(), chunk.heading())).toList());
+        chunks.deactivateBySourceDocumentId(sourceId);
+        chunks.saveAll(ragChunks.stream().map(chunk -> {
+            String fingerprint = snapshotFingerprint(chunk.documentId(), chunk.chunkId(),
+                    chunk.chunkIndex(), chunk.text());
+            SourceChunk value = chunks.findById(chunk.chunkId()).orElse(null);
+            if (value == null) {
+                return new SourceChunk(chunk.chunkId(), sourceId, source.getTopicId(),
+                        chunk.chunkIndex(), chunk.text(),
+                        Math.max(1, chunk.text().split("\\s+").length),
+                        chunk.pageNumber(), chunk.slideNumber(), chunk.heading(),
+                        chunk.rawText(), chunk.mathEnhanced(), fingerprint);
+            }
+            if (!value.getSourceDocumentId().equals(sourceId)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "RAG_CHUNK_ID_CONFLICT");
+            }
+            value.refreshSnapshot(chunk.chunkIndex(), chunk.text(),
+                    Math.max(1, chunk.text().split("\\s+").length),
+                    chunk.pageNumber(), chunk.slideNumber(), chunk.heading(),
+                    chunk.rawText(), chunk.mathEnhanced(), fingerprint);
+            return value;
+        }).toList());
         source.completeRagIndex(document.pageCount() == null ? 0 : document.pageCount(), ragChunks.size(),
-                indexedText, Instant.now());
+                indexedText, document.mathExtractionStatus(), document.mathFormulaCount(),
+                document.mathWarningCount(), Instant.now());
     }
 
     @Transactional
@@ -231,6 +250,19 @@ public class SourceService {
             if (end == words.length) break;
         }
         return result;
+    }
+
+    private static String snapshotFingerprint(UUID documentId, UUID chunkId,
+                                              int chunkIndex, String text) {
+        try {
+            var digest = java.security.MessageDigest.getInstance("SHA-256");
+            String value = documentId + "\u0000" + chunkId + "\u0000"
+                    + chunkIndex + "\u0000" + text;
+            return java.util.HexFormat.of().formatHex(
+                    digest.digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException(exception);
+        }
     }
 
     public record UploadResult(SourceDocument source, Job job) {}

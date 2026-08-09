@@ -9,11 +9,16 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.domain.Pageable;
 public interface JobRepository extends JpaRepository<Job, UUID> {
     Optional<Job> findByIdAndSubjectUserId(UUID id, UUID subjectUserId);
     Optional<Job> findByIdempotencyKey(String idempotencyKey);
     Optional<Job> findFirstByResourceIdAndSubjectUserIdAndTypeOrderByCreatedAtDesc(
             UUID resourceId, UUID subjectUserId, JobType type);
+    List<Job> findByResourceIdAndSubjectUserIdAndTypeOrderByCreatedAtDesc(
+            UUID resourceId, UUID subjectUserId, JobType type, Pageable pageable);
+    boolean existsByResourceIdAndTypeAndStatusIn(
+            UUID resourceId, JobType type, Set<JobStatus> statuses);
 
     @Query(value = """
             select * from jobs

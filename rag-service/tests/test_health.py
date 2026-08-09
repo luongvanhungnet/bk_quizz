@@ -16,12 +16,84 @@ class HealthGeminiService:
         max_output_tokens: int | None = None,
         trace_id: str | None = None,
         thinking_level: types.ThinkingLevel | None = None,
+        response_schema: object | None = None,
     ) -> GeminiResult:
-        assert message == "Chỉ trả lời đúng một từ: OK"
+        assert message == "Trả về JSON xác nhận trạng thái kết nối."
         assert temperature == 0
-        assert max_output_tokens == 64
+        assert max_output_tokens == 256
         assert thinking_level == types.ThinkingLevel.MINIMAL
-        return GeminiResult("OK", "test-model", TokenUsage(1, 1, 2))
+        assert response_schema is not None
+        return GeminiResult('{"status":"OK"}', "test-model", TokenUsage(1, 1, 2))
+
+
+class HealthQuizRouter:
+    async def health(self):
+        return {
+            "gemini_api_key": {"configured": True},
+            "gemini_oauth": {"configured": True},
+            "ollama": {
+                "configured": True,
+                "reachable": True,
+                "model": "qwen3:1.7b",
+                "modelAvailable": True,
+            },
+        }
+
+
+def test_llm_health_reports_batch_configuration_and_provider_order(
+    settings: Settings,
+) -> None:
+    configured = settings.model_copy(update={
+        "gemini_batch_size": 10,
+        "gemini_oauth_timeout_seconds": 120,
+        "ollama_max_questions_per_call": 2,
+        "ollama_max_output_tokens": 2400,
+    })
+    with TestClient(create_app(
+        settings=configured,
+        quiz_llm_router=HealthQuizRouter(),
+    )) as client:
+        response = client.get(
+            "/api/v1/health/llm",
+            headers={"X-Internal-API-Key": "test-internal-key"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["providerOrder"] == [
+        "gemini_api_key",
+        "gemini_oauth",
+        "ollama",
+    ]
+    assert body["geminiBatchSize"] == 10
+    assert body["geminiOAuthTimeoutSeconds"] == 120
+    assert body["ollamaMaxQuestionsPerCall"] == 2
+    assert body["ollamaMaxOutputTokens"] == 2400
+
+
+def test_v2_capabilities_require_internal_key_and_report_generation_contract(
+    client: TestClient,
+) -> None:
+    unauthorized = client.get("/api/v2/capabilities")
+    assert unauthorized.status_code == 401
+
+    response = client.get(
+        "/api/v2/capabilities",
+        headers={"X-Internal-API-Key": "test-internal-key"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "quizGenerationContract": "cognitive-repair-v1",
+        "capabilities": {
+            "questionPlan": True,
+            "acceptedQuestions": True,
+                "streaming": True,
+                "partialCognitiveRepair": True,
+                "structuredOutputCheckpoint": True,
+            },
+        "buildRevision": "development",
+    }
 
 
 def test_health_is_public_and_does_not_require_gemini(client: TestClient) -> None:
@@ -67,6 +139,7 @@ def test_gemini_health_calls_configured_service(settings: Settings) -> None:
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
     assert response.json()["model"] == "test-model"
+    assert response.json()["credentialSource"] == "injected"
     assert response.json()["message"] == "Kết nối Gemini hoạt động bình thường."
 
 

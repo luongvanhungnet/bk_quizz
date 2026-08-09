@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SourceDocumentRepository extends JpaRepository<SourceDocument, UUID> {
     List<SourceDocument> findByTopicIdAndDeletedAtIsNullOrderByCreatedAtDesc(UUID topicId);
     Optional<SourceDocument> findByIdAndDeletedAtIsNull(UUID id);
+    Optional<SourceDocument> findByRagDocumentIdAndDeletedAtIsNull(UUID ragDocumentId);
     List<SourceDocument> findAllByIdInAndOwnerIdAndStatusAndDeletedAtIsNull(
             Collection<UUID> ids, UUID ownerId, SourceStatus status);
 }

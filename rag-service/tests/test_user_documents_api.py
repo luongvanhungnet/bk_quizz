@@ -1,9 +1,12 @@
+import asyncio
 import hashlib
+import json
 from pathlib import Path
 
 import numpy as np
 from fastapi.testclient import TestClient
 
+from app.api.routes.v2 import _stream_ndjson, _unexpected_stream_failure
 from app.core.exceptions import ServiceError
 from app.main import create_app
 from app.services.gemini_service import GeminiResult, TokenUsage
@@ -74,6 +77,27 @@ class CohesionQuizGemini:
         "acceptedAnswers":[],"questionCitations":[{"sourceId":"S1","evidenceQuote":"Functional Cohesion là loại cohesion"}],
         "answerCitations":[{"sourceId":"S1","evidenceQuote":"thực hiện một chức năng duy nhất"}],
         "explanationCitations":[{"sourceId":"S1","evidenceQuote":"module có trách nhiệm rõ ràng"}]}]}"""
+        return GeminiResult(answer, "test-model", TokenUsage(10, 10, 20))
+
+
+class CognitiveQuizGemini:
+    called = False
+
+    async def generate(self, message: str, **_: object) -> GeminiResult:
+        self.called = True
+        assert '"cognitiveLevel": "L1"' in message
+        answer = """{"questions":[{"type":"SINGLE_CHOICE","planSlotId":"B1Q1",
+        "cognitiveLevel":"L1","complexityProfile":{"conceptCount":1,
+        "reasoningStepCount":0,"requiresNovelScenario":false,
+        "answerDirectlyPresent":true,"requiresComparison":false,
+        "conceptsUsed":["RAG"],"novelScenarioSummary":null},
+        "prompt":"What does RAG combine?","explanation":"RAG combines retrieval and generation.",
+        "options":[{"text":"retrieval and generation","correct":true},
+        {"text":"sorting and caching","correct":false},{"text":"rendering and styling","correct":false},
+        {"text":"testing and deployment","correct":false}],"acceptedAnswers":[],
+        "questionCitations":[{"sourceId":"S1","evidenceQuote":"RAG combines retrieval and generation"}],
+        "answerCitations":[{"sourceId":"S1","evidenceQuote":"RAG combines retrieval and generation"}],
+        "explanationCitations":[{"sourceId":"S1","evidenceQuote":"RAG combines retrieval and generation"}]}]}"""
         return GeminiResult(answer, "test-model", TokenUsage(10, 10, 20))
 
 
@@ -252,6 +276,73 @@ def test_v2_chunks_and_grounded_quiz_include_location_and_citations(settings) ->
         assert question["questionCitations"][0]["chunkIndex"] == 0
         assert question["answerCitations"][0]["evidenceQuote"].startswith("Nguồn kiến thức")
         assert question["explanationCitations"][0]["chunkIndex"] == 0
+        streamed = client.post(
+            "/api/v2/user-rag/generate-quiz/stream",
+            headers=_headers("user-a"),
+            json={
+                "documentIds": [document_id],
+                "title": "RAG",
+                "difficulty": "EASY",
+                "questionCounts": {
+                    "singleChoice": 1,
+                    "multipleSelect": 0,
+                    "fillBlank": 0,
+                },
+            },
+        )
+        assert streamed.status_code == 200
+        assert streamed.headers["content-type"].startswith(
+            "application/x-ndjson"
+        )
+        events = [
+            json.loads(line)
+            for line in streamed.text.splitlines()
+            if line.strip()
+        ]
+        assert events[0]["stage"] == "RETRIEVING"
+        assert any(event["type"] == "PROVIDER_STARTED" for event in events)
+        assert events[-1]["type"] == "RESULT"
+
+
+def test_unexpected_stream_failure_is_terminal_and_keeps_safe_stage() -> None:
+    event = _unexpected_stream_failure(
+        request_id="job-123",
+        stage="MATCHING_CITATIONS",
+        error_id="rag-error-456",
+    )
+
+    assert event["errorCode"] == "RAG_INTERNAL_ERROR"
+    assert event["retryable"] is False
+    assert event["stage"] == "MATCHING_CITATIONS"
+    assert event["details"] == [{
+        "reason": "UNEXPECTED_INTERNAL_ERROR",
+        "stage": "MATCHING_CITATIONS",
+        "errorId": "rag-error-456",
+    }]
+
+
+def test_stream_emits_heartbeat_while_processing_is_silent() -> None:
+    async def scenario() -> list[dict[str, object]]:
+        queue: asyncio.Queue[dict[str, object] | None] = asyncio.Queue()
+
+        async def producer() -> None:
+            await asyncio.sleep(0.03)
+            await queue.put({"type": "RESULT", "data": {}})
+            await queue.put(None)
+
+        task = asyncio.create_task(producer())
+        chunks = [
+            chunk
+            async for chunk in _stream_ndjson(
+                queue, task, heartbeat_seconds=0.005
+            )
+        ]
+        return [json.loads(chunk) for chunk in chunks]
+
+    events = asyncio.run(scenario())
+
+    assert any(event["type"] == "HEARTBEAT" for event in events)
+    assert events[-1]["type"] == "RESULT"
 
 
 def test_grounded_quiz_uses_selected_document_below_search_threshold(settings) -> None:
@@ -293,7 +384,189 @@ def test_grounded_quiz_uses_selected_document_below_search_threshold(settings) -
         assert gemini.called is True
 
 
-def test_grounded_quiz_rejects_batches_larger_than_four(settings) -> None:
+def test_cognitive_question_plan_is_canonical_without_legacy_difficulty_plan(settings) -> None:
+    gemini = CognitiveQuizGemini()
+    with TestClient(create_app(
+        settings=settings,
+        embedding_service=DeterministicEmbedding(),
+        gemini_service=gemini,
+    )) as client:
+        uploaded = client.post(
+            "/api/v1/user-documents",
+            headers=_headers("user-a"),
+            files={"file": (
+                "cognitive.txt",
+                "RAG combines retrieval and generation. Retrieval finds relevant document "
+                "chunks and generation uses those chunks to create grounded answers with citations.",
+                "text/plain",
+            )},
+        )
+
+        generated = client.post(
+            "/api/v2/user-rag/generate-quiz",
+            headers=_headers("user-a"),
+            json={
+                "documentIds": [uploaded.json()["id"]],
+                "title": "RAG fundamentals",
+                "cognitiveMode": "BALANCED",
+                "questionCounts": {
+                    "singleChoice": 1, "multipleSelect": 0, "fillBlank": 0,
+                },
+                "batchIndex": 0,
+                "totalBatches": 1,
+                "questionPlan": [{
+                    "planSlotId": "B1Q1",
+                    "questionType": "SINGLE_CHOICE",
+                    "cognitiveLevel": "L1",
+                    "constraint": {
+                        "cognitiveLevel": "L1",
+                        "conceptMin": 1,
+                        "conceptMax": 1,
+                        "reasoningMin": 0,
+                        "reasoningMax": 0,
+                        "requiresNovelScenario": False,
+                        "answerDirectlyPresent": True,
+                        "requiresComparison": False,
+                        "scoreMin": 1,
+                        "scoreMax": 2,
+                    },
+                }],
+            },
+        )
+
+        assert generated.status_code == 200, generated.text
+        assert gemini.called is True
+        assert generated.json()["questions"][0]["cognitiveLevel"] == "L1"
+        assert generated.json()["questions"][0]["difficulty"] == "EASY"
+
+
+def test_cognitive_levels_are_rejected_in_deprecated_difficulty_plan(settings) -> None:
+    with TestClient(create_app(
+        settings=settings,
+        embedding_service=DeterministicEmbedding(),
+    )) as client:
+        response = client.post(
+            "/api/v2/user-rag/generate-quiz",
+            headers=_headers("user-a"),
+            json={
+                "documentIds": ["00000000-0000-0000-0000-000000000001"],
+                "title": "RAG",
+                "cognitiveMode": "BALANCED",
+                "questionCounts": {
+                    "singleChoice": 1, "multipleSelect": 0, "fillBlank": 0,
+                },
+                "difficultyPlan": ["L1"],
+            },
+        )
+
+        assert response.status_code == 422
+        assert response.json()["code"] == "COGNITIVE_PLAN_INVALID"
+        assert response.json()["retryable"] is False
+
+        conflicting = client.post(
+            "/api/v2/user-rag/generate-quiz",
+            headers=_headers("user-a"),
+            json={
+                "documentIds": ["00000000-0000-0000-0000-000000000001"],
+                "title": "RAG",
+                "cognitiveMode": "BALANCED",
+                "questionCounts": {
+                    "singleChoice": 1, "multipleSelect": 0, "fillBlank": 0,
+                },
+                "difficultyPlan": ["MEDIUM"],
+                "questionPlan": [{
+                    "planSlotId": "B1Q1",
+                    "questionType": "SINGLE_CHOICE",
+                    "cognitiveLevel": "L1",
+                    "constraint": {
+                        "cognitiveLevel": "L1",
+                        "conceptMin": 1,
+                        "conceptMax": 1,
+                        "reasoningMin": 0,
+                        "reasoningMax": 0,
+                        "requiresNovelScenario": False,
+                        "answerDirectlyPresent": True,
+                        "requiresComparison": False,
+                        "scoreMin": 1,
+                        "scoreMax": 2,
+                    },
+                }],
+            },
+        )
+        assert conflicting.status_code == 422
+        assert conflicting.json()["code"] == "COGNITIVE_PLAN_INVALID"
+
+
+def test_invalid_cognitive_checkpoint_has_a_specific_error_code(settings) -> None:
+    with TestClient(create_app(
+        settings=settings,
+        embedding_service=DeterministicEmbedding(),
+    )) as client:
+        response = client.post(
+            "/api/v2/user-rag/generate-quiz",
+            headers=_headers("user-a"),
+            json={
+                "documentIds": ["00000000-0000-0000-0000-000000000001"],
+                "title": "RAG",
+                "cognitiveMode": "L1",
+                "questionCounts": {
+                    "singleChoice": 1, "multipleSelect": 0, "fillBlank": 0,
+                },
+                "questionPlan": [{
+                    "planSlotId": "B1Q1",
+                    "questionType": "SINGLE_CHOICE",
+                    "cognitiveLevel": "L1",
+                    "constraint": {
+                        "cognitiveLevel": "L1",
+                        "conceptMin": 1,
+                        "conceptMax": 1,
+                        "reasoningMin": 0,
+                        "reasoningMax": 0,
+                        "requiresNovelScenario": False,
+                        "answerDirectlyPresent": True,
+                        "requiresComparison": False,
+                        "scoreMin": 1,
+                        "scoreMax": 2,
+                    },
+                }],
+                "acceptedQuestions": [{
+                    "type": "SINGLE_CHOICE",
+                    "difficulty": "EASY",
+                    "planSlotId": "B1Q2",
+                    "cognitiveLevel": "L1",
+                    "complexityProfile": {
+                        "conceptCount": 1,
+                        "reasoningStepCount": 0,
+                        "requiresNovelScenario": False,
+                        "answerDirectlyPresent": True,
+                        "requiresComparison": False,
+                        "conceptsUsed": ["RAG"],
+                    },
+                    "prompt": "RAG là gì?",
+                    "explanation": "Giải thích.",
+                    "options": [
+                        {"text": "A", "correct": True},
+                        {"text": "B", "correct": False},
+                    ],
+                    "acceptedAnswers": [],
+                    "questionCitations": [{
+                        "sourceId": "S1", "evidenceQuote": "RAG",
+                    }],
+                    "answerCitations": [{
+                        "sourceId": "S1", "evidenceQuote": "RAG",
+                    }],
+                    "explanationCitations": [{
+                        "sourceId": "S1", "evidenceQuote": "RAG",
+                    }],
+                }],
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "COGNITIVE_CHECKPOINT_INVALID"
+
+
+def test_grounded_quiz_rejects_batches_larger_than_twenty(settings) -> None:
     with TestClient(create_app(
         settings=settings,
         embedding_service=DeterministicEmbedding(),
@@ -306,7 +579,7 @@ def test_grounded_quiz_rejects_batches_larger_than_four(settings) -> None:
                 "title": "RAG",
                 "difficulty": "MIXED",
                 "questionCounts": {
-                    "singleChoice": 5,
+                        "singleChoice": 21,
                     "multipleSelect": 0,
                     "fillBlank": 0,
                 },
@@ -317,7 +590,7 @@ def test_grounded_quiz_rejects_batches_larger_than_four(settings) -> None:
         assert response.json()["code"] == "QUIZ_BATCH_TOO_LARGE"
 
 
-def test_grounded_quiz_repairs_only_invalid_citations_once(settings) -> None:
+def test_grounded_quiz_keeps_invalid_citation_as_warning(settings) -> None:
     gemini = CitationRepairGemini()
     with TestClient(create_app(
         settings=settings,
@@ -348,7 +621,10 @@ def test_grounded_quiz_repairs_only_invalid_citations_once(settings) -> None:
         )
 
         assert generated.status_code == 200, generated.text
-        assert gemini.calls == 2
+        assert gemini.calls == 1
+        assert generated.json()["validationStatus"] == "WARNING"
+        assert generated.json()["warningCount"] == 1
+        assert generated.json()["questions"][0]["questionCitations"] == []
         assert generated.json()["questions"][0]["prompt"] == "RAG là gì?"
 
 

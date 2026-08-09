@@ -188,7 +188,7 @@ public class ClassroomResourcePresentationService {
                 available ? username(userById, topic.getOwnerId()) : null,
                 available, available ? null : topicUnavailableReason(share, topic),
                 available ? quizCount : 0,
-                0, null, null, null, null, null, null);
+                0, null, null, null, null, null, null, null);
     }
 
     private ClassroomCollaborationDtos.ResourcePreview quizPreview(
@@ -208,6 +208,7 @@ public class ClassroomResourcePresentationService {
                 available, available ? null : "RESOURCE_UNAVAILABLE",
                 0, available ? questionCount : 0,
                 available ? quiz.getDifficulty() : null,
+                available ? quiz.getCognitiveMode() : null,
                 available ? assignment.getDurationMinutes() : null,
                 available ? assignment.getStatus() : null,
                 available ? assignment.getOpensAt() : null,

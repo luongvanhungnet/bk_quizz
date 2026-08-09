@@ -60,6 +60,9 @@ public class SourceDocument {
     @Column(name = "page_count") private Integer pageCount;
     @Column(name = "chunk_count", nullable = false) private int chunkCount;
     @Column(name = "indexed_at") private Instant indexedAt;
+    @Column(name = "math_extraction_status", nullable = false, length = 20) private String mathExtractionStatus = "NOT_DETECTED";
+    @Column(name = "math_formula_count", nullable = false) private int mathFormulaCount;
+    @Column(name = "math_warning_count", nullable = false) private int mathWarningCount;
 
     @Column(name = "deleted_at")
     private Instant deletedAt;
@@ -156,7 +159,8 @@ public class SourceDocument {
         updatedAt = now;
     }
 
-    public void completeRagIndex(int pages, int chunks, String indexedText, Instant now) {
+    public void completeRagIndex(int pages, int chunks, String indexedText, String mathStatus,
+                                 int formulaCount, int warningCount, Instant now) {
         if (indexedText == null || indexedText.trim().length() < 100) {
             throw new IllegalArgumentException("Tài liệu phải có ít nhất 100 ký tự hữu ích");
         }
@@ -164,6 +168,9 @@ public class SourceDocument {
         status = SourceStatus.READY; pageCount = pages > 0 ? pages : null; chunkCount = chunks;
         indexingProgress = 100; indexingStep = "SUCCEEDED"; indexedAt = now;
         indexingProgressAt = now;
+        mathExtractionStatus = mathStatus == null ? "NOT_DETECTED" : mathStatus;
+        mathFormulaCount = Math.max(0, formulaCount);
+        mathWarningCount = Math.max(0, warningCount);
         errorCode = null; errorMessage = null; updatedAt = now;
     }
 
@@ -214,4 +221,7 @@ public class SourceDocument {
     public Integer getPageCount() { return pageCount; }
     public int getChunkCount() { return chunkCount; }
     public Instant getIndexedAt() { return indexedAt; }
+    public String getMathExtractionStatus() { return mathExtractionStatus; }
+    public int getMathFormulaCount() { return mathFormulaCount; }
+    public int getMathWarningCount() { return mathWarningCount; }
 }

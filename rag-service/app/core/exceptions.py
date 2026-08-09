@@ -134,7 +134,49 @@ def register_exception_handlers(app: FastAPI) -> None:
                 request,
                 status_code=422,
                 code="QUIZ_BATCH_TOO_LARGE",
-                message="Mỗi lần gọi Gemini chỉ được tạo tối đa 4 câu hỏi.",
+                message="Mỗi lần gọi Gemini chỉ được tạo tối đa 20 câu hỏi.",
+            )
+        if any(
+            error["type"] == "cognitive_plan_invalid"
+            for error in exception.errors()
+        ):
+            details = [
+                {
+                    "field": ".".join(
+                        str(part) for part in error["loc"] if part != "body"
+                    ),
+                    "message": error["msg"],
+                    "type": error["type"],
+                }
+                for error in exception.errors()
+            ]
+            return _error_response(
+                request,
+                status_code=422,
+                code="COGNITIVE_PLAN_INVALID",
+                message="Kế hoạch mức độ tư duy không hợp lệ.",
+                details=details,
+            )
+        if any(
+            error["type"] == "cognitive_checkpoint_invalid"
+            for error in exception.errors()
+        ):
+            details = [
+                {
+                    "field": ".".join(
+                        str(part) for part in error["loc"] if part != "body"
+                    ),
+                    "message": error["msg"],
+                    "type": error["type"],
+                }
+                for error in exception.errors()
+            ]
+            return _error_response(
+                request,
+                status_code=422,
+                code="COGNITIVE_CHECKPOINT_INVALID",
+                message="Checkpoint Cognitive không khớp kế hoạch câu hỏi.",
+                details=details,
             )
         details = [
             {

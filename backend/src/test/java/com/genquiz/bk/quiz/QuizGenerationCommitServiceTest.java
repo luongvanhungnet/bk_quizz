@@ -56,4 +56,38 @@ class QuizGenerationCommitServiceTest {
         calls.verify(questions).replaceGrounded(quizId, generated, expected);
         calls.verify(quizzes).markReady(quizId);
     }
+
+    @Test
+    void commitsUsableQuestionsAndMarksQuizReadyWithQualityWarnings() {
+        UUID quizId = UUID.randomUUID();
+        List<QuizDtos.GroundedQuestion> generated = List.of();
+        QuizDtos.QuestionCounts expected = new QuizDtos.QuestionCounts(1, 0, 0);
+        List<QuizDtos.AiValidationWarning> warnings = List.of(
+                new QuizDtos.AiValidationWarning(
+                        "INVALID_CITATION_QUOTE", "QUESTION", null, null,
+                        "S1", "Nguồn chưa được xác minh"));
+
+        service.replaceGroundedAndComplete(
+                quizId, generated, expected, AiValidationStatus.WARNING, warnings);
+
+        var calls = inOrder(questions, quizzes);
+        calls.verify(questions).replaceGrounded(quizId, generated, expected);
+        calls.verify(quizzes).markReady(
+                quizId, AiValidationStatus.WARNING, warnings);
+    }
+
+    @Test
+    void appendsGroundedQuestionsWithoutReplacingExistingQuestionsOrChangingQuizStatus() {
+        UUID quizId = UUID.randomUUID();
+        List<QuizDtos.GroundedQuestion> generated = List.of();
+        QuizDtos.QuestionCounts expected = new QuizDtos.QuestionCounts(0, 0, 0);
+
+        service.appendGroundedAndComplete(
+                quizId, generated, expected, 7L, 12L, "fingerprint");
+
+        verify(questions).appendGrounded(
+                quizId, generated, expected, 7L, 12L, "fingerprint");
+        verify(questions, never()).replaceGrounded(quizId, generated, expected);
+        verify(quizzes, never()).markReady(quizId);
+    }
 }

@@ -6,12 +6,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 public interface QuizRepository extends JpaRepository<Quiz, UUID> {
     interface TopicQuizCount {
         UUID getTopicId();
         long getQuizCount();
     }
     Optional<Quiz> findByIdAndDeletedAtIsNull(UUID id);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select q from Quiz q where q.id = :id and q.deletedAt is null")
+    Optional<Quiz> findLockedActiveById(UUID id);
     Page<Quiz> findByOwnerIdAndDeletedAtIsNull(UUID ownerId, Pageable pageable);
     Page<Quiz> findByTopicIdAndDeletedAtIsNull(UUID topicId, Pageable pageable);
     Page<Quiz> findByTopicIdAndOwnerIdAndDeletedAtIsNull(UUID topicId, UUID ownerId, Pageable pageable);

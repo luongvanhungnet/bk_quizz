@@ -10,7 +10,7 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 @ConfigurationProperties(prefix = "bkquiz.quiz-generation")
 public record QuizGenerationBatchProperties(
-        @Min(1) @Max(4) int batchMaxQuestions,
+        @Min(1) @Max(20) int batchMaxQuestions,
         @Min(1) @Max(5) int batchMaxAttempts,
         @NotNull Duration batchRetryDelay,
         @NotNull Duration batchSuccessDelay) {

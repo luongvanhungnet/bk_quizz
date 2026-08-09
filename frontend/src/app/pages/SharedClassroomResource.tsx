@@ -16,6 +16,7 @@ import {
 } from "../../api/bkquiz";
 import { Badge, Button, Card } from "../components/ui";
 import { getAssignmentAvailability } from "./sharedResourceAvailability";
+import { cognitiveLabel } from "../lib/cognitive";
 
 function formatDate(value: string | null) {
   return value ? new Date(value).toLocaleString("vi-VN") : "Không giới hạn";
@@ -140,7 +141,7 @@ function TopicDetail({
                       <h3 className="font-black">{quiz.title}</h3>
                       <p className="mt-1 text-xs text-[#6B7280]">
                         {quiz.questionCount} câu · {quiz.durationMinutes} phút ·{" "}
-                        {quiz.difficulty}
+                        {cognitiveLabel(quiz.cognitiveMode)}
                       </p>
                     </div>
                   </div>
@@ -200,7 +201,7 @@ function QuizDetail({
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <Info label="Số câu" value={`${quiz.questionCount}`} />
-          <Info label="Độ khó" value={quiz.difficulty} />
+          <Info label="Mức độ tư duy" value={cognitiveLabel(quiz.cognitiveMode)} />
           <Info label="Thời lượng" value={`${assignment.durationMinutes} phút`} />
         </div>
       </Card>

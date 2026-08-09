@@ -13,7 +13,8 @@ frontend/playwright-report/
 frontend/test-results/
 # Local AI models
 rag-service/data/models/embedding-onnx/onnx/*.onnx
-
+rag-service/client_secret.json
+rag-service/test_gemini_direct.py
 # Secrets and local config
 .env
 .env.*
@@ -32,4 +33,3 @@ Thumbs.db
 .data/
 uploads/
 *.log
-

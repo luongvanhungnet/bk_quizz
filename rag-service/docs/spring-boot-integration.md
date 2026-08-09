@@ -37,13 +37,26 @@ Spring trả `202` cho frontend và poll `GET /indexing-jobs/{jobId}` với back
 
 ## Tài liệu và RAG
 
+- `GET /capabilities`: handshake nội bộ trước khi sinh Quiz; Spring yêu cầu
+  `quizGenerationContract=cognitive-repair-v1`.
 - `GET /user-documents?page=1&size=20&status=READY`
 - `GET /user-documents/{id}`
 - `GET /user-documents/{id}/chunks?page=1&size=500`: đồng bộ chunk ID, text, trang/slide/heading về PostgreSQL.
 - `DELETE /user-documents/{id}`: hủy job chưa xong, loại khỏi search ngay.
 - `POST /user-rag/search`: body `{question,topK?,documentIds?,conversationHistory?,debug?}`.
 - `POST /user-rag/ask`: thêm `includeSystemDocuments`.
-- `POST /user-rag/generate-quiz`: sinh quiz structured output; mọi câu bắt buộc có nguồn riêng cho câu hỏi, đáp án và phần giải thích.
+- `POST /user-rag/generate-quiz`: sinh tối đa 20 câu/request; Spring gửi `cognitiveMode`
+- `POST /user-rag/generate-quiz/stream`: cùng nghiệp vụ nhưng trả
+  `application/x-ndjson`. Mỗi dòng là một event UTF-8; dòng cuối bắt buộc là
+  `RESULT` chứa `data` hoặc `FAILED` chứa `errorCode`, `retryable` và
+  `retryAfterSeconds`. Spring phải lưu các event trung gian và không chuyển
+  prompt, nội dung tài liệu hoặc thông tin xác thực xuống frontend.
+  và `questionPlan` định lượng cho từng slot. Mọi câu phải trả Cognitive Profile hợp lệ
+  cùng nguồn riêng cho câu hỏi, đáp án và phần giải thích. Quiz lớn được Spring chia batch
+  tuần tự và retry batch lỗi sau tối thiểu 5 phút.
+  `questionPlan` là nguồn sự thật cho L1–L5. Field `difficultyPlan` đã deprecated và chỉ
+  nhận `EASY|MEDIUM|HARD` cho client cũ; Spring không gửi field này trong request Cognitive.
+  `acceptedQuestions` luôn là mảng; dùng `[]` khi chưa có checkpoint.
 - `DELETE /users/{userId}/data`: Spring chỉ gọi khi path user trùng principal; xóa file, metadata, job, audit, index và cache tenant.
 
 Timeout đề xuất: search 15 giây, ask 75 giây, delete 30 giây. Không tự retry ask nếu chưa có idempotency ở tầng Spring. Có thể retry GET, upload với cùng idempotency key, và lỗi có `retryable=true` theo `retryAfterSeconds`.
@@ -74,6 +87,7 @@ Timeout đề xuất: search 15 giây, ask 75 giây, delete 30 giây. Không t�
 
 ## Health và vận hành
 
+- `GET /api/v2/capabilities`: yêu cầu internal key, trả contract và build revision.
 - `GET /health/live`: liveness, không gọi dependency.
 - `GET /health/ready`: SQLite, Redis, storage/disk, embedding và cấu hình Gemini; không gọi Gemini.
 - `GET /metrics`: Prometheus API metrics.
@@ -84,3 +98,5 @@ OpenAPI đã commit tại [openapi.json](openapi.json). CI chạy `python script
 ## Điểm nối với backend hiện tại
 
 Spring lưu cặp `sourceDocumentId ↔ ragDocumentId/jobId`, poll indexing, đồng bộ chunk và chỉ cho sinh quiz khi nguồn đã `READY`. Frontend không được truyền `X-User-Id`; Spring luôn lấy owner từ principal hoặc resource đã kiểm tra quyền.
+
+Document v2 bổ sung `mathExtractionStatus`, `mathFormulaCount`, `mathWarningCount`. Chunk sync bổ sung `rawText` và `mathEnhanced`; Spring lưu `text` làm nội dung retrieval/citation và chỉ cho owner/admin truy cập raw text. `PARTIAL`/`FAILED` ở math extraction không đổi trạng thái document `READY`.

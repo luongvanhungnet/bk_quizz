@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
@@ -39,7 +41,12 @@ class GeminiHealthResponse(BaseModel):
     status: str
     model: str
     latency_ms: int = Field(alias="latencyMs", ge=0)
+    credential_source: str = Field(alias="credentialSource")
     message: str
+
+
+class GeminiProbeOutput(BaseModel):
+    status: Literal["OK"]
 
 
 class RetrievalHealthResponse(BaseModel):

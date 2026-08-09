@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link } from "react-router";
-import { ArrowLeft, CheckCircle2, Mail, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { ApiRequestError } from "../../api/client";
 import { useAuth } from "../../auth/AuthProvider";
@@ -32,14 +32,8 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF4D9] font-sans text-[#111827] lg:grid lg:grid-cols-[420px_1fr]">
-      <aside className="bk-auth-grid hidden min-h-screen flex-col justify-between p-8 text-white lg:flex">
-        <Link to="/" className="flex items-center gap-2 text-xl font-black">
-          <span className="flex h-9 w-9 items-center justify-center rounded bg-[#C8102E]">
-            <Zap className="h-5 w-5 fill-current" />
-          </span>
-          BKQuiz
-        </Link>
+    <div className="min-h-[calc(100dvh-4rem)] bg-[#FFF4D9] font-sans text-[#111827] lg:grid lg:grid-cols-[420px_1fr]">
+      <aside className="bk-auth-grid hidden min-h-[calc(100dvh-4rem)] flex-col justify-between p-8 text-white lg:flex">
         <div className="max-w-xs">
           <p className="mb-4 text-sm font-black uppercase text-[#C8102E]">Forgot Password</p>
           <h1 className="text-4xl font-black leading-tight">Quên mật khẩu thì lấy lại trong vài phút.</h1>
@@ -54,7 +48,7 @@ export default function ForgotPassword() {
         </div>
       </aside>
 
-      <main className="flex min-h-screen items-center justify-center px-5 py-10">
+      <main className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-5 py-10">
         <div className="w-full max-w-[350px] sm:max-w-md">
           <Link to="/login" className="mb-6 inline-flex items-center gap-2 text-sm font-bold text-[#6B7280] hover:text-[#111827]">
             <ArrowLeft className="h-4 w-4" />

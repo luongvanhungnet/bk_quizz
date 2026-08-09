@@ -7,7 +7,10 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.exceptions import ServiceError
 from app.db.models import Base
 
-ALEMBIC_HEAD = "0003_performance_indexes"
+# Keep this in sync with the migration graph. A regression test compares the
+# runtime guard with Alembic's actual head so a newly added ORM column cannot
+# be deployed while an older SQLite schema is still reported as ready.
+ALEMBIC_HEAD = "0004_pdf_math_extraction"
 
 
 class Database:

@@ -29,4 +29,44 @@ public class QuizGenerationCommitService {
         questions.replaceGrounded(quizId, generated, expected);
         quizzes.markReady(quizId);
     }
+
+    @Transactional
+    public void replaceGroundedAndComplete(
+            UUID quizId,
+            List<QuizDtos.GroundedQuestion> generated,
+            QuizDtos.QuestionCounts expected,
+            AiValidationStatus validationStatus,
+            List<QuizDtos.AiValidationWarning> validationWarnings) {
+        questions.replaceGrounded(quizId, generated, expected);
+        quizzes.markReady(quizId, validationStatus, validationWarnings);
+    }
+
+    @Transactional
+    public void appendGroundedAndComplete(
+            UUID quizId,
+            List<QuizDtos.GroundedQuestion> generated,
+            QuizDtos.QuestionCounts expected,
+            long baseQuizVersion,
+            long baseQuestionCount,
+            String baseQuestionFingerprint) {
+        questions.appendGrounded(
+                quizId, generated, expected, baseQuizVersion,
+                baseQuestionCount, baseQuestionFingerprint);
+    }
+
+    @Transactional
+    public void appendGroundedAndComplete(
+            UUID quizId,
+            List<QuizDtos.GroundedQuestion> generated,
+            QuizDtos.QuestionCounts expected,
+            long baseQuizVersion,
+            long baseQuestionCount,
+            String baseQuestionFingerprint,
+            AiValidationStatus validationStatus,
+            List<QuizDtos.AiValidationWarning> validationWarnings) {
+        questions.appendGrounded(
+                quizId, generated, expected, baseQuizVersion,
+                baseQuestionCount, baseQuestionFingerprint);
+        quizzes.mergeAiValidation(quizId, validationStatus, validationWarnings);
+    }
 }

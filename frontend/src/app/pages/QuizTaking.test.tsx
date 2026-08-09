@@ -61,6 +61,7 @@ describe("QuizTaking", () => {
       visibility: "PUBLIC",
       generationMode: "MANUAL",
       difficulty: "EASY",
+      cognitiveMode: "L1",
       durationMinutes: 30,
       questionCount: 2,
       errorCode: null,

@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.genquiz.bk.source.SourceDtos;
 import com.genquiz.bk.source.SourcePresentationService;
 import java.util.List;
+import com.genquiz.bk.job.JobDtos;
+import com.genquiz.bk.job.JobService;
 
 @RestController
 @RequestMapping("/api/quizzes")
@@ -32,13 +34,15 @@ public class QuizController {
     private final ActorIdentityService actors;
     private final CurrentUser currentUser;
     private final SourcePresentationService sourcePresentation;
+    private final JobService jobs;
 
     public QuizController(QuizService service, ActorIdentityService actors, CurrentUser currentUser,
-                          SourcePresentationService sourcePresentation) {
+                          SourcePresentationService sourcePresentation, JobService jobs) {
         this.service = service;
         this.actors = actors;
         this.currentUser = currentUser;
         this.sourcePresentation = sourcePresentation;
+        this.jobs = jobs;
     }
 
     @PostMapping
@@ -46,7 +50,7 @@ public class QuizController {
                                                         Principal principal) {
         Quiz quiz = service.createManual(actors.requireUserId(principal), request);
         return ResponseEntity.created(URI.create("/api/quizzes/" + quiz.getId()))
-                .body(QuizDtos.QuizResponse.from(quiz, 0));
+                .body(QuizDtos.QuizResponse.forOwner(quiz, 0));
     }
 
     @GetMapping
@@ -56,13 +60,17 @@ public class QuizController {
         Page<Quiz> result = topicId == null ? service.listOwned(actorId, pageable)
                 : service.listOwnedByTopic(actorId, topicId, pageable);
         return result
-                .map(quiz -> QuizDtos.QuizResponse.from(quiz, service.questionCount(quiz.getId())));
+                .map(quiz -> QuizDtos.QuizResponse.forOwner(
+                        quiz, service.questionCount(quiz.getId())));
     }
 
     @GetMapping("/{quizId}")
     public QuizDtos.QuizResponse get(@PathVariable UUID quizId, Principal principal) {
-        Quiz quiz = service.getAccessible(actors.requireUserId(principal), quizId);
-        return QuizDtos.QuizResponse.from(quiz, service.questionCount(quizId));
+        UUID actorId = actors.requireUserId(principal);
+        Quiz quiz = service.getAccessible(actorId, quizId);
+        return quiz.getOwnerId().equals(actorId)
+                ? QuizDtos.QuizResponse.forOwner(quiz, service.questionCount(quizId))
+                : QuizDtos.QuizResponse.from(quiz, service.questionCount(quizId));
     }
 
     @GetMapping("/{quizId}/sources")
@@ -71,19 +79,26 @@ public class QuizController {
                 .map(sourcePresentation::response).toList();
     }
 
+    @GetMapping("/{quizId}/generation/job")
+    public JobDtos.Response latestGenerationJob(
+            @PathVariable UUID quizId, Principal principal) {
+        return JobDtos.Response.from(jobs.latestOwnedQuizGeneration(
+                actors.requireUserId(principal), quizId));
+    }
+
     @PutMapping("/{quizId}")
     public QuizDtos.QuizResponse update(@PathVariable UUID quizId,
                                         @Valid @RequestBody QuizDtos.SaveRequest request,
                                         Principal principal) {
         Quiz quiz = service.update(actors.requireUserId(principal), quizId, request);
-        return QuizDtos.QuizResponse.from(quiz, service.questionCount(quizId));
+        return QuizDtos.QuizResponse.forOwner(quiz, service.questionCount(quizId));
     }
 
     @PostMapping("/{quizId}/publish")
     public QuizDtos.QuizResponse publish(@PathVariable UUID quizId, Principal principal) {
         currentUser.requireVerified();
         Quiz quiz = service.publish(actors.requireUserId(principal), quizId);
-        return QuizDtos.QuizResponse.from(quiz, service.questionCount(quizId));
+        return QuizDtos.QuizResponse.forOwner(quiz, service.questionCount(quizId));
     }
 
     @PostMapping("/generate")
@@ -94,7 +109,7 @@ public class QuizController {
         currentUser.requireVerified();
         var result = service.generate(actors.requireUserId(principal), request, idempotencyKey);
         var body = new QuizDtos.GenerateResponse(
-                QuizDtos.QuizResponse.from(result.quiz(), service.questionCount(result.quiz().getId())),
+                QuizDtos.QuizResponse.forOwner(result.quiz(), service.questionCount(result.quiz().getId())),
                 result.job().getId());
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .header(HttpHeaders.LOCATION, "/api/jobs/" + result.job().getId()).body(body);
@@ -111,7 +126,7 @@ public class QuizController {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .header(HttpHeaders.LOCATION, "/api/jobs/" + result.job().getId())
                 .body(new QuizDtos.GenerateResponse(
-                        QuizDtos.QuizResponse.from(result.quiz(), service.questionCount(quizId)), result.job().getId()));
+                        QuizDtos.QuizResponse.forOwner(result.quiz(), service.questionCount(quizId)), result.job().getId()));
     }
 
     @PostMapping("/{quizId}/generation/retry-last")
@@ -123,9 +138,45 @@ public class QuizController {
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .header(HttpHeaders.LOCATION, "/api/jobs/" + result.job().getId())
                 .body(new QuizDtos.GenerateResponse(
-                        QuizDtos.QuizResponse.from(
+                        QuizDtos.QuizResponse.forOwner(
                                 result.quiz(), service.questionCount(quizId)),
                         result.job().getId()));
+    }
+
+    @PostMapping("/{quizId}/generation/append")
+    public ResponseEntity<QuizDtos.GenerateResponse> appendGeneration(
+            @PathVariable UUID quizId,
+            @Valid @RequestBody QuizDtos.AppendGenerateRequest request,
+            @RequestHeader(
+                    value = "Idempotency-Key",
+                    required = false) String idempotencyKey,
+            Principal principal) {
+        currentUser.requireVerified();
+        var result = service.appendGeneration(
+                actors.requireUserId(principal),
+                quizId,
+                request,
+                idempotencyKey);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .header(
+                        HttpHeaders.LOCATION,
+                        "/api/jobs/" + result.job().getId())
+                .body(new QuizDtos.GenerateResponse(
+                        QuizDtos.QuizResponse.forOwner(
+                                result.quiz(),
+                                service.questionCount(quizId)),
+                        result.job().getId()));
+    }
+
+    @GetMapping("/{quizId}/generation/jobs")
+    public List<JobDtos.Response> generationJobs(
+            @PathVariable UUID quizId,
+            @RequestParam(defaultValue = "20") int limit,
+            Principal principal) {
+        UUID actorId = actors.requireUserId(principal);
+        service.getOwned(actorId, quizId);
+        return jobs.ownedQuizGenerationHistory(actorId, quizId, limit)
+                .stream().map(JobDtos.Response::from).toList();
     }
 
     @DeleteMapping("/{quizId}")

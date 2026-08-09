@@ -12,21 +12,35 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_
 from redis import Redis
 
 from app.api.routes import chat, evaluation, health, operations, rag, system_documents, user_documents, user_rag, v2
-from app.core.config import Settings, get_settings
+from app.core.config import (
+    Settings,
+    gemini_credential_diagnostics,
+    get_settings,
+)
+from app.core.contracts import QUIZ_GENERATION_CONTRACT
 from app.core.exceptions import register_exception_handlers
 from app.db.database import Database
 from app.services.async_document_service import AsyncDocumentProcessor, AsyncDocumentService
 from app.services.chunking_service import ChunkingService
+from app.services.citation_matcher import CitationMatcher
 from app.services.context_builder import ContextBuilder
 from app.services.document_parser import DocumentParser
 from app.services.embedding_service import EmbeddingService
 from app.services.evaluation_service import RetrievalEvaluationService
+from app.services.gemini_math_vision import GeminiMathVisionService
+from app.services.gemini_quiz_providers import GeminiApiKeyProvider, GeminiOAuthProvider
 from app.services.gemini_service import GeminiService
 from app.services.grounded_answer_service import GroundedAnswerService
 from app.services.hybrid_retrieval import HybridRetrievalService
 from app.services.indexing_job_service import IndexingJobService
 from app.services.job_dispatcher import CeleryJobDispatcher
+from app.services.ollama_qwen_provider import OllamaQwenProvider
 from app.services.query_rewrite_service import QueryRewriteService
+from app.services.quiz_llm_provider import (
+    QuizLLMProvider,
+    QuizLLMRouter,
+    UnavailableQuizLLMProvider,
+)
 from app.services.rag_pipeline_service import RagPipelineService
 from app.services.rag_service import RagService
 from app.services.rate_limiter import NoopRateLimiter, RedisRateLimiter
@@ -47,6 +61,27 @@ HTTP_LATENCY = Histogram(
 )
 
 
+def build_quiz_providers(
+    settings: Settings,
+    gemini_service: Any | None,
+) -> list[QuizLLMProvider]:
+    providers: list[QuizLLMProvider] = []
+    if gemini_service is not None:
+        providers.append(GeminiApiKeyProvider(gemini_service, settings.gemini_model))
+    elif settings.llm_fallback_enabled:
+        providers.append(UnavailableQuizLLMProvider(
+            name="gemini_api_key",
+            model=settings.gemini_model,
+            error_code="GEMINI_API_NOT_CONFIGURED",
+            message="Gemini API key chưa được cấu hình.",
+        ))
+    if settings.llm_fallback_enabled and settings.gemini_oauth_enabled:
+        providers.append(GeminiOAuthProvider(settings))
+    if settings.llm_fallback_enabled and settings.ollama_enabled:
+        providers.append(OllamaQwenProvider(settings))
+    return providers
+
+
 def create_app(
     *,
     settings: Settings | None = None,
@@ -63,12 +98,30 @@ def create_app(
     reranker_service: Any | None = None,
     rag_pipeline_service: Any | None = None,
     job_dispatcher: Any | None = None,
+    quiz_llm_router: Any | None = None,
 ) -> FastAPI:
     resolved_settings = settings or get_settings()
     injected_service = gemini_service
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
+        credential_diagnostics = gemini_credential_diagnostics(resolved_settings)
+        application.state.gemini_credential_source = (
+            "injected" if settings is not None else credential_diagnostics.source
+        )
+        application.state.logger.info(
+            "Gemini API configuration source=%s model=%s key_length=%d key_fingerprint=%s",
+            application.state.gemini_credential_source,
+            resolved_settings.gemini_model,
+            credential_diagnostics.length,
+            credential_diagnostics.fingerprint or "not-configured",
+        )
+        application.state.logger.info(
+            "RAG runtime module=%s quiz_generation_contract=%s build_revision=%s",
+            __file__,
+            QUIZ_GENERATION_CONTRACT,
+            resolved_settings.app_build_revision,
+        )
         owned_service: GeminiService | None = None
         if injected_service is not None:
             application.state.gemini_service = injected_service
@@ -77,6 +130,33 @@ def create_app(
             application.state.gemini_service = owned_service
         else:
             application.state.gemini_service = None
+        owned_quiz_router: QuizLLMRouter | None = None
+        if quiz_llm_router is not None:
+            application.state.quiz_llm_router = quiz_llm_router
+        else:
+            quiz_providers = (
+                [
+                    GeminiApiKeyProvider(
+                        injected_service,
+                        resolved_settings.gemini_model,
+                    )
+                ]
+                if injected_service is not None
+                else build_quiz_providers(
+                    resolved_settings,
+                    application.state.gemini_service,
+                )
+            )
+            owned_quiz_router = (
+                QuizLLMRouter(
+                    quiz_providers,
+                    failure_threshold=resolved_settings.llm_circuit_breaker_failure_threshold,
+                    cooldown_seconds=resolved_settings.llm_circuit_breaker_cooldown_seconds,
+                )
+                if quiz_providers
+                else None
+            )
+            application.state.quiz_llm_router = owned_quiz_router
         embedding = embedding_service or EmbeddingService(
             resolved_settings.embedding_model,
             resolved_settings.query_embedding_cache_size,
@@ -98,9 +178,17 @@ def create_app(
             resolved_settings.system_index_dir,
             resolved_settings.embedding_model,
         )
+        owned_database = database is None
+        db = database or Database(
+            resolved_settings.database_url,
+            create_for_tests=resolved_settings.app_env == "test",
+        )
+        if resolved_settings.app_env != "test":
+            db.validate_migrated()
+        math_vision = GeminiMathVisionService(resolved_settings, db) if resolved_settings.math_vision_enabled else None
         indexing = system_indexing_service or SystemIndexingService(
             documents_dir=resolved_settings.system_documents_dir,
-            parser=DocumentParser(),
+            parser=DocumentParser(math_vision=math_vision),
             chunker=ChunkingService(
                 resolved_settings.chunk_size_chars,
                 resolved_settings.chunk_overlap_chars,
@@ -140,6 +228,22 @@ def create_app(
         )
         store.add_commit_listener(hybrid.clear_cache)
         application.state.embedding_service = embedding
+        application.state.citation_matcher = CitationMatcher(
+            mode=resolved_settings.citation_match_mode,
+            embedding_service=embedding,
+            lexical_min_score=resolved_settings.citation_lexical_min_score,
+            semantic_same_source_min_score=(
+                resolved_settings.citation_semantic_same_source_min_score
+            ),
+            semantic_cross_source_min_score=(
+                resolved_settings.citation_semantic_cross_source_min_score
+            ),
+            uniqueness_margin=resolved_settings.citation_uniqueness_margin,
+            max_window_chars=resolved_settings.citation_max_window_chars,
+            max_candidates_per_source=(
+                resolved_settings.citation_max_candidates_per_source
+            ),
+        )
         application.state.vector_store = store
         application.state.system_indexing_service = indexing
         application.state.retrieval_service = retrieval
@@ -147,13 +251,6 @@ def create_app(
         application.state.reranker_service = reranker
         application.state.hybrid_retrieval_service = hybrid
         application.state.rag_pipeline_service = pipeline
-        owned_database = database is None
-        db = database or Database(
-            resolved_settings.database_url,
-            create_for_tests=resolved_settings.app_env == "test",
-        )
-        if resolved_settings.app_env != "test":
-            db.validate_migrated()
         indexes = user_index_manager or UserIndexManager(
             resolved_settings.user_index_dir,
             embedding,
@@ -173,7 +270,7 @@ def create_app(
             max_upload_bytes=resolved_settings.max_upload_size_mb * 1024 * 1024,
             max_documents=resolved_settings.max_documents_per_user,
             max_storage_bytes=resolved_settings.max_storage_mb_per_user * 1024 * 1024,
-            parser=DocumentParser(),
+            parser=DocumentParser(math_vision=math_vision),
             chunker=ChunkingService(
                 resolved_settings.chunk_size_chars,
                 resolved_settings.chunk_overlap_chars,
@@ -220,6 +317,8 @@ def create_app(
         finally:
             if owned_service is not None:
                 await owned_service.close()
+            if owned_quiz_router is not None:
+                await owned_quiz_router.close()
             if owned_database:
                 db.dispose()
             redis_client.close()
@@ -234,8 +333,13 @@ def create_app(
         lifespan=lifespan,
     )
     application.state.settings = resolved_settings
+    application.state.gemini_credential_source = (
+        "injected" if settings is not None else "unknown"
+    )
     application.state.gemini_service = injected_service
+    application.state.quiz_llm_router = quiz_llm_router
     application.state.embedding_service = embedding_service
+    application.state.citation_matcher = None
     application.state.vector_store = vector_store
     application.state.system_indexing_service = system_indexing_service
     application.state.retrieval_service = retrieval_service
