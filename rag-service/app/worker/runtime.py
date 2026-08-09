@@ -7,6 +7,7 @@ from app.services.async_document_service import AsyncDocumentProcessor
 from app.services.chunking_service import ChunkingService
 from app.services.document_parser import DocumentParser
 from app.services.embedding_service import EmbeddingService
+from app.services.gemini_math_vision import GeminiMathVisionService
 from app.services.indexing_job_service import IndexingJobService
 from app.services.upload_validation import UploadValidator
 from app.services.user_document_service import UserDocumentService
@@ -45,7 +46,7 @@ def worker_runtime() -> tuple[AsyncDocumentProcessor, IndexingJobService, Settin
         max_upload_bytes=settings.max_upload_size_mb * 1024 * 1024,
         max_documents=settings.max_documents_per_user,
         max_storage_bytes=settings.max_storage_mb_per_user * 1024 * 1024,
-        parser=DocumentParser(),
+        parser=DocumentParser(math_vision=GeminiMathVisionService(settings, database) if settings.math_vision_enabled else None),
         chunker=ChunkingService(settings.chunk_size_chars, settings.chunk_overlap_chars),
         index_manager=indexes, validator=UploadValidator(),
     )

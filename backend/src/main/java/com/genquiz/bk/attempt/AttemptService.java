@@ -366,7 +366,10 @@ public class AttemptService {
                 .map(value -> value.getAnswerText()).toList();
         return new AttemptQuestionSnapshot(attemptId, question.getId(), question.getSourceChunkId(), question.getType(),
                 question.getPrompt(), question.getExplanation(), question.getPoints(), position,
-                write(safeOptions), write(new AnswerKey(correctIds, accepted)), write(citationSnapshots(question.getId())));
+                write(safeOptions), write(new AnswerKey(correctIds, accepted)), write(citationSnapshots(question.getId())),
+                question.getCognitiveLevel(), question.getComplexityScore(), question.isComplexityVerified(),
+                question.getCognitiveMetadata(), question.getAiValidationStatus(),
+                question.getValidationWarnings());
     }
 
     private void validateAnswer(AttemptQuestionSnapshot snapshot, AttemptDtos.AnswerInput input) {

@@ -17,6 +17,7 @@ from app.services.retrieval_service import RetrievalResult
 from app.services.vector_store import VectorStore
 
 LOGGER = logging.getLogger("uvicorn.error")
+EXTRACTION_VERSION = "pdf-math-v1"
 
 
 class UserIndexManager:
@@ -102,6 +103,7 @@ class UserIndexManager:
                 and current.manifest.get("ownerId") == owner_id
                 and current.manifest.get("embeddingRuntime", "legacy")
                 == getattr(self._embedding, "runtime_fingerprint", "legacy")
+                and current.manifest.get("extractionVersion") == EXTRACTION_VERSION
             )
 
     def remove_document(self, owner_id: str, document_id: str) -> None:
@@ -209,6 +211,7 @@ class UserIndexManager:
                 "documentCount": len({chunk.document_id for chunk in chunks}),
                 "documentIds": sorted({chunk.document_id for chunk in chunks}),
                 "chunkCount": len(chunks),
+                "extractionVersion": EXTRACTION_VERSION,
             },
         )
         if self._on_index_change is not None:

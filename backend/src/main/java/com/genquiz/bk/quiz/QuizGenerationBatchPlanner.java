@@ -4,19 +4,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class QuizGenerationBatchPlanner {
+    private static final CognitiveLevel[] BALANCED_ORDER = {
+            CognitiveLevel.L3, CognitiveLevel.L2, CognitiveLevel.L4,
+            CognitiveLevel.L1, CognitiveLevel.L5
+    };
+    private static final double[] BALANCED_WEIGHTS = {0.35, 0.25, 0.25, 0.10, 0.05};
+
     private QuizGenerationBatchPlanner() {}
 
     public static List<BatchPlan> plan(
-            QuizDtos.QuestionCounts requested, Difficulty quizDifficulty, int maxBatchSize) {
-        if (maxBatchSize < 1 || maxBatchSize > 4) {
-            throw new IllegalArgumentException("Quiz batch size phải từ 1 đến 4.");
+            QuizDtos.QuestionCounts requested, CognitiveMode mode, int maxBatchSize) {
+        if (maxBatchSize < 1 || maxBatchSize > 20) {
+            throw new IllegalArgumentException("Quiz batch size phải từ 1 đến 20.");
         }
         int[] remaining = {
-                requested.singleChoice(),
-                requested.multipleSelect(),
-                requested.fillBlank()
+                requested.singleChoice(), requested.multipleSelect(), requested.fillBlank()
         };
-        int totalQuestions = requested.total();
         List<QuizDtos.QuestionCounts> countPlans = new ArrayList<>();
         int typeCursor = 0;
         while (remaining[0] + remaining[1] + remaining[2] > 0) {
@@ -32,15 +35,63 @@ public final class QuizGenerationBatchPlanner {
             countPlans.add(new QuizDtos.QuestionCounts(current[0], current[1], current[2]));
         }
 
-        List<Difficulty> globalDifficulties = difficulties(quizDifficulty, totalQuestions);
+        List<CognitiveLevel> levels = levels(mode, requested.total());
         List<BatchPlan> result = new ArrayList<>(countPlans.size());
         int offset = 0;
         for (int index = 0; index < countPlans.size(); index++) {
             QuizDtos.QuestionCounts counts = countPlans.get(index);
-            List<Difficulty> batchDifficulties = List.copyOf(
-                    globalDifficulties.subList(offset, offset + counts.total()));
-            result.add(new BatchPlan(index, countPlans.size(), counts, batchDifficulties));
+            var batchLevels = List.copyOf(levels.subList(offset, offset + counts.total()));
+            result.add(new BatchPlan(index, countPlans.size(), counts, batchLevels));
             offset += counts.total();
+        }
+        return List.copyOf(result);
+    }
+
+    @Deprecated
+    public static List<BatchPlan> plan(
+            QuizDtos.QuestionCounts requested, Difficulty difficulty, int maxBatchSize) {
+        return plan(requested, switch (difficulty) {
+            case EASY -> CognitiveMode.L1;
+            case MEDIUM -> CognitiveMode.L3;
+            case HARD -> CognitiveMode.L5;
+            case MIXED -> CognitiveMode.BALANCED;
+        }, maxBatchSize);
+    }
+
+    static List<CognitiveLevel> levels(CognitiveMode mode, int total) {
+        if (mode != CognitiveMode.BALANCED) {
+            return java.util.Collections.nCopies(total, mode.fixedLevel());
+        }
+        int[] counts = new int[BALANCED_WEIGHTS.length];
+        int assigned = 0;
+        for (int i = 0; i < counts.length; i++) {
+            counts[i] = (int) Math.floor(total * BALANCED_WEIGHTS[i]);
+            assigned += counts[i];
+        }
+        List<Integer> remainderOrder = java.util.stream.IntStream.range(0, counts.length)
+                .boxed().sorted((left, right) -> {
+                    double leftRemainder = total * BALANCED_WEIGHTS[left] - counts[left];
+                    double rightRemainder = total * BALANCED_WEIGHTS[right] - counts[right];
+                    int compared = Double.compare(rightRemainder, leftRemainder);
+                    return compared != 0 ? compared : Integer.compare(left, right);
+                }).toList();
+        for (int i = 0; i < total - assigned; i++) counts[remainderOrder.get(i)]++;
+
+        List<CognitiveLevel> result = new ArrayList<>(total);
+        int[] emitted = new int[counts.length];
+        while (result.size() < total) {
+            int selected = -1;
+            double largestDeficit = Double.NEGATIVE_INFINITY;
+            for (int i = 0; i < counts.length; i++) {
+                if (emitted[i] >= counts[i]) continue;
+                double deficit = (result.size() + 1.0) * counts[i] / total - emitted[i];
+                if (deficit > largestDeficit) {
+                    largestDeficit = deficit;
+                    selected = i;
+                }
+            }
+            emitted[selected]++;
+            result.add(BALANCED_ORDER[selected]);
         }
         return List.copyOf(result);
     }
@@ -53,24 +104,20 @@ public final class QuizGenerationBatchPlanner {
         throw new IllegalStateException("Không còn loại câu hỏi để phân batch.");
     }
 
-    private static List<Difficulty> difficulties(Difficulty quizDifficulty, int total) {
-        if (quizDifficulty != Difficulty.MIXED) {
-            return java.util.Collections.nCopies(total, quizDifficulty);
-        }
-        if (total == 1) return List.of(Difficulty.MEDIUM);
-        if (total == 2) return List.of(Difficulty.EASY, Difficulty.HARD);
-        Difficulty[] cycle = {Difficulty.EASY, Difficulty.MEDIUM, Difficulty.HARD};
-        return java.util.stream.IntStream.range(0, total)
-                .mapToObj(index -> cycle[index % cycle.length]).toList();
-    }
-
     public record BatchPlan(
             int index,
             int totalBatches,
             QuizDtos.QuestionCounts counts,
-            List<Difficulty> difficulties) {
-        public int size() {
-            return counts.total();
+            List<CognitiveLevel> levels) {
+        public int size() { return counts.total(); }
+
+        @Deprecated
+        public List<Difficulty> difficulties() {
+            return levels.stream().map(level -> switch (level) {
+                case L1 -> Difficulty.EASY;
+                case L2, L3 -> Difficulty.MEDIUM;
+                case L4, L5 -> Difficulty.HARD;
+            }).toList();
         }
     }
 }

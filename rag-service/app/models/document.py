@@ -9,6 +9,10 @@ class DocumentSection:
     heading: str | None
     text: str
     slide_number: int | None = None
+    raw_text: str | None = None
+    math_enhanced: bool = False
+    math_formula_count: int = 0
+    math_warning_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -17,6 +21,8 @@ class ChunkDraft:
     heading: str | None
     text: str
     slide_number: int | None = None
+    raw_text: str | None = None
+    math_enhanced: bool = False
 
 
 @dataclass(frozen=True)
@@ -36,6 +42,8 @@ class DocumentChunk:
     classroom_id: str | None = None
     source_type: str | None = None
     slide_number: int | None = None
+    raw_content: str | None = None
+    math_enhanced: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -54,6 +62,8 @@ class DocumentChunk:
             "classroomId": self.classroom_id,
             "sourceType": self.source_type or self.document_type,
             "slideNumber": self.slide_number,
+            "rawContent": self.raw_content,
+            "mathEnhanced": self.math_enhanced,
         }
 
     @classmethod
@@ -74,6 +84,8 @@ class DocumentChunk:
             classroom_id=value.get("classroomId"),
             source_type=value.get("sourceType", value.get("documentType")),
             slide_number=value.get("slideNumber"),
+            raw_content=value.get("rawContent"),
+            math_enhanced=bool(value.get("mathEnhanced", False)),
         )
 
 

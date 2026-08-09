@@ -3,12 +3,14 @@ package com.genquiz.bk.quiz;
 import com.genquiz.bk.rag.RagDtos;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import tools.jackson.databind.JsonNode;
 
 record QuizGenerationCheckpoint(
         int contractVersion,
         String fingerprint,
         List<BatchState> batches) {
-    static final int CONTRACT_VERSION = 3;
+    static final int CONTRACT_VERSION = 5;
 
     static QuizGenerationCheckpoint create(
             String fingerprint, List<QuizGenerationBatchPlanner.BatchPlan> plans) {
@@ -21,8 +23,8 @@ record QuizGenerationCheckpoint(
                                 plan.counts().singleChoice(),
                                 plan.counts().multipleSelect(),
                                 plan.counts().fillBlank()),
-                        plan.difficulties().stream().map(Enum::name).toList(),
-                        0, null, null, null)).toList());
+                        plan.levels().stream().map(Enum::name).toList(),
+                        0, null, null, null, null, null)).toList());
     }
 
     boolean matches(String expectedFingerprint, int expectedBatchCount) {
@@ -42,28 +44,71 @@ record QuizGenerationCheckpoint(
         BatchState current = batches.get(index);
         return replace(index, new BatchState(
                 current.index(), current.counts(), current.difficultyPlan(),
-                current.attempts() + 1, current.generated(), null, null));
+                current.attempts() + 1, current.generated(), current.partialQuestions(),
+                current.partialMetadata(), null, null));
     }
 
     QuizGenerationCheckpoint complete(int index, RagDtos.GeneratedQuiz generated) {
         BatchState current = batches.get(index);
         return replace(index, new BatchState(
                 current.index(), current.counts(), current.difficultyPlan(),
-                current.attempts(), generated, null, null));
+                current.attempts(), generated, null, null, null, null));
+    }
+
+    QuizGenerationCheckpoint partial(int index, JsonNode checkpoint) {
+        BatchState current = batches.get(index);
+        boolean structured = checkpoint != null
+                && checkpoint.isObject()
+                && "STRUCTURED_OUTPUT_CHECKPOINT".equals(
+                checkpoint.path("type").stringValue(""));
+        JsonNode questions = structured
+                ? checkpoint.path("acceptedQuestions").deepCopy()
+                : checkpoint;
+        JsonNode metadata = structured ? checkpoint.deepCopy() : current.partialMetadata();
+        return replace(index, new BatchState(
+                current.index(), current.counts(), current.difficultyPlan(),
+                current.attempts(), current.generated(), questions, metadata, null, null));
     }
 
     QuizGenerationCheckpoint fail(int index, String code, String requestId) {
         BatchState current = batches.get(index);
         return replace(index, new BatchState(
                 current.index(), current.counts(), current.difficultyPlan(),
-                current.attempts(), current.generated(), code, requestId));
+                current.attempts(), current.generated(), current.partialQuestions(),
+                current.partialMetadata(), code, requestId));
+    }
+
+    RagDtos.GeneratedQuiz restorePartialAccounting(
+            int index, RagDtos.GeneratedQuiz generated) {
+        JsonNode metadata = batches.get(index).partialMetadata();
+        if (metadata == null || !metadata.isObject()) return generated;
+        String model = generated.model();
+        JsonNode checkpointModel = metadata.get("model");
+        if ((model == null || "checkpoint".equals(model))
+                && checkpointModel != null && checkpointModel.isString()) {
+            model = checkpointModel.stringValue();
+        }
+        Map<String, Integer> usage = generated.usage();
+        JsonNode checkpointUsage = metadata.get("usage");
+        int generatedTokens = usage == null ? 0 : usage.getOrDefault("totalTokens", 0);
+        if (generatedTokens == 0 && checkpointUsage != null && checkpointUsage.isObject()) {
+            usage = Map.of(
+                    "inputTokens", checkpointUsage.path("inputTokens").asInt(0),
+                    "outputTokens", checkpointUsage.path("outputTokens").asInt(0),
+                    "totalTokens", checkpointUsage.path("totalTokens").asInt(0));
+        }
+        return new RagDtos.GeneratedQuiz(
+                generated.questions(), model, usage,
+                generated.validationStatus(), generated.validationWarnings(),
+                generated.requestedCount(), generated.savedCount(), generated.warningCount());
     }
 
     QuizGenerationCheckpoint resetIncompleteAttempts() {
         List<BatchState> reset = batches.stream().map(batch ->
                 batch.generated() == null
                         ? new BatchState(batch.index(), batch.counts(),
-                        batch.difficultyPlan(), 0, null, null, null)
+                        batch.difficultyPlan(), 0, null, batch.partialQuestions(),
+                        batch.partialMetadata(), null, null)
                         : batch).toList();
         return new QuizGenerationCheckpoint(contractVersion, fingerprint, reset);
     }
@@ -96,6 +141,8 @@ record QuizGenerationCheckpoint(
             List<String> difficultyPlan,
             int attempts,
             RagDtos.GeneratedQuiz generated,
+            JsonNode partialQuestions,
+            JsonNode partialMetadata,
             String lastErrorCode,
             String upstreamRequestId) {
     }

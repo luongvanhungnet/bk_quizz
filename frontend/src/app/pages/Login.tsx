@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { Eye, EyeOff, LockKeyhole, Mail, Zap } from "lucide-react";
+import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { ApiRequestError } from "../../api/client";
 import { useAuth } from "../../auth/AuthProvider";
@@ -43,14 +43,8 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF4D9] font-sans text-[#111827] lg:grid lg:grid-cols-[420px_1fr]">
-      <aside className="bk-auth-grid relative hidden min-h-screen overflow-hidden p-8 text-white lg:flex lg:flex-col lg:justify-between">
-        <Link to="/" className="flex items-center gap-2 text-xl font-black">
-          <span className="flex h-9 w-9 items-center justify-center rounded bg-[#C8102E]">
-            <Zap className="h-5 w-5 fill-current" />
-          </span>
-          BKQuiz
-        </Link>
+    <div className="min-h-[calc(100dvh-4rem)] bg-[#FFF4D9] font-sans text-[#111827] lg:grid lg:grid-cols-[420px_1fr]">
+      <aside className="bk-auth-grid relative hidden min-h-[calc(100dvh-4rem)] overflow-hidden p-8 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="max-w-xs">
           <p className="mb-4 text-sm font-black uppercase text-[#C8102E]">Auth Login</p>
           <h1 className="text-4xl font-black leading-tight">Từ slide thành đề ôn tập chỉ trong vài phút.</h1>
@@ -65,13 +59,9 @@ export default function Login() {
         </div>
       </aside>
 
-      <main className="flex min-h-screen items-center justify-center px-5 py-10">
+      <main className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-5 py-10">
         <div className="w-full max-w-[350px] sm:max-w-md">
-          <div className="mb-8 flex items-center justify-between lg:hidden">
-            <Link to="/" className="flex items-center gap-2 text-xl font-black text-[#C8102E]">
-              <Zap className="h-6 w-6 fill-current" />
-              BKQuiz
-            </Link>
+          <div className="mb-8 flex items-center justify-end lg:hidden">
             <Link to="/register" className="text-sm font-bold text-[#C8102E]">Đăng ký</Link>
           </div>
 

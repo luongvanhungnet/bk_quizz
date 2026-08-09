@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
-import { GraduationCap, Mail, UserRound, Zap } from "lucide-react";
+import { GraduationCap, Mail, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { ApiRequestError } from "../../api/client";
 import { useAuth } from "../../auth/AuthProvider";
@@ -58,14 +58,8 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FFF4D9] font-sans text-[#111827] lg:grid lg:grid-cols-[420px_1fr]">
-      <aside className="bk-auth-grid hidden min-h-screen flex-col justify-between p-8 text-white lg:flex">
-        <Link to="/" className="flex items-center gap-2 text-xl font-black">
-          <span className="flex h-9 w-9 items-center justify-center rounded bg-[#C8102E]">
-            <Zap className="h-5 w-5 fill-current" />
-          </span>
-          BKQuiz
-        </Link>
+    <div className="min-h-[calc(100dvh-4rem)] bg-[#FFF4D9] font-sans text-[#111827] lg:grid lg:grid-cols-[420px_1fr]">
+      <aside className="bk-auth-grid hidden min-h-[calc(100dvh-4rem)] flex-col justify-between p-8 text-white lg:flex">
         <div className="max-w-xs">
           <p className="mb-4 text-sm font-black uppercase text-[#C8102E]">Auth Register</p>
           <h1 className="text-4xl font-black leading-tight">Tạo tài khoản để biến tài liệu thành quiz.</h1>
@@ -80,13 +74,9 @@ export default function Register() {
         </div>
       </aside>
 
-      <main className="flex min-h-screen items-center justify-center px-5 py-10">
+      <main className="flex min-h-[calc(100dvh-4rem)] items-center justify-center px-5 py-10">
         <div className="w-full max-w-[350px] sm:max-w-md">
-          <div className="mb-8 flex items-center justify-between lg:hidden">
-            <Link to="/" className="flex items-center gap-2 text-xl font-black text-[#C8102E]">
-              <Zap className="h-6 w-6 fill-current" />
-              BKQuiz
-            </Link>
+          <div className="mb-8 flex items-center justify-end lg:hidden">
             <Link to="/login" className="text-sm font-bold text-[#C8102E]">Đăng nhập</Link>
           </div>
 

@@ -45,6 +45,9 @@ public class SystemController {
             data.put("springWorker", springWorker ? "up" : "down");
             data.put("ragApi", rag.apiAvailable() ? "up" : "down");
             data.put("ragWorker", rag.workerAvailable() ? "up" : "down");
+            data.put("ragQuizGenerationContract", rag.quizGenerationContract());
+            data.put("ragContractCompatible", rag.quizGenerationContractCompatible());
+            data.put("ragBuildRevision", rag.buildRevision());
             data.put("ragQueueLength", rag.queueLength());
             data.put("ragPendingJobs", rag.pendingJobs());
             data.put("ragOldestPendingSeconds", rag.oldestPendingSeconds());

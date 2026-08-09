@@ -48,16 +48,30 @@ class QuizOptionOutput(BaseModel):
     correct: bool
 
 
+class CognitiveProfileOutput(BaseModel):
+    conceptCount: int = Field(ge=1, le=6)
+    reasoningStepCount: int = Field(ge=0, le=5)
+    requiresNovelScenario: bool
+    answerDirectlyPresent: bool
+    requiresComparison: bool
+    conceptsUsed: list[str] = Field(min_length=1, max_length=6)
+    novelScenarioSummary: str | None = None
+    cognitiveRationale: str | None = Field(default=None, max_length=500)
+
+
 class GroundedQuizQuestionOutput(BaseModel):
     type: Literal["SINGLE_CHOICE", "MULTIPLE_SELECT", "FILL_BLANK"]
     difficulty: Literal["EASY", "MEDIUM", "HARD"] | None = None
+    planSlotId: str | None = None
+    cognitiveLevel: Literal["L1", "L2", "L3", "L4", "L5"] | None = None
+    complexityProfile: CognitiveProfileOutput | None = None
     prompt: str = Field(min_length=1, max_length=10000)
     explanation: str = Field(min_length=1, max_length=10000)
     options: list[QuizOptionOutput] = Field(default_factory=list)
     acceptedAnswers: list[str] = Field(default_factory=list)
-    questionCitations: list[QuizCitationOutput] = Field(min_length=1)
-    answerCitations: list[QuizCitationOutput] = Field(min_length=1)
-    explanationCitations: list[QuizCitationOutput] = Field(min_length=1)
+    questionCitations: list[QuizCitationOutput] = Field(default_factory=list)
+    answerCitations: list[QuizCitationOutput] = Field(default_factory=list)
+    explanationCitations: list[QuizCitationOutput] = Field(default_factory=list)
 
 
 class GroundedQuizOutput(BaseModel):

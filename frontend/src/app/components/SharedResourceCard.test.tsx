@@ -21,6 +21,7 @@ describe("SharedResourceCard", () => {
             quizCount: 3,
             questionCount: 0,
             difficulty: null,
+            cognitiveMode: null,
             durationMinutes: null,
             assignmentStatus: null,
             opensAt: null,

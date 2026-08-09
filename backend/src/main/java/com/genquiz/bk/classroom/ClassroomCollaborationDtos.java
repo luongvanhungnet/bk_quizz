@@ -1,5 +1,5 @@
 package com.genquiz.bk.classroom;
-import com.genquiz.bk.quiz.Difficulty;
+import com.genquiz.bk.quiz.Difficulty; import com.genquiz.bk.quiz.CognitiveMode;
 import com.genquiz.bk.quiz.QuizDtos;
 import com.genquiz.bk.topic.TopicDtos;
 import jakarta.validation.constraints.*; import java.time.Instant; import java.util.List; import java.util.UUID;
@@ -9,7 +9,7 @@ public final class ClassroomCollaborationDtos { private ClassroomCollaborationDt
  public record AttachmentResponse(UUID id,String name,String mediaType,long sizeBytes,boolean image,String accessUrl){}
  public record ResourcePreview(String kind,UUID resourceId,UUID referenceId,String title,String description,
   String ownerUsername,boolean available,String unavailableReason,long quizCount,long questionCount,
-  Difficulty difficulty,Integer durationMinutes,AssignmentStatus assignmentStatus,Instant opensAt,
+  Difficulty difficulty,CognitiveMode cognitiveMode,Integer durationMinutes,AssignmentStatus assignmentStatus,Instant opensAt,
   Instant dueAt,Integer maxAttempts){}
  public record MessageResponse(UUID id,UUID classroomId,UUID senderId,String senderUsername,ClassroomMessageType type,
   String content,UUID topicShareId,UUID assignmentId,ResourcePreview resourcePreview,

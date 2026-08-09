@@ -9,7 +9,6 @@ import {
   Settings2,
   Sparkles,
   UploadCloud,
-  Zap,
 } from "lucide-react";
 import { Button, Card } from "../components/ui";
 import { plans } from "../content/pricing";
@@ -60,11 +59,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-[#FFF4D9] font-sans text-[#111827]">
       <header className="sticky top-0 z-40 border-b border-black/5 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
-          <Link to="/" className="flex items-center gap-2 text-xl font-black text-[#C8102E]">
-            <Zap className="h-6 w-6 fill-current" />
-            BKQuiz
-          </Link>
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-end gap-8 px-5 md:justify-between lg:px-8">
           <nav className="hidden items-center gap-7 text-sm font-semibold text-[#6B7280] md:flex">
             <a href="#features" className="hover:text-[#111827]">Tính năng</a>
             <a href="#compare" className="hover:text-[#111827]">So sánh</a>
@@ -125,10 +120,7 @@ export default function Landing() {
 
           <div className="relative min-h-[430px] overflow-hidden rounded-lg border border-black/10 bg-white p-4 shadow-2xl">
             <div className="absolute left-0 top-0 h-full w-24 bg-[#111111] p-4 text-white">
-              <div className="mb-8 flex items-center gap-2 text-sm font-black">
-                <Zap className="h-4 w-4 fill-[#C8102E] text-[#C8102E]" />
-                BK
-              </div>
+              <div className="mb-8 text-sm font-black">Menu</div>
               {["Nguồn", "Quiz", "Thi thử", "Kết quả"].map((item, index) => (
                 <div
                   key={item}
@@ -304,10 +296,6 @@ export default function Landing() {
 
       <footer className="border-t border-black/5 bg-white px-5 py-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 text-sm text-[#6B7280] md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2 font-black text-[#111827]">
-            <Zap className="h-5 w-5 fill-[#C8102E] text-[#C8102E]" />
-            BKQuiz
-          </div>
           <p>© 2026 BKQuiz. Nền tảng ôn tập dành cho sinh viên Bách Khoa.</p>
           <div className="flex gap-5">
             <a href="#" className="hover:text-[#111827]">Liên hệ</a>

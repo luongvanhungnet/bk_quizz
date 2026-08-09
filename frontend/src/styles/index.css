@@ -1,3 +1,17 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+  .math-markdown .katex-display {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-block: 0.25rem;
+  }
+
+  .math-markdown > :first-child {
+    margin-top: 0;
+  }
+
+  .math-markdown > :last-child {
+    margin-bottom: 0;
+  }

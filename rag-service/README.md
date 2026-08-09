@@ -28,6 +28,14 @@ Query + conversation history
 Hybrid, reranker và rewrite là ba feature flag độc lập. Nếu local reranker không tải
 được, service ghi cảnh báo và tiếp tục dùng RRF; không gửi candidate sang dịch vụ ngoài.
 
+### Đối chiếu nguồn khi sinh Quiz
+
+Citation được kiểm tra theo thứ tự nguyên văn, chuẩn hóa, lexical và semantic local.
+Kết quả gần đúng chỉ được chấp nhận khi có một đoạn nguồn duy nhất vượt ngưỡng; API
+luôn trả lại đoạn nguyên văn lấy từ chunk. Các ngưỡng được cấu hình bằng nhóm biến
+`CITATION_*` trong `.env.example`. Nếu còn câu chưa có nguồn chắc chắn, RAG giữ các
+câu hợp lệ trong checkpoint và chỉ tạo lại những slot còn thiếu.
+
 ## Kiến trúc và giới hạn
 
 - Python 3.11, SQLite/SQLAlchemy/Alembic, FAISS và filesystem local.
@@ -50,7 +58,9 @@ Copy-Item .env.example .env
 ```
 
 Khai báo ít nhất `GEMINI_MODEL`, `SPRING_BOOT_INTERNAL_API_KEY`; khai báo
-`GEMINI_API_KEY` khi cần `/chat`, `/rag/ask` hoặc `/user-rag/ask`.
+`GEMINI_API_KEY` khi cần `/chat`, `/rag/ask` hoặc `/user-rag/ask`. Không đặt API
+key trực tiếp trong script. Nếu PowerShell đang giữ một key cũ khác `.env`,
+development dừng với `GEMINI_CONFIG_CONFLICT` thay vì âm thầm dùng sai key.
 
 Gemini Free Tier có quota theo project và dữ liệu gửi lên có thể được Google dùng để
 cải thiện sản phẩm. Không gửi tài liệu bí mật/nhạy cảm lên Free Tier. Model embedding
@@ -62,8 +72,18 @@ Service fail-fast nếu database chưa ở Alembic head:
 
 ```powershell
 .\.venv\Scripts\alembic.exe upgrade head
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8090
+.\scripts\run_local.ps1 -Service api
 ```
+
+Launcher nạp chính xác `rag-service/.env`. Khi chạy Uvicorn thủ công, xóa key
+cũ bằng `Remove-Item Env:GEMINI_API_KEY -ErrorAction Ignore` rồi restart tiến
+trình. Kiểm tra credential và structured output bằng đúng runtime của ứng dụng:
+
+```powershell
+.\.venv\Scripts\python.exe .\test_gemini_direct.py
+```
+
+Script chỉ in nguồn cấu hình, độ dài và fingerprint rút gọn, không in API key.
 
 Không dùng `--workers` lớn hơn 1. Swagger chỉ bật khi `APP_ENV=development` tại
 `http://127.0.0.1:8090/docs`.
@@ -215,6 +235,65 @@ Phase 5 bổ sung API `/api/v2` cho upload bất đồng bộ, Celery/Redis job,
 
 Khi chạy trực tiếp development, `INDEX_LOCK_MODE=auto` cho phép upload đồng bộ v1 fallback sang process-local lock nếu Redis tắt. API v2, Celery và production vẫn bắt buộc Redis; Docker luôn đặt `INDEX_LOCK_MODE=redis`.
 
+## Fallback sinh Quiz: Gemini API key → OAuth ADC → Ollama Qwen
+
+Fallback chỉ áp dụng cho `/api/v2/user-rag/generate-quiz`. Chat, query rewrite và
+RAG ask vẫn dùng Gemini API key như trước. Các provider được gọi tuần tự; khi một
+provider thành công thì provider phía sau không được gọi.
+
+Gemini OAuth và API key đều chia yêu cầu thành tối đa 10 câu mỗi request. Quiz
+20 câu chạy tuần tự thành `10 + 10`, ghép theo `planSlotId`, rồi mới kiểm tra
+toàn bộ quiz. OAuth dùng timeout 120 giây.
+
+Chuẩn bị OAuth ADC:
+
+```powershell
+gcloud auth application-default login
+gcloud auth application-default set-quota-project gen-lang-client-0839815713
+```
+
+ADC được lưu trong profile người dùng của Google Cloud CLI. Không sao chép hoặc
+commit file credential ADC vào repository.
+
+Chuẩn bị Ollama:
+
+```powershell
+ollama pull qwen3:1.7b
+ollama run qwen3:1.7b
+```
+
+Khi RAG service chạy trực tiếp trên Windows, đặt
+`OLLAMA_BASE_URL=http://127.0.0.1:11434`. Khi RAG service chạy trong Docker và
+Ollama chạy trên host, dùng `http://host.docker.internal:11434`.
+
+Qwen mặc định chỉ tạo tối đa hai câu mỗi request, chạy tuần tự với `think=false`,
+`stream=false`, `num_predict=2400`, JSON Schema của `GroundedQuizOutput`, context
+4096 và temperature 0.1. Nếu hai câu vẫn chạm giới hạn output, request được chia
+thành `1 + 1`. Retry chỉ yêu cầu lại slot thiếu và luôn kèm danh sách câu đã tạo
+để chống câu tương đương hoặc gần trùng. Tất cả câu hỏi, đáp án, Cognitive Level
+và citation vẫn được server kiểm tra trước khi trả cho Spring Boot.
+
+Kiểm tra provider mà không hiển thị secret:
+
+```powershell
+python scripts/test_llm_fallback.py --provider ollama
+python scripts/test_llm_fallback.py --provider gemini-api-key
+python scripts/test_llm_fallback.py --provider gemini-oauth
+python scripts/test_llm_fallback.py --simulate-gemini-failure
+python scripts/test_llm_fallback.py --provider chain
+```
+
+Health nội bộ:
+
+```powershell
+curl.exe http://127.0.0.1:8090/api/v1/health/llm `
+  -H "X-Internal-API-Key: $InternalKey"
+```
+
+Ollama là fallback tùy chọn. Ollama offline không làm process FastAPI ngừng chạy;
+nếu toàn bộ provider đều không khả dụng, endpoint sinh Quiz trả lỗi retryable để
+Spring worker thử lại theo lịch hiện có.
+
 Trên Windows, Celery bắt buộc dùng pool `solo`; pool mặc định `prefork/spawn` có thể làm
 `billiard` mất process handle (`WinError 5/6`) và khiến tài liệu kẹt ở `PENDING`.
 Chạy worker bằng script đã kiểm tra Redis và khóa đúng topology:
@@ -244,3 +323,23 @@ quá nhỏ.
 - Contract Spring Boot: [docs/spring-boot-integration.md](docs/spring-boot-integration.md)
 - OpenAPI committed: [docs/openapi.json](docs/openapi.json)
 - Hướng dẫn test chi tiết: [README-TESTING.md](README-TESTING.md)
+
+Spring Boot kiểm tra `GET /api/v2/capabilities` trước khi sinh Quiz. Contract hiện
+tại là `cognitive-repair-v1`; `APP_BUILD_REVISION` cho biết chính xác bản RAG đang
+phục vụ cổng HTTP.
+
+## Công thức toán trong PDF và Quiz
+
+- Quiz mới dùng LaTeX có delimiter: `$...$` trong dòng và `$$...$$` cho công thức độc lập. Quy tắc áp dụng cho Gemini API, Gemini OAuth và Ollama Qwen.
+- PDF được đọc bằng structured layout của PyMuPDF. Vùng công thức chưa chắc chắn được crop 300 DPI và gửi theo lô tối đa 4 vùng qua Gemini Vision theo thứ tự API key rồi OAuth; crop không được lưu.
+- Text thô được giữ để audit. Chỉ LaTeX vượt kiểm tra region, dấu ngoặc, command an toàn và ký hiệu nhận diện mới được đưa vào text dùng cho retrieval/citation.
+- Vision timeout/hết quota không làm indexing thất bại: document vẫn `READY`, trạng thái math là `PARTIAL` và có thể reindex sau. Cache `math_extractions` tái sử dụng crop đã nhận dạng thành công.
+
+```env
+MATH_VISION_ENABLED=true
+MATH_VISION_MODEL=gemini-3.5-flash-lite
+MATH_VISION_TIMEOUT_SECONDS=60
+MATH_EXTRACTION_VERSION=pdf-math-v1
+```
+
+Sau khi nâng cấp, chạy `alembic upgrade head` và reindex PDF cũ để nhận extraction version mới.

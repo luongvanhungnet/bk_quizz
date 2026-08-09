@@ -2,12 +2,7 @@ package com.genquiz.bk.quiz;
 
 import com.genquiz.bk.topic.Visibility;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -17,14 +12,14 @@ public final class QuizDtos {
     private QuizDtos() {}
 
     public record SaveRequest(
-            @NotNull(message = "Chủ đề là bắt buộc") UUID topicId,
-            @NotBlank(message = "Tiêu đề không được để trống")
-            @Size(max = 200, message = "Tiêu đề tối đa 200 ký tự") String title,
-            @Size(max = 5000, message = "Mô tả tối đa 5000 ký tự") String description,
-            @NotNull Difficulty difficulty,
-            @Min(value = 1, message = "Thời lượng tối thiểu 1 phút")
-            @Max(value = 300, message = "Thời lượng tối đa 300 phút") int durationMinutes,
-            @NotNull Visibility visibility) {}
+            @NotNull UUID topicId, @NotBlank @Size(max = 200) String title,
+            @Size(max = 5000) String description, Difficulty difficulty,
+            CognitiveMode cognitiveMode, @Min(1) @Max(300) int durationMinutes,
+            @NotNull Visibility visibility) {
+        public CognitiveMode resolvedCognitiveMode() {
+            return cognitiveMode != null ? cognitiveMode : legacyMode(difficulty);
+        }
+    }
 
     public record QuestionCounts(
             @Min(0) @Max(50) int singleChoice,
@@ -35,80 +30,118 @@ public final class QuizDtos {
 
     public record GenerateRequest(
             @NotNull UUID topicId,
-            @NotEmpty(message = "Cần chọn ít nhất một tài liệu")
-            @Size(max = 10, message = "Chỉ được chọn tối đa 10 tài liệu") List<UUID> sourceIds,
+            @NotEmpty @Size(max = 10) List<UUID> sourceIds,
             @NotBlank @Size(max = 200) String title,
-            @NotNull Difficulty difficulty,
+            Difficulty difficulty,
+            CognitiveMode cognitiveMode,
             @Min(1) @Max(300) int durationMinutes,
             @NotNull Visibility visibility,
-            @NotNull @Valid QuestionCounts questionCounts) {}
+            @NotNull @Valid QuestionCounts questionCounts) {
+        public CognitiveMode resolvedCognitiveMode() {
+            return cognitiveMode != null ? cognitiveMode : legacyMode(difficulty);
+        }
+    }
 
     public record QuizResponse(
-            UUID id,
-            UUID topicId,
-            UUID ownerId,
-            String title,
-            String description,
-            QuizStatus status,
-            Visibility visibility,
-            GenerationMode generationMode,
-            Difficulty difficulty,
-            int durationMinutes,
-            long questionCount,
-            String errorCode,
-            String errorMessage,
-            Instant publishedAt,
-            Instant createdAt,
-            Instant updatedAt,
-            long version) {
+            UUID id, UUID topicId, UUID ownerId, String title, String description,
+            QuizStatus status, Visibility visibility, GenerationMode generationMode,
+            Difficulty difficulty, CognitiveMode cognitiveMode, int durationMinutes,
+            long questionCount, String errorCode, String errorMessage,
+            AiValidationStatus aiValidationStatus,
+            List<AiValidationWarning> aiValidationWarnings,
+            Instant publishedAt, Instant createdAt, Instant updatedAt, long version) {
         public static QuizResponse from(Quiz quiz, long questionCount) {
+            return response(quiz, questionCount, false);
+        }
+        public static QuizResponse forOwner(Quiz quiz, long questionCount) {
+            return response(quiz, questionCount, true);
+        }
+        private static QuizResponse response(Quiz quiz, long questionCount,
+                                             boolean includeWarnings) {
             return new QuizResponse(quiz.getId(), quiz.getTopicId(), quiz.getOwnerId(), quiz.getTitle(),
                     quiz.getDescription(), quiz.getStatus(), quiz.getVisibility(), quiz.getGenerationMode(),
-                    quiz.getDifficulty(), quiz.getDurationMinutes(), questionCount, quiz.getErrorCode(),
-                    quiz.getErrorMessage(), quiz.getPublishedAt(), quiz.getCreatedAt(), quiz.getUpdatedAt(),
-                    quiz.getVersion());
+                    quiz.getDifficulty(), quiz.getCognitiveMode(), quiz.getDurationMinutes(), questionCount,
+                    quiz.getErrorCode(), quiz.getErrorMessage(),
+                    includeWarnings ? quiz.getAiValidationStatus() : null,
+                    includeWarnings ? quiz.getAiValidationWarnings() : List.of(),
+                    quiz.getPublishedAt(), quiz.getCreatedAt(),
+                    quiz.getUpdatedAt(), quiz.getVersion());
         }
     }
 
     public record GenerateResponse(QuizResponse quiz, UUID jobId) {}
-
-    public record OptionRequest(
-            @NotBlank(message = "Lựa chọn không được để trống") @Size(max = 2000) String text,
-            boolean correct) {}
+    public record AppendGenerateRequest(
+            @NotEmpty @Size(max = 10) List<UUID> sourceIds,
+            @NotNull CognitiveMode cognitiveMode,
+            @NotNull @Valid QuestionCounts questionCounts) {}
+    public record OptionRequest(@NotBlank @Size(max = 2000) String text, boolean correct) {}
 
     public record QuestionRequest(
-            @NotNull QuestionType type,
-            @NotBlank(message = "Nội dung câu hỏi không được để trống") @Size(max = 10000) String prompt,
-            @Size(max = 10000) String explanation,
-            @NotNull @Min(0) BigDecimal points,
-            @NotNull Difficulty difficulty,
-            UUID sourceChunkId,
-            List<@Valid OptionRequest> options,
-            List<@NotBlank @Size(max = 2000) String> acceptedAnswers) {}
+            @NotNull QuestionType type, @NotBlank @Size(max = 10000) String prompt,
+            @Size(max = 10000) String explanation, @NotNull @Min(0) BigDecimal points,
+            Difficulty difficulty, CognitiveLevel cognitiveLevel, CognitiveProfile complexityProfile,
+            UUID sourceChunkId, List<@Valid OptionRequest> options,
+            List<@NotBlank @Size(max = 2000) String> acceptedAnswers) {
+        public QuestionRequest(QuestionType type, String prompt, String explanation, BigDecimal points,
+                               Difficulty difficulty, UUID sourceChunkId, List<OptionRequest> options,
+                               List<String> acceptedAnswers) {
+            this(type, prompt, explanation, points, difficulty, null, null,
+                    sourceChunkId, options, acceptedAnswers);
+        }
+        public CognitiveLevel resolvedCognitiveLevel() {
+            if (cognitiveLevel != null) return cognitiveLevel;
+            return switch (difficulty == null ? Difficulty.MEDIUM : difficulty) {
+                case EASY -> CognitiveLevel.L1;
+                case MEDIUM, MIXED -> CognitiveLevel.L3;
+                case HARD -> CognitiveLevel.L5;
+            };
+        }
+    }
 
     public record OptionResponse(UUID id, String text, boolean correct, int position) {}
-
-    public record CitationRequest(UUID sourceChunkId, CitationRole role, String evidenceQuote) {}
-    public record GroundedQuestion(QuestionRequest question, List<CitationRequest> citations) {}
+    public record CitationRequest(UUID sourceChunkId, CitationRole role, String evidenceQuote,
+                                  UUID ragDocumentId, int chunkIndex, Integer pageNumber,
+                                  Integer slideNumber, String heading, String chunkText,
+                                  String rawText, boolean mathEnhanced,
+                                  String snapshotFingerprint) {
+        public CitationRequest(UUID sourceChunkId, CitationRole role, String evidenceQuote) {
+            this(sourceChunkId, role, evidenceQuote, null, 0, null, null,
+                    null, null, null, false, null);
+        }
+    }
+    public record AiValidationWarning(String code, String role, Object expected,
+                                      Object actual, String sourceId, String message) {}
+    public record GroundedQuestion(QuestionRequest question, List<CitationRequest> citations,
+                                   AiValidationStatus validationStatus,
+                                   List<AiValidationWarning> validationWarnings) {
+        public GroundedQuestion(QuestionRequest question, List<CitationRequest> citations) {
+            this(question, citations, AiValidationStatus.VERIFIED, List.of());
+        }
+    }
     public record CitationResponse(UUID sourceChunkId, UUID sourceDocumentId, String filename,
                                    Integer pageNumber, Integer slideNumber, int chunkIndex, String heading,
                                    CitationRole role, String evidenceQuote) {}
 
-    /** Author/editor representation. Attempt endpoints deliberately use separate redacted DTOs. */
     public record QuestionResponse(
-            UUID id,
-            UUID quizId,
-            QuestionType type,
-            String prompt,
-            String explanation,
-            BigDecimal points,
-            int position,
-            Difficulty difficulty,
-            UUID sourceChunkId,
-            List<OptionResponse> options,
-            List<String> acceptedAnswers,
-            List<CitationResponse> citations,
-            long version) {}
+            UUID id, UUID quizId, QuestionType type, String prompt, String explanation,
+            BigDecimal points, int position, Difficulty difficulty, CognitiveLevel cognitiveLevel,
+            CognitiveProfile complexityProfile, Integer complexityScore, UUID sourceChunkId,
+            List<OptionResponse> options, List<String> acceptedAnswers,
+            List<CitationResponse> citations, AiValidationStatus validationStatus,
+            List<AiValidationWarning> validationWarnings, Instant validationReviewedAt,
+            UUID validationReviewedBy, String validationReviewNote, long version) {}
+
+    public record ValidationReviewRequest(@Size(max = 500) String note) {}
 
     public record ReorderRequest(@NotEmpty List<UUID> questionIds) {}
+
+    private static CognitiveMode legacyMode(Difficulty difficulty) {
+        if (difficulty == null) return CognitiveMode.BALANCED;
+        return switch (difficulty) {
+            case EASY -> CognitiveMode.L1;
+            case MEDIUM -> CognitiveMode.L3;
+            case HARD -> CognitiveMode.L5;
+            case MIXED -> CognitiveMode.BALANCED;
+        };
+    }
 }

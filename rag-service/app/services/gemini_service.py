@@ -247,6 +247,33 @@ class GeminiService:
         if isinstance(exception, ServiceError):
             return exception
         if isinstance(exception, errors.APIError):
+            response_body = getattr(exception, "details", None)
+            error_body = (
+                response_body.get("error", response_body)
+                if isinstance(response_body, dict)
+                else {}
+            )
+            upstream_status = str(
+                getattr(exception, "status", None)
+                or error_body.get("status", "")
+                or ""
+            )
+            upstream_reason = str(error_body.get("reason", "") or "")
+            response = getattr(exception, "response", None)
+            headers = getattr(response, "headers", {}) or {}
+            upstream_request_id = str(
+                headers.get("x-request-id")
+                or headers.get("x-guploader-uploadid")
+                or ""
+            )[:120]
+            LOGGER.warning(
+                "gemini_api_error http_status=%s upstream_status=%s "
+                "upstream_reason=%s upstream_request_id=%s",
+                exception.code,
+                upstream_status[:80],
+                upstream_reason[:80],
+                upstream_request_id,
+            )
             if exception.code == 429:
                 quota_exhausted = "quota" in str(exception).casefold()
                 return ServiceError(
@@ -257,14 +284,28 @@ class GeminiService:
             if exception.code in {401, 403}:
                 return ServiceError(
                     503,
-                    "GEMINI_AUTH_ERROR",
+                    "GEMINI_API_AUTHENTICATION_FAILED",
                     "Cấu hình xác thực Gemini không hợp lệ.",
                 )
             if exception.code in {400, 404, 422}:
                 return ServiceError(
                     502,
-                    "GEMINI_MODEL_UNAVAILABLE" if exception.code == 404 else "GEMINI_REQUEST_REJECTED",
-                    "Gemini từ chối yêu cầu hoặc model không khả dụng.",
+                    (
+                        "GEMINI_MODEL_NOT_AVAILABLE"
+                        if exception.code == 404
+                        else "GEMINI_API_REQUEST_INCOMPATIBLE"
+                    ),
+                    (
+                        "Model Gemini hiện không khả dụng."
+                        if exception.code == 404
+                        else "Gemini API không tương thích với yêu cầu sinh quiz."
+                    ),
+                    details=[{
+                        "httpStatus": exception.code,
+                        "upstreamStatus": upstream_status[:80],
+                        "upstreamReason": upstream_reason[:80],
+                        "upstreamRequestId": upstream_request_id or None,
+                    }],
                 )
         if isinstance(exception, (httpx.TimeoutException, TimeoutError)):
             return ServiceError(

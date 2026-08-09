@@ -119,7 +119,7 @@ bkquiz:
     max-sources: ${MAX_SOURCES_PER_GENERATION:10}
     min-source-characters: ${MIN_SOURCE_CHARACTERS:100}
   quiz-generation:
-    batch-max-questions: ${QUIZ_BATCH_MAX_QUESTIONS:4}
+    batch-max-questions: ${QUIZ_BATCH_MAX_QUESTIONS:20}
     batch-max-attempts: ${QUIZ_BATCH_MAX_ATTEMPTS:3}
     batch-retry-delay: ${QUIZ_BATCH_RETRY_DELAY:5m}
     batch-success-delay: ${QUIZ_BATCH_SUCCESS_DELAY:15s}

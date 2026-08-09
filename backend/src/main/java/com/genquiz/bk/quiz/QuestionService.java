@@ -5,9 +5,13 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.text.Normalizer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -57,8 +61,7 @@ public class QuestionService {
         requireEditable(quiz);
         validate(request);
         int position = Math.toIntExact(questions.countByQuizId(quizId));
-        Question question = questions.save(new Question(quizId, request.sourceChunkId(), request.type(),
-                request.prompt(), request.explanation(), request.points(), position, request.difficulty()));
+        Question question = questions.save(newQuestion(quizId, request.sourceChunkId(), request, position));
         replaceAnswers(question, request);
         if (citations != null) citations.deleteByQuestionId(question.getId());
         return authorResponse(question);
@@ -72,8 +75,10 @@ public class QuestionService {
         validate(request);
         question.update(request.sourceChunkId(), request.type(), request.prompt(), request.explanation(),
                 request.points(), request.difficulty());
+        applyCognitive(question, request);
         replaceAnswers(question, request);
         if (citations != null) citations.deleteByQuestionId(question.getId());
+        quizzes.refreshAiValidationStatus(question.getQuizId());
         return authorResponse(question);
     }
 
@@ -86,6 +91,37 @@ public class QuestionService {
         if (citations != null) citations.deleteByQuestionId(questionId);
         questions.delete(question);
         normalizePositions(question.getQuizId());
+        quizzes.refreshAiValidationStatus(question.getQuizId());
+    }
+
+    @Transactional
+    public QuizDtos.QuestionResponse reviewValidation(UUID actorId, boolean admin,
+                                                       UUID questionId, String note) {
+        Question question = require(questionId);
+        if (admin) quizzes.requireForJob(question.getQuizId());
+        else quizzes.getOwned(actorId, question.getQuizId());
+        try {
+            question.markValidationReviewed(actorId, note, java.time.Instant.now());
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage());
+        }
+        quizzes.refreshAiValidationStatus(question.getQuizId());
+        return authorResponse(question);
+    }
+
+    @Transactional
+    public QuizDtos.QuestionResponse undoValidationReview(UUID actorId, boolean admin,
+                                                           UUID questionId) {
+        Question question = require(questionId);
+        if (admin) quizzes.requireForJob(question.getQuizId());
+        else quizzes.getOwned(actorId, question.getQuizId());
+        try {
+            question.undoValidationReview();
+        } catch (IllegalStateException exception) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage());
+        }
+        quizzes.refreshAiValidationStatus(question.getQuizId());
+        return authorResponse(question);
     }
 
     @Transactional
@@ -116,34 +152,17 @@ public class QuestionService {
         }
         for (int index = 0; index < generated.size(); index++) {
             QuizDtos.QuestionRequest request = generated.get(index);
-            Question question = questions.save(new Question(quizId, request.sourceChunkId(), request.type(),
-                    request.prompt(), request.explanation(), request.points(), index, request.difficulty()));
+            Question question = questions.save(newQuestion(quizId, request.sourceChunkId(), request, index));
             replaceAnswers(question, request);
         }
     }
 
     @Transactional
     public void replaceGrounded(UUID quizId, List<QuizDtos.GroundedQuestion> generated,
-                                QuizDtos.QuestionCounts expected) {
-        validateGeneratedBatch(generated.stream().map(QuizDtos.GroundedQuestion::question).toList(), expected);
-        if (generated.stream().anyMatch(item -> item.citations() == null
-                || item.citations().stream().noneMatch(c -> c.role() == CitationRole.QUESTION)
-                || item.citations().stream().noneMatch(c -> c.role() == CitationRole.ANSWER)
-                || item.citations().stream().noneMatch(c -> c.role() == CitationRole.EXPLANATION))) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
-                    "Câu hỏi AI phải có nguồn cho câu hỏi, đáp án và giải thích");
-        }
-        Set<UUID> allowedSources = quizSources.findByQuizId(quizId).stream()
-                .map(QuizSource::getSourceDocumentId).collect(java.util.stream.Collectors.toSet());
-        for (var item : generated) for (var citation : item.citations()) {
-            var chunk = sourceChunks.findById(citation.sourceChunkId())
-                    .orElseThrow(() -> invalidCitation());
-            if (!allowedSources.contains(chunk.getSourceDocumentId())
-                    || citation.evidenceQuote() == null || citation.evidenceQuote().isBlank()
-                    || !containsNormalized(chunk.getContent(), citation.evidenceQuote())) {
-                throw invalidCitation();
-            }
-        }
+                                 QuizDtos.QuestionCounts expected) {
+        validateUsableGeneratedBatch(
+                generated.stream().map(QuizDtos.GroundedQuestion::question).toList());
+        generated = resolveGroundedCitations(quizId, generated);
         List<Question> old = questions.findByQuizIdOrderByPosition(quizId);
         List<UUID> oldIds = old.stream().map(Question::getId).toList();
         if (!oldIds.isEmpty()) {
@@ -152,13 +171,16 @@ public class QuestionService {
         }
         for (int index = 0; index < generated.size(); index++) {
             var item = generated.get(index); var request = item.question();
-            UUID primary = item.citations().get(0).sourceChunkId();
-            Question question = questions.save(new Question(quizId, primary, request.type(), request.prompt(),
-                    request.explanation(), request.points(), index, request.difficulty()));
+            List<QuizDtos.CitationRequest> itemCitations = safeCitations(item);
+            UUID primary = itemCitations.isEmpty() ? null
+                    : itemCitations.get(0).sourceChunkId();
+            Question question = newQuestion(quizId, primary, request, index);
+            question.applyAiValidation(item.validationStatus(), item.validationWarnings());
+            question = questions.save(question);
             replaceAnswers(question, request);
             List<QuestionCitation> values = new ArrayList<>();
             java.util.Map<CitationRole, Integer> positions = new java.util.EnumMap<>(CitationRole.class);
-            for (var citation : item.citations()) {
+            for (var citation : itemCitations) {
                 int position = positions.merge(citation.role(), 1, Integer::sum) - 1;
                 values.add(new QuestionCitation(question.getId(), citation.sourceChunkId(), citation.role(),
                         citation.evidenceQuote(), position));
@@ -167,8 +189,214 @@ public class QuestionService {
         }
     }
 
+    @Transactional
+    public void appendGrounded(
+            UUID quizId,
+            List<QuizDtos.GroundedQuestion> generated,
+            QuizDtos.QuestionCounts expected,
+            long baseQuizVersion,
+            long baseQuestionCount,
+            String baseQuestionFingerprint) {
+        validateUsableGeneratedBatch(
+                generated.stream().map(QuizDtos.GroundedQuestion::question).toList());
+        Quiz quiz = quizzes.lockForGenerationCommit(quizId);
+        List<Question> existing = questions.findByQuizIdOrderByPosition(quizId);
+        if (quiz.getVersion() != baseQuizVersion
+                || existing.size() != baseQuestionCount
+                || !questionFingerprint(existing).equals(baseQuestionFingerprint)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "QUIZ_CHANGED_DURING_GENERATION");
+        }
+        if (existing.size() + generated.size() > 50) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNPROCESSABLE_CONTENT, "QUIZ_QUESTION_LIMIT_EXCEEDED");
+        }
+        generated = resolveGroundedCitations(quizId, generated);
+        int startPosition = existing.size();
+        for (int index = 0; index < generated.size(); index++) {
+            var item = generated.get(index);
+            var request = item.question();
+            List<QuizDtos.CitationRequest> itemCitations = safeCitations(item);
+            UUID primary = itemCitations.isEmpty() ? null
+                    : itemCitations.get(0).sourceChunkId();
+            Question question = newQuestion(
+                    quizId, primary, request, startPosition + index);
+            question.applyAiValidation(item.validationStatus(), item.validationWarnings());
+            question = questions.save(question);
+            replaceAnswers(question, request);
+            saveCitations(question, itemCitations);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public String questionFingerprint(UUID quizId) {
+        return questionFingerprint(questions.findByQuizIdOrderByPosition(quizId));
+    }
+
+    static String questionFingerprint(List<Question> values) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            for (Question question : values) {
+                digest.update(Integer.toString(question.getPosition())
+                        .getBytes(StandardCharsets.UTF_8));
+                digest.update((byte) 0);
+                digest.update(normalizePrompt(question.getPrompt())
+                        .getBytes(StandardCharsets.UTF_8));
+                digest.update((byte) 0xff);
+            }
+            return HexFormat.of().formatHex(digest.digest());
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    private List<QuizDtos.GroundedQuestion> resolveGroundedCitations(
+            UUID quizId, List<QuizDtos.GroundedQuestion> generated) {
+        Set<UUID> allowedSources = quizSources.findByQuizId(quizId).stream()
+                .map(QuizSource::getSourceDocumentId)
+                .collect(java.util.stream.Collectors.toSet());
+        java.util.Map<UUID, com.genquiz.bk.source.SourceDocument> allowedDocumentsByRagId =
+                allowedSources.stream()
+                        .map(sourceDocuments::findByIdAndDeletedAtIsNull)
+                        .flatMap(Optional::stream)
+                        .filter(document -> document.getRagDocumentId() != null)
+                        .collect(java.util.stream.Collectors.toMap(
+                                com.genquiz.bk.source.SourceDocument::getRagDocumentId,
+                                document -> document));
+        List<com.genquiz.bk.source.SourceChunk> allowedChunks = new ArrayList<>(allowedSources.stream()
+                .flatMap(sourceId -> sourceChunks
+                        .findBySourceDocumentIdOrderByChunkIndex(sourceId).stream())
+                .toList());
+        java.util.Map<UUID, com.genquiz.bk.source.SourceChunk> allowedById =
+                new java.util.HashMap<>(allowedChunks.stream().collect(java.util.stream.Collectors.toMap(
+                        com.genquiz.bk.source.SourceChunk::getId,
+                        chunk -> chunk,
+                        (first, ignored) -> first)));
+
+        List<QuizDtos.GroundedQuestion> resolved = new ArrayList<>();
+        for (var item : generated) {
+            List<QuizDtos.CitationRequest> valid = new ArrayList<>();
+            List<QuizDtos.AiValidationWarning> warnings = new ArrayList<>(
+                    item.validationWarnings() == null
+                            ? List.of() : item.validationWarnings());
+            for (var citation : safeCitations(item)) {
+                com.genquiz.bk.source.SourceChunk synchronizedChunk = syncCitationSnapshot(
+                        citation, allowedDocumentsByRagId, allowedSources);
+                if (synchronizedChunk != null) {
+                    allowedById.entrySet().removeIf(entry ->
+                            entry.getValue().getSourceDocumentId().equals(
+                                    synchronizedChunk.getSourceDocumentId())
+                                    && entry.getValue().getChunkIndex()
+                                    == synchronizedChunk.getChunkIndex());
+                    allowedById.put(synchronizedChunk.getId(), synchronizedChunk);
+                    allowedChunks.removeIf(chunk ->
+                            chunk.getSourceDocumentId().equals(
+                                    synchronizedChunk.getSourceDocumentId())
+                                    && chunk.getChunkIndex()
+                                    == synchronizedChunk.getChunkIndex());
+                    allowedChunks.add(synchronizedChunk);
+                }
+                com.genquiz.bk.source.SourceChunk exact =
+                        citation.sourceChunkId() == null
+                                ? null : allowedById.get(citation.sourceChunkId());
+                if (exact == null && citation.sourceChunkId() != null) {
+                    var referenced = sourceChunks.findById(citation.sourceChunkId());
+                    if (referenced.isPresent()
+                            && !allowedSources.contains(
+                            referenced.get().getSourceDocumentId())) {
+                        throw invalidCitation();
+                    }
+                }
+                if (exact != null
+                        && containsNormalized(
+                        exact.getContent(), citation.evidenceQuote())) {
+                    valid.add(citation);
+                    continue;
+                }
+                List<com.genquiz.bk.source.SourceChunk> matches = allowedChunks.stream()
+                        .filter(chunk -> containsNormalized(
+                                chunk.getContent(), citation.evidenceQuote()))
+                        .toList();
+                if (matches.size() == 1) {
+                    valid.add(new QuizDtos.CitationRequest(
+                            matches.get(0).getId(), citation.role(),
+                            citation.evidenceQuote()));
+                    continue;
+                }
+                warnings.add(new QuizDtos.AiValidationWarning(
+                        "INVALID_CITATION_QUOTE",
+                        citation.role() == null ? null : citation.role().name(),
+                        "Citation thuộc nguồn đã chọn và khớp nội dung đã đồng bộ",
+                        citation.sourceChunkId() == null
+                                ? null : citation.sourceChunkId().toString(),
+                        citation.sourceChunkId() == null
+                                ? null : citation.sourceChunkId().toString(),
+                        "Không thể đối chiếu chắc chắn trích dẫn; câu hỏi vẫn được lưu để chủ Quiz kiểm tra."));
+            }
+            resolved.add(new QuizDtos.GroundedQuestion(
+                    item.question(),
+                    List.copyOf(valid),
+                    warnings.isEmpty() && item.validationStatus() != AiValidationStatus.WARNING
+                            ? AiValidationStatus.VERIFIED : AiValidationStatus.WARNING,
+                    List.copyOf(warnings)));
+        }
+        return List.copyOf(resolved);
+    }
+
+    private com.genquiz.bk.source.SourceChunk syncCitationSnapshot(
+            QuizDtos.CitationRequest citation,
+            java.util.Map<UUID, com.genquiz.bk.source.SourceDocument> allowedDocumentsByRagId,
+            Set<UUID> allowedSources) {
+        if (citation.ragDocumentId() == null || citation.chunkText() == null
+                || citation.chunkText().isBlank() || citation.sourceChunkId() == null) {
+            return null;
+        }
+        var source = allowedDocumentsByRagId.get(citation.ragDocumentId());
+        if (source == null || !allowedSources.contains(source.getId())) {
+            throw invalidCitation();
+        }
+        if (!containsNormalized(citation.chunkText(), citation.evidenceQuote())) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "QUIZ_CITATION_SNAPSHOT_INVALID");
+        }
+        var existing = sourceChunks.findById(citation.sourceChunkId()).orElse(null);
+        if (existing != null && !existing.getSourceDocumentId().equals(source.getId())) {
+            throw invalidCitation();
+        }
+        sourceChunks.deactivateActiveAtIndex(source.getId(), citation.chunkIndex());
+        int tokenCount = Math.max(1, citation.chunkText().trim().split("\\s+").length);
+        if (existing == null) {
+            existing = new com.genquiz.bk.source.SourceChunk(
+                    citation.sourceChunkId(), source.getId(), source.getTopicId(),
+                    citation.chunkIndex(), citation.chunkText(), tokenCount,
+                    citation.pageNumber(), citation.slideNumber(), citation.heading(),
+                    citation.rawText(), citation.mathEnhanced(), citation.snapshotFingerprint());
+        } else {
+            existing.refreshSnapshot(citation.chunkIndex(), citation.chunkText(), tokenCount,
+                    citation.pageNumber(), citation.slideNumber(), citation.heading(),
+                    citation.rawText(), citation.mathEnhanced(), citation.snapshotFingerprint());
+        }
+        return sourceChunks.save(existing);
+    }
+
+    private void saveCitations(
+            Question question, List<QuizDtos.CitationRequest> requested) {
+        List<QuestionCitation> values = new ArrayList<>();
+        java.util.Map<CitationRole, Integer> positions =
+                new java.util.EnumMap<>(CitationRole.class);
+        for (var citation : requested) {
+            int position = positions.merge(citation.role(), 1, Integer::sum) - 1;
+            values.add(new QuestionCitation(
+                    question.getId(), citation.sourceChunkId(), citation.role(),
+                    citation.evidenceQuote(), position));
+        }
+        citations.saveAll(values);
+    }
+
     private static ResponseStatusException invalidCitation() {
-        return new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "Nguồn trích dẫn không hợp lệ");
+        return new ResponseStatusException(
+                HttpStatus.UNPROCESSABLE_CONTENT,
+                "QUIZ_CITATION_SOURCE_FORBIDDEN");
     }
 
     private static boolean containsNormalized(String text, String quote) {
@@ -206,9 +434,13 @@ public class QuestionService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
                     "Câu hỏi phải có loại và nội dung hợp lệ");
         }
-        if (request.difficulty() == null || request.difficulty() == Difficulty.MIXED) {
+        if (request.cognitiveLevel() == null
+                && (request.difficulty() == null || request.difficulty() == Difficulty.MIXED)) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
-                    "QUESTION_DIFFICULTY_INVALID");
+                    "COGNITIVE_LEVEL_INVALID");
+        }
+        if (request.complexityProfile() != null && request.complexityProfile().verified()) {
+            CognitivePolicy.validate(request.resolvedCognitiveLevel(), request.complexityProfile());
         }
         List<QuizDtos.OptionRequest> optionValues = request.options() == null ? List.of() : request.options();
         List<String> answerValues = request.acceptedAnswers() == null ? List.of() : request.acceptedAnswers();
@@ -265,10 +497,7 @@ public class QuestionService {
         Set<String> prompts = new HashSet<>();
         for (QuizDtos.QuestionRequest request : generated) {
             validate(request);
-            String normalizedPrompt = Normalizer.normalize(request.prompt(), Normalizer.Form.NFKC)
-                    .toLowerCase(Locale.ROOT)
-                    .replaceAll("\\s+", " ")
-                    .trim();
+            String normalizedPrompt = normalizePrompt(request.prompt());
             if (!prompts.add(normalizedPrompt)) {
                 throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
                         "Danh sách sinh tự động chứa câu hỏi trùng nhau");
@@ -287,6 +516,26 @@ public class QuestionService {
         }
     }
 
+    static void validateUsableGeneratedBatch(List<QuizDtos.QuestionRequest> generated) {
+        if (generated == null || generated.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "AI không tạo được câu hỏi có thể sử dụng");
+        }
+        generated.forEach(QuestionService::validate);
+    }
+
+    private static List<QuizDtos.CitationRequest> safeCitations(
+            QuizDtos.GroundedQuestion question) {
+        return question.citations() == null ? List.of() : question.citations();
+    }
+
+    private static String normalizePrompt(String prompt) {
+        return Normalizer.normalize(prompt == null ? "" : prompt, Normalizer.Form.NFKC)
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
     private QuizDtos.QuestionResponse authorResponse(Question question) {
         var optionDtos = options.findByQuestionIdOrderByPosition(question.getId()).stream()
                 .map(option -> new QuizDtos.OptionResponse(option.getId(), option.getOptionText(), option.isCorrect(),
@@ -303,8 +552,43 @@ public class QuestionService {
                 }).toList();
         return new QuizDtos.QuestionResponse(question.getId(), question.getQuizId(), question.getType(),
                 question.getPrompt(), question.getExplanation(), question.getPoints(), question.getPosition(),
-                question.getDifficulty(), question.getSourceChunkId(), optionDtos, answers, citationDtos,
+                question.getDifficulty(), question.getCognitiveLevel(),
+                profile(question), question.getComplexityScore(), question.getSourceChunkId(), optionDtos, answers, citationDtos,
+                question.getAiValidationStatus(), question.getValidationWarnings(),
+                question.getValidationReviewedAt(), question.getValidationReviewedBy(),
+                question.getValidationReviewNote(),
                 question.getVersion());
+    }
+
+    private Question newQuestion(UUID quizId, UUID sourceChunkId, QuizDtos.QuestionRequest request, int position) {
+        Question question = new Question(quizId, sourceChunkId, request.type(), request.prompt(),
+                request.explanation(), request.points(), position, request.difficulty());
+        applyCognitive(question, request);
+        return question;
+    }
+
+    private void applyCognitive(Question question, QuizDtos.QuestionRequest request) {
+        CognitiveProfile profile = request.complexityProfile();
+        if (profile == null) profile = new CognitiveProfile(0, 0, false, false, false, List.of(), null, false);
+        String metadata = "{}";
+        try {
+            metadata = new tools.jackson.databind.ObjectMapper().writeValueAsString(
+                    java.util.Map.of("conceptsUsed", profile.conceptsUsed(),
+                            "novelScenarioSummary", profile.novelScenarioSummary() == null ? "" : profile.novelScenarioSummary()));
+        } catch (Exception ignored) {
+            // Empty metadata remains safe; scalar columns are authoritative.
+        }
+        question.applyCognitiveProfile(request.resolvedCognitiveLevel(), profile, metadata);
+    }
+
+    private CognitiveProfile profile(Question question) {
+        if (!question.isComplexityVerified()) {
+            return new CognitiveProfile(0, 0, false, false, false, List.of(), null, false);
+        }
+        return new CognitiveProfile(question.getConceptCount(), question.getReasoningStepCount(),
+                Boolean.TRUE.equals(question.getRequiresNovelScenario()),
+                Boolean.TRUE.equals(question.getAnswerDirectlyPresent()),
+                Boolean.TRUE.equals(question.getRequiresComparison()), List.of(), null, true);
     }
 
     private Question require(UUID questionId) {

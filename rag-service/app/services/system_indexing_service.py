@@ -10,6 +10,8 @@ from app.models.document import DocumentChunk, utc_now_iso
 from app.services.document_parser import SUPPORTED_EXTENSIONS, DocumentParser
 from app.utils.hashing import chunk_uuid, document_uuid, sha256_file
 
+EXTRACTION_VERSION = "pdf-math-v1"
+
 
 @dataclass(frozen=True)
 class IndexingResult:
@@ -78,6 +80,7 @@ class SystemIndexingService:
             and old_manifest.get("embeddingModel") == self._embedding.model_name
             and old_manifest.get("embeddingRuntime", "legacy")
             == embedding_runtime
+            and old_manifest.get("extractionVersion") == EXTRACTION_VERSION
         )
         old_entries = {
             entry["relativePath"]: entry for entry in old_manifest.get("files", [])
@@ -146,6 +149,8 @@ class SystemIndexingService:
                         heading=draft.heading,
                         text=draft.text,
                         created_at=indexed_at,
+                        raw_content=draft.raw_text,
+                        math_enhanced=draft.math_enhanced,
                     )
                     for index, draft in enumerate(drafts)
                 ]
@@ -214,6 +219,7 @@ class SystemIndexingService:
             "files": manifest_entries,
             "totalDocuments": len(canonical_paths),
             "totalChunks": len(final_chunks),
+            "extractionVersion": EXTRACTION_VERSION,
         }
         self._store.commit(vectors, final_chunks, manifest)
         return IndexingResult(

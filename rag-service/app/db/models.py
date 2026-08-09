@@ -65,6 +65,30 @@ class DocumentRecord(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    math_extraction_status: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_DETECTED")
+    math_formula_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    math_warning_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class MathExtractionRecord(Base):
+    __tablename__ = "math_extractions"
+    __table_args__ = (
+        Index("idx_math_extractions_document_page", "document_id", "page_number"),
+        Index("uq_math_extraction_cache", "document_id", "crop_sha256", "model", "extraction_version", unique=True),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    document_id: Mapped[str] = mapped_column(String(36), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    bbox_json: Mapped[str] = mapped_column(Text, nullable=False)
+    crop_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    raw_text: Mapped[str] = mapped_column(Text, nullable=False)
+    latex: Mapped[str | None] = mapped_column(Text)
+    provider: Mapped[str | None] = mapped_column(String(32))
+    model: Mapped[str | None] = mapped_column(String(128))
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    extraction_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 
 class IndexingJob(Base):

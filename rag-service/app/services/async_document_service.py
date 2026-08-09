@@ -181,7 +181,7 @@ class AsyncDocumentProcessor:
             safe_key = __import__("app.models.user_context", fromlist=["safe_user_key"]).safe_user_key(owner_id)
             path = self._documents._upload_root / safe_key / document_id / record.stored_filename
             self._step(job_id, "PARSING", 30)
-            sections = self._documents._parser.parse(path, record.original_filename)
+            sections = self._documents._parser.parse(path, record.original_filename, document_id)
             self._step(job_id, "CHUNKING", 50)
             drafts = self._documents._chunker.chunk_sections(sections)
             if not drafts:
@@ -197,7 +197,12 @@ class AsyncDocumentProcessor:
             self._step(job_id, "COMMITTING", 90)
             pages = {d.page_number for d in drafts if d.page_number is not None}
             slides = {d.slide_number for d in drafts if d.slide_number is not None}
-            self._commit_if_running(job_id, owner_id, document_id, chunks, len(pages or slides) or None)
+            math_formula_count = sum(section.math_formula_count for section in sections)
+            math_warning_count = sum(section.math_warning_count for section in sections)
+            self._commit_if_running(
+                job_id, owner_id, document_id, chunks, len(pages or slides) or None,
+                math_formula_count, math_warning_count,
+            )
             self._jobs.succeed(job_id)
         except ServiceError as error:
             self._jobs.fail(job_id, error.code, error.message)
@@ -218,6 +223,7 @@ class AsyncDocumentProcessor:
     def _commit_if_running(
         self, job_id: str, owner_id: str, document_id: str,
         chunks: list[Any], page_count: int | None,
+        math_formula_count: int = 0, math_warning_count: int = 0,
     ) -> None:
         now = datetime.now(timezone.utc)
         with self._documents._indexes.lock_for(owner_id), self._documents._database.session() as session:
@@ -234,6 +240,13 @@ class AsyncDocumentProcessor:
                 document.status = "READY"
                 document.page_count = page_count
                 document.chunk_count = len(chunks)
+                document.math_formula_count = math_formula_count
+                document.math_warning_count = math_warning_count
+                document.math_extraction_status = (
+                    "FAILED" if math_warning_count and not math_formula_count
+                    else "PARTIAL" if math_warning_count
+                    else "ENHANCED" if math_formula_count else "NOT_DETECTED"
+                )
                 document.error_message = None
                 document.indexed_at = document.updated_at = now
                 session.commit()

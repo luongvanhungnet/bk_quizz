@@ -1,13 +1,14 @@
 package com.genquiz.bk.explore;
 
 import com.genquiz.bk.quiz.Difficulty;
+import com.genquiz.bk.quiz.CognitiveMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 public final class ExploreDtos {
     private ExploreDtos() {}
-    public record QuizSummary(UUID id, String title, Difficulty difficulty, int durationMinutes,
+    public record QuizSummary(UUID id, String title, Difficulty difficulty, CognitiveMode cognitiveMode, int durationMinutes,
                               long questionCount, Instant publishedAt) {}
     public record TopicSummary(UUID id, String title, String description, UUID ownerId, String ownerUsername,
                                long quizCount, long learnerCount, long bookmarkCount, Instant publishedAt) {}

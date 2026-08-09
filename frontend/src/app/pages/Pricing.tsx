@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { CheckCircle2, HelpCircle, Zap } from "lucide-react";
+import { CheckCircle2, HelpCircle } from "lucide-react";
 import { Button, Card } from "../components/ui";
 import { plans } from "../content/pricing";
 
@@ -7,11 +7,7 @@ export default function Pricing() {
   return (
     <div className="min-h-screen bg-[#F7F7F8] font-sans text-[#111827]">
       <header className="border-b border-[#E5E7EB] bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
-          <Link to="/" className="flex items-center gap-2 text-xl font-black text-[#C8102E]">
-            <Zap className="h-6 w-6 fill-current" />
-            BKQuiz
-          </Link>
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-end gap-8 px-5 md:justify-between lg:px-8">
           <nav className="hidden items-center gap-6 text-sm font-semibold text-[#6B7280] md:flex">
             <Link to="/">Trang chủ</Link>
             <Link to="/dashboard">Ứng dụng</Link>

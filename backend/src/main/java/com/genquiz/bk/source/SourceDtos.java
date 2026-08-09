@@ -32,6 +32,9 @@ public final class SourceDtos {
             Instant indexingProgressAt,
             Integer pageCount,
             int chunkCount,
+            String mathExtractionStatus,
+            int mathFormulaCount,
+            int mathWarningCount,
             Instant indexedAt,
             Instant createdAt,
             Instant updatedAt,
@@ -46,7 +49,8 @@ public final class SourceDtos {
                     source.getErrorMessage(), source.getIndexingProgress(), source.getIndexingStep(),
                     stage(source), delayed, processorAvailable,
                     source.getIndexingProgressAt(),
-                    source.getPageCount(), source.getChunkCount(), source.getIndexedAt(),
+                    source.getPageCount(), source.getChunkCount(), source.getMathExtractionStatus(),
+                    source.getMathFormulaCount(), source.getMathWarningCount(), source.getIndexedAt(),
                     source.getCreatedAt(), source.getUpdatedAt(), source.getVersion());
         }
 

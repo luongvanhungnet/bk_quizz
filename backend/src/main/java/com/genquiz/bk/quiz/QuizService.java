@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import com.genquiz.bk.security.VerifiedAccountGuard;
+import com.genquiz.bk.common.error.ApiException;
 
 @Service
 public class QuizService {
@@ -68,8 +69,10 @@ public class QuizService {
     @Transactional
     public Quiz createManual(UUID actorId, QuizDtos.SaveRequest request) {
         topics.getOwned(actorId, request.topicId());
-        return quizzes.save(Quiz.manual(request.topicId(), actorId, request.title(), request.description(),
-                request.difficulty(), request.durationMinutes(), request.visibility()));
+        Quiz quiz = Quiz.manual(request.topicId(), actorId, request.title(), request.description(),
+                request.difficulty(), request.durationMinutes(), request.visibility());
+        quiz.setCognitiveMode(request.resolvedCognitiveMode());
+        return quizzes.save(quiz);
     }
 
     @Transactional(readOnly = true)
@@ -118,6 +121,7 @@ public class QuizService {
         }
         quiz.update(request.title(), request.description(), request.difficulty(), request.durationMinutes(),
                 request.visibility());
+        quiz.setCognitiveMode(request.resolvedCognitiveMode());
         return quiz;
     }
 
@@ -151,8 +155,10 @@ public class QuizService {
     @Transactional
     public GenerationResult generate(UUID actorId, QuizDtos.GenerateRequest request, String idempotencyKey) {
         validateGeneration(actorId, request);
-        Quiz quiz = quizzes.save(Quiz.generated(request.topicId(), actorId, request.title(), request.difficulty(),
-                request.durationMinutes(), request.visibility()));
+        Quiz quiz = Quiz.generated(request.topicId(), actorId, request.title(), request.difficulty(),
+                request.durationMinutes(), request.visibility());
+        quiz.setCognitiveMode(request.resolvedCognitiveMode());
+        quizzes.save(quiz);
         quizSources.saveAll(request.sourceIds().stream().distinct()
                 .map(sourceId -> new QuizSource(quiz.getId(), sourceId)).toList());
         String scopedKey = idempotencyKey == null || idempotencyKey.isBlank()
@@ -169,6 +175,62 @@ public class QuizService {
     }
 
     @Transactional
+    public GenerationResult appendGeneration(
+            UUID actorId,
+            UUID quizId,
+            QuizDtos.AppendGenerateRequest request,
+            String idempotencyKey) {
+        Quiz quiz = getOwnedForGeneration(actorId, quizId);
+        if (quiz.getStatus() != QuizStatus.DRAFT
+                && quiz.getStatus() != QuizStatus.READY) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "QUIZ_APPEND_NOT_ALLOWED",
+                    "Chỉ có thể sinh thêm câu hỏi cho Quiz bản nháp hoặc sẵn sàng.");
+        }
+        if (jobs.hasActiveQuizGeneration(quizId)) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "QUIZ_GENERATION_IN_PROGRESS",
+                    "Quiz đang có một tác vụ sinh câu hỏi khác.");
+        }
+        List<Question> existing =
+                questions.findByQuizIdOrderByPosition(quizId);
+        int requested = request.questionCounts().total();
+        if (requested < 1 || existing.size() + requested > 50) {
+            throw new ApiException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "QUIZ_QUESTION_LIMIT_EXCEEDED",
+                    "Tổng số câu hỏi của Quiz không được vượt quá 50.");
+        }
+        validateGenerationSources(
+                actorId, quiz.getTopicId(), request.sourceIds());
+
+        var linkedSources = quizSources.findByQuizId(quizId).stream()
+                .map(QuizSource::getSourceDocumentId)
+                .collect(java.util.stream.Collectors.toCollection(
+                        LinkedHashSet::new));
+        List<UUID> missingSourceIds = request.sourceIds().stream()
+                .filter(sourceId -> !linkedSources.contains(sourceId))
+                .toList();
+        quizSources.saveAll(missingSourceIds.stream()
+                .map(sourceId -> new QuizSource(quizId, sourceId)).toList());
+
+        String scopedKey = idempotencyKey == null || idempotencyKey.isBlank()
+                ? null
+                : "quiz-generation-append:" + actorId + ":" + quizId + ":"
+                        + idempotencyKey;
+        Job job = jobs.enqueue(
+                JobType.QUIZ_GENERATION,
+                actorId,
+                quizId,
+                appendGenerationPayload(quiz, request, existing),
+                scopedKey,
+                maxJobAttempts(request.questionCounts()));
+        return new GenerationResult(quiz, job);
+    }
+
+    @Transactional
     public GenerationResult retry(UUID actorId, UUID quizId, QuizDtos.GenerateRequest request,
                                   String idempotencyKey) {
         Quiz quiz = getOwned(actorId, quizId);
@@ -178,6 +240,7 @@ public class QuizService {
         }
         validateGeneration(actorId, request);
         quiz.queueRetry();
+        quiz.setCognitiveMode(request.resolvedCognitiveMode());
         quizSources.deleteByQuizId(quizId);
         quizSources.saveAll(request.sourceIds().stream().distinct()
                 .map(sourceId -> new QuizSource(quizId, sourceId)).toList());
@@ -191,13 +254,18 @@ public class QuizService {
     @Transactional
     public GenerationResult retryLast(UUID actorId, UUID quizId) {
         Quiz quiz = getOwned(actorId, quizId);
-        if (quiz.getStatus() != QuizStatus.FAILED
-                || quiz.getGenerationMode() != GenerationMode.AI) {
+        Job latest = jobs.latestOwnedQuizGeneration(actorId, quizId);
+        boolean append = QuizGenerationOperation.fromPayload(
+                latest.getPayload()) == QuizGenerationOperation.APPEND;
+        if ((!append && (quiz.getStatus() != QuizStatus.FAILED
+                || quiz.getGenerationMode() != GenerationMode.AI))
+                || (append && quiz.getStatus() != QuizStatus.DRAFT
+                && quiz.getStatus() != QuizStatus.READY)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "Bài kiểm tra không thể thử sinh lại");
         }
         Job job = jobs.retryOwnedQuizGeneration(actorId, quizId);
-        quiz.queueRetry();
+        if (!append) quiz.queueRetry();
         return new GenerationResult(quiz, job);
     }
 
@@ -220,6 +288,34 @@ public class QuizService {
     }
 
     @Transactional
+    public void markReady(UUID quizId, AiValidationStatus validationStatus,
+                          List<QuizDtos.AiValidationWarning> validationWarnings) {
+        if (questions.countByQuizId(quizId) == 0) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
+                    "AI không tạo được câu hỏi có thể sử dụng");
+        }
+        requireActive(quizId).markReady(validationStatus, validationWarnings);
+    }
+
+    @Transactional
+    public void mergeAiValidation(UUID quizId, AiValidationStatus validationStatus,
+                                  List<QuizDtos.AiValidationWarning> validationWarnings) {
+        requireActive(quizId).mergeAiValidation(validationStatus, validationWarnings);
+    }
+
+    @Transactional
+    public void refreshAiValidationStatus(UUID quizId) {
+        List<Question> values = questions.findByQuizIdOrderByPosition(quizId);
+        AiValidationStatus status = values.stream().anyMatch(
+                question -> question.getAiValidationStatus() == AiValidationStatus.WARNING)
+                ? AiValidationStatus.WARNING
+                : values.stream().anyMatch(
+                        question -> question.getAiValidationStatus() == AiValidationStatus.REVIEWED)
+                        ? AiValidationStatus.REVIEWED : AiValidationStatus.VERIFIED;
+        requireActive(quizId).updateAiValidationStatus(status);
+    }
+
+    @Transactional
     public void markFailed(UUID quizId, String safeCode, String safeMessage) {
         requireActive(quizId).markFailed(safeCode, safeMessage);
     }
@@ -235,6 +331,13 @@ public class QuizService {
     @Transactional(readOnly = true)
     public Quiz requireForJob(UUID quizId) { return requireActive(quizId); }
 
+    @Transactional
+    public Quiz lockForGenerationCommit(UUID quizId) {
+        return quizzes.findLockedActiveById(quizId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Không tìm thấy bài kiểm tra"));
+    }
+
     private void validateGeneration(UUID actorId, QuizDtos.GenerateRequest request) {
         topics.getOwned(actorId, request.topicId());
         int total = request.questionCounts().total();
@@ -242,14 +345,19 @@ public class QuizService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
                     "Tổng số câu hỏi phải từ 1 đến 50");
         }
-        var uniqueSourceIds = new LinkedHashSet<>(request.sourceIds());
-        if (uniqueSourceIds.size() != request.sourceIds().size()) {
+        validateGenerationSources(actorId, request.topicId(), request.sourceIds());
+    }
+
+    private void validateGenerationSources(
+            UUID actorId, UUID topicId, List<UUID> sourceIds) {
+        var uniqueSourceIds = new LinkedHashSet<>(sourceIds);
+        if (uniqueSourceIds.size() != sourceIds.size()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT, "Danh sách tài liệu bị trùng");
         }
         List<SourceDocument> ready = sources.findAllByIdInAndOwnerIdAndStatusAndDeletedAtIsNull(
                 uniqueSourceIds, actorId, SourceStatus.READY);
         if (ready.size() != uniqueSourceIds.size()
-                || ready.stream().anyMatch(source -> !source.getTopicId().equals(request.topicId()))) {
+                || ready.stream().anyMatch(source -> !source.getTopicId().equals(topicId))) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
                     "Tất cả tài liệu phải thuộc chủ đề và đã xử lý xong");
         }
@@ -258,14 +366,53 @@ public class QuizService {
     private String generationPayload(Quiz quiz, QuizDtos.GenerateRequest request) {
         try {
             return objectMapper.writeValueAsString(Map.of(
+                    "operation", QuizGenerationOperation.CREATE,
                     "quizId", quiz.getId(),
                     "topicId", quiz.getTopicId(),
                     "title", request.title(),
                     "sourceIds", request.sourceIds(),
-                    "difficulty", request.difficulty(),
+                    "difficulty", quiz.getDifficulty(),
+                    "cognitiveMode", request.resolvedCognitiveMode(),
                     "questionCounts", request.questionCounts()));
         } catch (JacksonException exception) {
             throw new IllegalStateException("Không thể tạo payload sinh câu hỏi", exception);
+        }
+    }
+
+    private String appendGenerationPayload(
+            Quiz quiz,
+            QuizDtos.AppendGenerateRequest request,
+            List<Question> existing) {
+        try {
+            var payload = new java.util.LinkedHashMap<String, Object>();
+            payload.put("operation", QuizGenerationOperation.APPEND);
+            payload.put("quizId", quiz.getId());
+            payload.put("topicId", quiz.getTopicId());
+            payload.put("title", quiz.getTitle());
+            payload.put("sourceIds", request.sourceIds());
+            payload.put(
+                    "difficulty",
+                    quiz.getDifficulty() == null
+                            ? Difficulty.MEDIUM : quiz.getDifficulty());
+            payload.put("cognitiveMode", request.cognitiveMode());
+            payload.put("questionCounts", request.questionCounts());
+            payload.put("baseQuizVersion", quiz.getVersion());
+            payload.put("baseQuestionCount", existing.size());
+            payload.put(
+                    "baseQuestionFingerprint",
+                    QuestionService.questionFingerprint(existing));
+            payload.put(
+                    "existingPrompts",
+                    existing.stream()
+                            .map(Question::getPrompt)
+                            .map(value -> value.substring(
+                                    0, Math.min(500, value.length())))
+                            .toList());
+            return objectMapper.writeValueAsString(payload);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException(
+                    "KhÃ´ng thá»ƒ táº¡o payload sinh ná»‘i cÃ¢u há»i",
+                    exception);
         }
     }
 
@@ -278,6 +425,19 @@ public class QuizService {
     private Quiz requireActive(UUID quizId) {
         return quizzes.findByIdAndDeletedAtIsNull(quizId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy bài kiểm tra"));
+    }
+
+    private Quiz getOwnedForGeneration(UUID actorId, UUID quizId) {
+        Quiz quiz = quizzes.findLockedActiveById(quizId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Không tìm thấy bài kiểm tra"));
+        if (!quiz.isOwnedBy(actorId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền chỉnh sửa bài kiểm tra này");
+        }
+        return quiz;
     }
 
     public record GenerationResult(Quiz quiz, Job job) {}

@@ -12,15 +12,30 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/jobs")
 public class JobController {
     private final JobService service;
+    private final JobEventService events;
     private final ActorIdentityService actors;
 
-    public JobController(JobService service, ActorIdentityService actors) {
+    public JobController(
+            JobService service,
+            JobEventService events,
+            ActorIdentityService actors) {
         this.service = service;
+        this.events = events;
         this.actors = actors;
     }
 
     @GetMapping("/{jobId}")
     public JobDtos.Response get(@PathVariable UUID jobId, Principal principal) {
         return JobDtos.Response.from(service.getOwned(actors.requireUserId(principal), jobId));
+    }
+
+    @GetMapping("/{jobId}/events")
+    public JobEventDtos.Page events(
+            @PathVariable UUID jobId,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") long afterId,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "100") int limit,
+            Principal principal) {
+        return events.listOwned(
+                actors.requireUserId(principal), jobId, afterId, limit);
     }
 }

@@ -66,23 +66,24 @@ Mở ba PowerShell tại `D:\BKQuiz\rag-service`.
 API:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
+.\scripts\run_local.ps1 -Service api
 ```
 
 Worker Windows dùng pool `solo`:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-.\scripts\run_worker.ps1
+.\scripts\run_local.ps1 -Service worker
 ```
 
 Beat phát hiện job stale:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-celery -A app.worker.celery_app:celery_app beat --loglevel=INFO
+.\scripts\run_local.ps1 -Service beat
 ```
+
+Trước khi test Gemini, chạy `.\.venv\Scripts\python.exe .\test_gemini_direct.py`.
+Nếu nhận `GEMINI_CONFIG_CONFLICT`, xóa key cũ khỏi PowerShell bằng
+`Remove-Item Env:GEMINI_API_KEY -ErrorAction Ignore` hoặc luôn dùng launcher.
 
 ## 4. Health và metrics
 
@@ -90,6 +91,8 @@ celery -A app.worker.celery_app:celery_app beat --loglevel=INFO
 curl.exe http://127.0.0.1:8000/health/live
 curl.exe http://127.0.0.1:8000/health/ready
 curl.exe http://127.0.0.1:8000/metrics
+curl.exe http://127.0.0.1:8000/api/v2/capabilities `
+  -H "X-Internal-API-Key: $InternalKey"
 curl.exe http://127.0.0.1:9101/metrics
 ```
 
@@ -259,3 +262,12 @@ Evaluation trả Recall@5, Hit Rate@5, MRR và latency cho baseline/hybrid. Bỏ
 | Readiness 503 nhưng liveness 200 | Xem trường `checks` để xác định SQLite, Redis, disk, embedding hoặc Gemini config. |
 
 Contract đầy đủ cho Spring Boot nằm tại `docs/spring-boot-integration.md`; OpenAPI tại `docs/openapi.json`.
+
+## Kiểm tra công thức toán
+
+```powershell
+alembic upgrade head
+python -m pytest tests/test_math_markup.py tests/test_pdf_math_extractor.py tests/test_gemini_math_vision.py -q
+```
+
+Upload hoặc reindex PDF có tích phân/chỉ số rồi kiểm tra document trả `mathExtractionStatus`, `mathFormulaCount`, `mathWarningCount`; endpoint chunks trả cả `text`, `rawText` và `mathEnhanced`. `PARTIAL` là kết quả hợp lệ khi Vision không khả dụng, không phải lỗi indexing.

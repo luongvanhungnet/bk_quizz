@@ -85,7 +85,7 @@ class UserDocumentService:
             os.replace(staging, final_path)
             self._set_status(document_id, "PROCESSING")
             stage = "PARSING"
-            sections = await asyncio.to_thread(self._parser.parse, final_path, filename)
+            sections = await asyncio.to_thread(self._parser.parse, final_path, filename, document_id)
             stage = "CHUNKING"
             drafts = await asyncio.to_thread(self._chunker.chunk_sections, sections)
             if not drafts:
@@ -95,6 +95,8 @@ class UserDocumentService:
             page_values = {draft.page_number for draft in drafts if draft.page_number is not None}
             slide_values = {draft.slide_number for draft in drafts if draft.slide_number is not None}
             page_count = len(page_values or slide_values) or None
+            math_formula_count = sum(section.math_formula_count for section in sections)
+            math_warning_count = sum(section.math_warning_count for section in sections)
             stage = "INDEXING"
             record = await asyncio.to_thread(
                 self._index_and_mark_ready,
@@ -102,6 +104,8 @@ class UserDocumentService:
                 document_id,
                 chunks,
                 page_count,
+                math_formula_count,
+                math_warning_count,
             )
             index_committed = True
             return self._dto(record)
@@ -196,7 +200,7 @@ class UserDocumentService:
                 if not path.is_file():
                     raise ServiceError(409, "USER_INDEX_REBUILD_REQUIRED", "Thiếu tệp nguồn để dựng lại chỉ mục người dùng.")
                 try:
-                    sections = self._parser.parse(path, record.original_filename)
+                    sections = self._parser.parse(path, record.original_filename, record.id)
                     drafts = self._chunker.chunk_sections(sections)
                 except ValueError as error:
                     raise ServiceError(409, "USER_INDEX_REBUILD_REQUIRED", "Không thể dựng lại chỉ mục người dùng.") from error
@@ -260,7 +264,7 @@ class UserDocumentService:
             record.updated_at = datetime.now(timezone.utc)
             session.commit()
 
-    def _mark_ready(self, document_id: str, page_count: int | None, chunk_count: int) -> DocumentRecord:
+    def _mark_ready(self, document_id: str, page_count: int | None, chunk_count: int, math_formula_count: int = 0, math_warning_count: int = 0) -> DocumentRecord:
         with self._database.session() as session:
             record = session.get(DocumentRecord, document_id)
             if record is None:
@@ -269,6 +273,13 @@ class UserDocumentService:
             record.status = "READY"
             record.page_count = page_count
             record.chunk_count = chunk_count
+            record.math_formula_count = math_formula_count
+            record.math_warning_count = math_warning_count
+            record.math_extraction_status = (
+                "FAILED" if math_warning_count and not math_formula_count
+                else "PARTIAL" if math_warning_count
+                else "ENHANCED" if math_formula_count else "NOT_DETECTED"
+            )
             record.error_message = None
             record.indexed_at = now
             record.updated_at = now
@@ -281,11 +292,13 @@ class UserDocumentService:
         document_id: str,
         chunks: list[DocumentChunk],
         page_count: int | None,
+        math_formula_count: int = 0,
+        math_warning_count: int = 0,
     ) -> DocumentRecord:
         with self._indexes.lock_for(owner_id):
             self._indexes.replace_document(owner_id, document_id, chunks)
             try:
-                return self._mark_ready(document_id, page_count, len(chunks))
+                return self._mark_ready(document_id, page_count, len(chunks), math_formula_count, math_warning_count)
             except Exception:
                 self._indexes.remove_document(owner_id, document_id)
                 raise
@@ -338,6 +351,8 @@ class UserDocumentService:
             classroom_id=context.classroom_id,
             source_type="USER_UPLOAD",
             slide_number=draft.slide_number,
+            raw_content=draft.raw_text,
+            math_enhanced=draft.math_enhanced,
         ) for index, draft in enumerate(drafts)]
 
     @staticmethod
@@ -356,6 +371,9 @@ class UserDocumentService:
             createdAt=record.created_at,
             updatedAt=record.updated_at,
             indexedAt=record.indexed_at,
+            mathExtractionStatus=record.math_extraction_status,
+            mathFormulaCount=record.math_formula_count,
+            mathWarningCount=record.math_warning_count,
         )
 
 

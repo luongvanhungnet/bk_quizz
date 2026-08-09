@@ -6,16 +6,20 @@ from docx import Document as WordDocument
 from pptx import Presentation
 
 from app.models.document import DocumentSection
+from app.services.pdf_math_extractor import MathVision, PdfMathExtractor
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".pptx", ".txt", ".md", ".markdown"}
 HEADING_PATTERN = re.compile(r"^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$")
 
 
 class DocumentParser:
-    def parse(self, path: Path, original_filename: str | None = None) -> list[DocumentSection]:
+    def __init__(self, math_vision: MathVision | None = None) -> None:
+        self._pdf_math = PdfMathExtractor(math_vision)
+
+    def parse(self, path: Path, original_filename: str | None = None, document_id: str | None = None) -> list[DocumentSection]:
         suffix = Path(original_filename or path.name).suffix.casefold()
         if suffix == ".pdf":
-            sections = self._parse_pdf(path)
+            sections = self._parse_pdf(path, document_id)
         elif suffix == ".docx":
             sections = self._parse_docx(path)
         elif suffix == ".pptx":
@@ -91,15 +95,22 @@ class DocumentParser:
     def _parse_text(path: Path) -> list[DocumentSection]:
         return [DocumentSection(None, None, path.read_text(encoding="utf-8-sig"))]
 
-    @staticmethod
-    def _parse_pdf(path: Path) -> list[DocumentSection]:
+    def _parse_pdf(self, path: Path, document_id: str | None = None) -> list[DocumentSection]:
         sections: list[DocumentSection] = []
         try:
             with pymupdf.open(path) as document:
                 for index, page in enumerate(document):
-                    text = page.get_text("text", sort=True).strip()
-                    if text:
-                        sections.append(DocumentSection(index + 1, None, text))
+                    result = self._pdf_math.extract(page, index + 1, document_id)
+                    if result.raw_text:
+                        sections.append(DocumentSection(
+                            index + 1,
+                            None,
+                            result.enhanced_text,
+                            raw_text=result.raw_text,
+                            math_enhanced=result.formula_count > 0,
+                            math_formula_count=result.formula_count,
+                            math_warning_count=result.warning_count,
+                        ))
         except (pymupdf.FileDataError, RuntimeError) as error:
             raise ValueError(f"Không thể đọc PDF {path.name}.") from error
         return sections

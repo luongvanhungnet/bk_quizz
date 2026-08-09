@@ -1,20 +1,94 @@
+import hashlib
+import os
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
+from dotenv import dotenv_values
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+RAG_SERVICE_ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_ENV_FILE = RAG_SERVICE_ROOT / ".env"
+
+
+class GeminiConfigConflictError(RuntimeError):
+    code = "GEMINI_CONFIG_CONFLICT"
+
+
+@dataclass(frozen=True)
+class GeminiCredentialDiagnostics:
+    source: str
+    fingerprint: str | None
+    length: int
+    process_configured: bool
+    dotenv_configured: bool
+
+
+def _secret_fingerprint(value: str) -> str | None:
+    normalized = value.strip()
+    if not normalized:
+        return None
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:12]
+
+
+def gemini_credential_diagnostics(
+    settings: "Settings",
+    *,
+    env_file: Path = DEFAULT_ENV_FILE,
+) -> GeminiCredentialDiagnostics:
+    process_key = os.getenv("GEMINI_API_KEY", "").strip()
+    dotenv_key = str(dotenv_values(env_file).get("GEMINI_API_KEY") or "").strip()
+    selected_key = settings.gemini_api_key.strip()
+    if process_key and dotenv_key and process_key == dotenv_key:
+        source = "process_env_and_dotenv"
+    elif process_key and selected_key == process_key:
+        source = "process_env"
+    elif dotenv_key and selected_key == dotenv_key:
+        source = "dotenv"
+    elif selected_key:
+        source = "injected"
+    else:
+        source = "not_configured"
+    return GeminiCredentialDiagnostics(
+        source=source,
+        fingerprint=_secret_fingerprint(selected_key),
+        length=len(selected_key),
+        process_configured=bool(process_key),
+        dotenv_configured=bool(dotenv_key),
+    )
+
+
+def _validate_gemini_credential_sources(
+    settings: "Settings",
+    *,
+    env_file: Path,
+) -> None:
+    if settings.app_env != "development":
+        return
+    process_key = os.getenv("GEMINI_API_KEY", "").strip()
+    dotenv_key = str(dotenv_values(env_file).get("GEMINI_API_KEY") or "").strip()
+    if process_key and dotenv_key and process_key != dotenv_key:
+        raise GeminiConfigConflictError(
+            "GEMINI_CONFIG_CONFLICT: GEMINI_API_KEY trong process environment "
+            "khác với dotenv của rag-service. Hãy xóa biến môi trường cũ hoặc "
+            "đồng bộ hai nguồn trước khi khởi động. "
+            f"processFingerprint={_secret_fingerprint(process_key)} "
+            f"dotenvFingerprint={_secret_fingerprint(dotenv_key)}"
+        )
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=DEFAULT_ENV_FILE,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
     )
 
     app_name: str = "BKQuiz RAG Service"
+    app_build_revision: str = "development"
     app_env: Literal["development", "test", "production"] = "development"
     app_host: str = "127.0.0.1"
     app_port: int = Field(default=8090, ge=1, le=65535)
@@ -23,12 +97,34 @@ class Settings(BaseSettings):
     gemini_api_base_url: str | None = None
     gemini_model: str
     gemini_temperature: float = Field(default=0.2, ge=0, le=2)
-    gemini_max_output_tokens: int = Field(default=2048, ge=1, le=65536)
-    gemini_timeout_seconds: float = Field(default=30, gt=0, le=300)
+    gemini_max_output_tokens: int = Field(default=32768, ge=1, le=65536)
+    gemini_timeout_seconds: float = Field(default=120, gt=0, le=300)
     gemini_max_attempts: int = Field(default=3, ge=1, le=3)
     gemini_max_retries: int | None = Field(default=None, ge=0, le=3)
     gemini_max_concurrency: int = Field(default=2, ge=1, le=20)
     gemini_retry_initial_delay_seconds: float = Field(default=1, ge=0, le=30)
+    llm_fallback_enabled: bool = True
+    gemini_oauth_enabled: bool = True
+    gemini_oauth_model: str = "gemini-3.6-flash"
+    gemini_oauth_quota_project: str = ""
+    gemini_oauth_timeout_seconds: float = Field(default=120, gt=0, le=300)
+    gemini_batch_size: int = Field(default=10, ge=1, le=20)
+    math_vision_enabled: bool = True
+    math_vision_model: str = "gemini-3.5-flash-lite"
+    math_vision_timeout_seconds: float = Field(default=60, gt=0, le=300)
+    math_extraction_version: str = "pdf-math-v1"
+    ollama_enabled: bool = True
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    ollama_model: str = "qwen3:1.7b"
+    ollama_timeout_seconds: float = Field(default=180, gt=0, le=600)
+    ollama_context_size: int = Field(default=4096, ge=1024, le=40960)
+    ollama_max_output_tokens: int = Field(default=2400, ge=256, le=8192)
+    ollama_temperature: float = Field(default=0.1, ge=0, le=2)
+    ollama_keep_alive: str = "60s"
+    ollama_max_questions_per_call: int = Field(default=2, ge=1, le=4)
+    ollama_batch_max_retries: int = Field(default=1, ge=0, le=3)
+    llm_circuit_breaker_failure_threshold: int = Field(default=1, ge=1, le=100)
+    llm_circuit_breaker_cooldown_seconds: int = Field(default=300, ge=1, le=3600)
 
     spring_boot_internal_api_key: str
     spring_boot_previous_internal_api_key: str = ""
@@ -82,6 +178,13 @@ class Settings(BaseSettings):
     rerank_min_candidates: int = Field(default=3, ge=1, le=100)
     rag_max_context_chars: int = Field(default=16000, ge=1000, le=100000)
     rag_quiz_min_useful_chars: int = Field(default=100, ge=1, le=10000)
+    citation_match_mode: Literal["exact", "lexical", "semantic"] = "semantic"
+    citation_lexical_min_score: float = Field(default=0.82, ge=0, le=1)
+    citation_semantic_same_source_min_score: float = Field(default=0.72, ge=0, le=1)
+    citation_semantic_cross_source_min_score: float = Field(default=0.80, ge=0, le=1)
+    citation_uniqueness_margin: float = Field(default=0.08, ge=0, le=1)
+    citation_max_window_chars: int = Field(default=600, ge=50, le=2000)
+    citation_max_candidates_per_source: int = Field(default=128, ge=1, le=1000)
     rag_debug_api_key: str = ""
     query_embedding_cache_size: int = Field(default=512, ge=1, le=10000)
     retrieval_cache_size: int = Field(default=512, ge=1, le=10000)
@@ -113,12 +216,31 @@ class Settings(BaseSettings):
         normalized = value.strip() if value else ""
         return normalized or None
 
+    @field_validator("ollama_base_url")
+    @classmethod
+    def normalize_ollama_url(cls, value: str) -> str:
+        normalized = value.strip().rstrip("/")
+        if not normalized.startswith(("http://", "https://")):
+            raise ValueError("OLLAMA_BASE_URL phải là URL HTTP hợp lệ.")
+        return normalized
+
+    @field_validator("gemini_oauth_quota_project")
+    @classmethod
+    def normalize_optional_text(cls, value: str) -> str:
+        return value.strip()
+
     @field_validator("rag_debug_api_key")
     @classmethod
     def normalize_debug_secret(cls, value: str) -> str:
         return value.strip()
 
-    @field_validator("embedding_model", "reranker_model")
+    @field_validator(
+        "embedding_model",
+        "reranker_model",
+        "gemini_oauth_model",
+        "ollama_model",
+        "ollama_keep_alive",
+    )
     @classmethod
     def embedding_model_must_not_be_blank(cls, value: str) -> str:
         normalized = value.strip()
@@ -144,6 +266,12 @@ class Settings(BaseSettings):
             raise ValueError("INDEX_LOCK_MODE=local không được phép trong production.")
         if self.celery_worker_heartbeat_ttl_seconds <= self.celery_worker_heartbeat_interval_seconds:
             raise ValueError("CELERY_WORKER_HEARTBEAT_TTL_SECONDS phải lớn hơn heartbeat interval.")
+        if (
+            self.app_env == "production"
+            and self.llm_fallback_enabled
+            and not (self.gemini_api_key or self.gemini_oauth_enabled or self.ollama_enabled)
+        ):
+            raise ValueError("LLM fallback được bật nhưng không có provider sinh quiz nào khả dụng.")
         return self
 
     @property
@@ -153,4 +281,10 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return load_settings()
+
+
+def load_settings(*, env_file: Path = DEFAULT_ENV_FILE) -> Settings:
+    settings = Settings(_env_file=env_file)
+    _validate_gemini_credential_sources(settings, env_file=env_file)
+    return settings

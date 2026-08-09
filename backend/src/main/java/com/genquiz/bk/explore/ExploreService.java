@@ -44,7 +44,7 @@ public class ExploreService {
         Topic topic = requirePublic(topicId);
         var publicQuizzes = quizzes.findByTopicIdAndStatusAndVisibilityAndModerationStatusAndDeletedAtIsNullOrderByPublishedAtDesc(
                 topicId, QuizStatus.PUBLISHED, Visibility.PUBLIC, com.genquiz.bk.common.ModerationStatus.ACTIVE).stream()
-                .map(q -> new ExploreDtos.QuizSummary(q.getId(), q.getTitle(), q.getDifficulty(),
+                .map(q -> new ExploreDtos.QuizSummary(q.getId(), q.getTitle(), q.getDifficulty(), q.getCognitiveMode(),
                         q.getDurationMinutes(), questions.countByQuizId(q.getId()), q.getPublishedAt()))
                 .toList();
         return new ExploreDtos.TopicDetail(summary(topic), publicQuizzes);
