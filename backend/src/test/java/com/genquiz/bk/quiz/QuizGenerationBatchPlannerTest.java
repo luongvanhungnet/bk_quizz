@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class QuizGenerationBatchPlannerTest {
     @Test
     void enforcesTwentyQuestionBatchLimitForBoundarySizes() {
-        for (int total : List.of(1, 20, 21, 50)) {
+        for (int total : List.of(1, 20, 21, 50, 100)) {
             var batches = QuizGenerationBatchPlanner.plan(
                     new QuizDtos.QuestionCounts(total, 0, 0),
                     CognitiveMode.L1, 20);

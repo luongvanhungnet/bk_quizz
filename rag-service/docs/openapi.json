@@ -1434,6 +1434,98 @@
         }
       }
     },
+    "/api/v2/user-documents/resolve": {
+      "get": {
+        "tags": [
+          "v2-production"
+        ],
+        "summary": "Resolve Document By Hash",
+        "operationId": "resolve_document_by_hash_api_v2_user_documents_resolve_get",
+        "parameters": [
+          {
+            "name": "sha256",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 64,
+              "maxLength": 64,
+              "title": "Sha256"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          },
+          {
+            "name": "x-classroom-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Classroom-Id"
+            }
+          },
+          {
+            "name": "x-internal-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserDocumentDto"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v2/user-documents/{document_id}": {
       "get": {
         "tags": [
@@ -1591,6 +1683,96 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/user-documents/{document_id}/reindex": {
+      "post": {
+        "tags": [
+          "v2-production"
+        ],
+        "summary": "Reindex Document",
+        "operationId": "reindex_document_api_v2_user_documents__document_id__reindex_post",
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          },
+          {
+            "name": "x-classroom-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Classroom-Id"
+            }
+          },
+          {
+            "name": "x-internal-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsyncUploadResponse"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -1872,6 +2054,95 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/GroundedQuizRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v2/attempt-tutor/chat/stream": {
+      "post": {
+        "tags": [
+          "v2-production"
+        ],
+        "summary": "Stream Attempt Tutor",
+        "operationId": "stream_attempt_tutor_api_v2_attempt_tutor_chat_stream_post",
+        "parameters": [
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-User-Id"
+            }
+          },
+          {
+            "name": "x-classroom-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Classroom-Id"
+            }
+          },
+          {
+            "name": "x-internal-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Internal-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttemptTutorRequest"
               }
             }
           }
@@ -2555,6 +2826,96 @@
           "jobStatus"
         ],
         "title": "AsyncUploadResponse"
+      },
+      "AttemptTutorRequest": {
+        "properties": {
+          "questionNumber": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Questionnumber"
+          },
+          "questionType": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Questiontype"
+          },
+          "prompt": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Prompt"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Options"
+          },
+          "learnerAnswer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learneranswer"
+          },
+          "correctAnswer": {
+            "type": "string",
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Correctanswer"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/TutorSource"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Sources"
+          },
+          "conversationHistory": {
+            "items": {
+              "$ref": "#/components/schemas/TutorConversationMessage"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Conversationhistory"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 2,
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "questionNumber",
+          "questionType",
+          "prompt",
+          "correctAnswer",
+          "message"
+        ],
+        "title": "AttemptTutorRequest"
       },
       "Body_upload_document_api_v1_user_documents_post": {
         "properties": {
@@ -3309,7 +3670,7 @@
               "type": "string"
             },
             "type": "array",
-            "maxItems": 50,
+            "maxItems": 100,
             "title": "Excludedprompts"
           },
           "acceptedQuestions": {
@@ -3639,19 +4000,19 @@
         "properties": {
           "singleChoice": {
             "type": "integer",
-            "maximum": 50.0,
+            "maximum": 100.0,
             "minimum": 0.0,
             "title": "Singlechoice"
           },
           "multipleSelect": {
             "type": "integer",
-            "maximum": 50.0,
+            "maximum": 100.0,
             "minimum": 0.0,
             "title": "Multipleselect"
           },
           "fillBlank": {
             "type": "integer",
-            "maximum": 50.0,
+            "maximum": 100.0,
             "minimum": 0.0,
             "title": "Fillblank"
           }
@@ -4155,6 +4516,125 @@
           "totalTokens"
         ],
         "title": "TokenUsageResponse"
+      },
+      "TutorConversationMessage": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Content"
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "TutorConversationMessage"
+      },
+      "TutorSource": {
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Sourceid"
+          },
+          "sourceChunkId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcechunkid"
+          },
+          "sourceDocumentId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcedocumentid"
+          },
+          "filename": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Filename"
+          },
+          "pageNumber": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagenumber"
+          },
+          "slideNumber": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slidenumber"
+          },
+          "chunkIndex": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Chunkindex"
+          },
+          "heading": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading"
+          },
+          "evidenceQuote": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Evidencequote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sourceId",
+          "filename",
+          "chunkIndex",
+          "evidenceQuote"
+        ],
+        "title": "TutorSource"
       },
       "UserChunkDto": {
         "properties": {

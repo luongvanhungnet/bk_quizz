@@ -115,7 +115,7 @@ bkquiz:
     embedding-dimensions: ${GEMINI_EMBEDDING_DIMENSIONS:768}
     timeout: ${GEMINI_TIMEOUT:60s}
     max-attempts: ${GEMINI_MAX_ATTEMPTS:3}
-    max-questions: ${MAX_QUESTIONS_PER_QUIZ:50}
+    max-questions: ${MAX_QUESTIONS_PER_QUIZ:100}
     max-sources: ${MAX_SOURCES_PER_GENERATION:10}
     min-source-characters: ${MIN_SOURCE_CHARACTERS:100}
   quiz-generation:

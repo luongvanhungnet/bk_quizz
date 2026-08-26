@@ -72,6 +72,47 @@ describe("createApiClient", () => {
     });
   });
 
+  it("preserves every validation detail for spreadsheet imports", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      success: false,
+      message: "File Excel có dữ liệu không hợp lệ.",
+      data: null,
+      errors: [
+        { code: "QUESTION_TYPE_INVALID", field: "CauHoi!A2", message: "Loại câu hỏi sai." },
+        { code: "POINTS_INVALID", field: "CauHoi!J2", message: "Điểm không hợp lệ." },
+      ],
+      traceId: "excel-trace",
+    }), { status: 422, headers: { "Content-Type": "application/json" } })));
+    const client = createApiClient({ baseUrl: "/api" });
+
+    const error = await client.request("/quizzes/quiz-1/questions/import").catch((value) => value);
+
+    expect(error).toMatchObject({
+      code: "QUESTION_TYPE_INVALID",
+      details: [
+        { code: "QUESTION_TYPE_INVALID", field: "CauHoi!A2" },
+        { code: "POINTS_INVALID", field: "CauHoi!J2" },
+      ],
+    });
+  });
+
+  it("downloads an authenticated binary response without parsing it as JSON", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new Uint8Array([80, 75, 3, 4]), {
+      status: 200,
+      headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const client = createApiClient({ baseUrl: "/api", getAccessToken: () => "token" });
+
+    const blob = await client.requestBlob!("/questions/import-template");
+
+    expect(blob.size).toBe(4);
+    expect(fetchMock).toHaveBeenCalledWith("/api/questions/import-template", expect.objectContaining({
+      credentials: "include",
+      headers: expect.objectContaining({ Authorization: "Bearer token" }),
+    }));
+  });
+
   it("serializes refresh for concurrent 401 responses and retries with the new token", async () => {
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
       const authorization = new Headers(init?.headers).get("Authorization");

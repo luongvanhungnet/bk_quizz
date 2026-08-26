@@ -1,0 +1,664 @@
+LỘ TRÌNH DEPLOY BKQUIZ LÊN PRODUCTION
+Ngày lập: 26/08/2026
+
+======================================================================
+1. MỤC TIÊU VÀ PHẠM VI
+======================================================================
+
+Tài liệu này đánh giá và đề xuất lộ trình deploy BKQuiz với các dịch vụ:
+
+  - React                         -> Cloudflare Pages
+  - PostgreSQL nghiệp vụ         -> Neon
+  - File upload                  -> Cloudflare R2
+  - Spring Boot API              -> Google Cloud Run
+  - FAISS                        -> Qdrant
+  - SQLite metadata RAG          -> PostgreSQL/Neon
+  - FastAPI RAG                  -> Google Cloud Run
+  - Celery/Redis broker          -> Pub/Sub + event worker
+  - Redis cache/lock/rate limit  -> Upstash Redis
+  - STOMP realtime              -> Ably
+
+Ollama AI local KHÔNG nằm trong kiến trúc production. Luồng AI production chỉ
+dùng Gemini API key và Gemini qua Google Application Default Credentials nếu
+được cấu hình. Model embedding ONNX trong RAG không phải Ollama và vẫn có thể
+chạy trong container FastAPI/worker.
+
+Kết luận ngắn: kiến trúc đề xuất phù hợp về hướng đi, nhưng chưa thể deploy mã
+nguồn hiện tại bằng cách chỉ thay biến môi trường. Cần hoàn tất các thay đổi
+stateless cho RAG, tách worker nền và thay giao thức realtime trước khi cho hệ
+thống scale nhiều instance.
+
+
+======================================================================
+2. KIẾN TRÚC PRODUCTION KHUYẾN NGHỊ
+======================================================================
+
+Người dùng
+   |
+   +--> app.example.com     Cloudflare Pages (React SPA)
+   |
+   +--> /api/*              cùng origin qua Cloudflare proxy/Worker
+                              |
+                              v
+                         Cloud Run: bkquiz-api (Spring Boot)
+                              |
+              +---------------+----------------+----------------+
+              |               |                |                |
+              v               v                v                v
+          Neon PG         Cloudflare R2     Ably REST       Pub/Sub/
+       nghiệp vụ + RAG    file gốc/private   publish         Cloud Tasks
+              ^                                                 |
+              |                                                 v
+              +---------------- Cloud Run worker(s) <------------+
+                                      |
+                                      v
+                              Cloud Run: rag-api
+                                |       |       |
+                                v       v       v
+                              Neon    Qdrant  Upstash
+
+Các nguyên tắc bắt buộc:
+
+  1. Neon là nguồn sự thật cho dữ liệu nghiệp vụ, job và metadata RAG.
+  2. R2 là nguồn sự thật cho file gốc; không phụ thuộc ổ đĩa container.
+  3. Qdrant là nguồn vector; không ghi FAISS vào filesystem Cloud Run.
+  4. Pub/Sub/Cloud Tasks chỉ vận chuyển job ID. Trạng thái và checkpoint nằm
+     trong PostgreSQL để xử lý idempotent và phục hồi sau redelivery.
+  5. Upstash chỉ giữ cache, rate limit, distributed lock và dữ liệu có thể tạo
+     lại; không dùng làm nguồn sự thật nghiệp vụ.
+  6. Ably chỉ vận chuyển sự kiện realtime. Tin nhắn lớp học vẫn lưu tại Neon.
+  7. API key, JWT secret, R2 secret và internal RAG key nằm trong Secret Manager,
+     không đặt trong image, repository hoặc VITE_*.
+
+
+======================================================================
+3. ĐÁNH GIÁ TỪNG CÔNG CỤ
+======================================================================
+
+3.1 React -> Cloudflare Pages
+
+Đánh giá: PHÙ HỢP.
+
+Lý do:
+  - Frontend là Vite/React SPA và Cloudflare Pages hỗ trợ SPA fallback về trang
+    gốc, phù hợp với các route như /workspace và /attempt/:attemptId.
+  - Static asset được phân phối qua CDN, build/deploy đơn giản và không cần
+    server Node.js ở production.
+
+Việc cần làm:
+  - Build bằng npm ci && npm run build; output là frontend/dist.
+  - Đặt VITE_API_BASE_URL=/api nếu dùng proxy cùng origin.
+  - Không đặt secret trong biến VITE_* vì chúng được nhúng vào JavaScript.
+  - Thêm security headers: CSP, X-Content-Type-Options, Referrer-Policy và
+    Permissions-Policy.
+  - Kiểm tra deep-link trực tiếp tới mọi React route.
+
+Điểm đặc biệt của BKQuiz:
+  - Frontend đang dùng refresh cookie, XSRF cookie và credentials=include.
+  - Nếu Pages chạy ở app.example.com còn Cloud Run ở run.app, cookie SameSite=Lax
+    hiện tại sẽ không hoạt động ổn định cho request cross-site và frontend cũng
+    không đọc được XSRF cookie của domain Cloud Run.
+  - Khuyến nghị giữ API cùng origin: app.example.com/api/* được Cloudflare
+    Worker/proxy chuyển tới Cloud Run. Phương án khác là api.example.com nhưng
+    phải sửa cookie Domain/SameSite, CORS và CSRF một cách có chủ đích.
+
+Kết luận: dùng Pages, nhưng phải giải quyết same-origin API trước khi go-live.
+
+
+3.2 PostgreSQL -> Neon
+
+Đánh giá: PHÙ HỢP CÓ ĐIỀU KIỆN.
+
+Lý do:
+  - Spring Boot hiện đã dùng PostgreSQL, Flyway và Hibernate validate nên độ
+    tương thích cao.
+  - Neon có pooled connection string qua PgBouncer, phù hợp với Cloud Run có thể
+    tạo nhiều instance.
+
+Điều kiện và thay đổi:
+  - Chọn Neon region gần Cloud Run nhất; tránh truy vấn xuyên châu lục.
+  - Runtime dùng pooled endpoint và SSL require.
+  - Flyway migration nên chạy bằng Cloud Run Job/CI với direct endpoint, một lần
+    trước khi cập nhật traffic; không để mọi instance cùng tranh migration.
+  - Giữ Hikari nhỏ (hiện tối đa 6); tính tổng pool = max instances x pool size.
+  - Tạo role riêng: migration owner, Spring runtime, RAG runtime; cấp quyền tối
+    thiểu.
+  - Bật backup/PITR theo gói production và kiểm thử restore định kỳ.
+  - Có thể dùng cùng một Neon project nhưng nên tách database hoặc schema
+    bkquiz_app và bkquiz_rag để migration Flyway/Alembic không va chạm.
+
+Rủi ro:
+  - Scale Cloud Run quá cao có thể tạo connection storm dù có PgBouncer.
+  - Scale-to-zero của database hoặc compute cold start có thể tăng latency đầu
+    tiên; cần benchmark theo gói Neon được chọn.
+
+Kết luận: phù hợp; cần quản trị connection và migration đúng cách.
+
+
+3.3 File upload -> Cloudflare R2
+
+Đánh giá: PHÙ HỢP VÀ NÊN THỰC HIỆN TRƯỚC KHI DEPLOY WORKER.
+
+Lý do:
+  - R2 có S3-compatible API. Backend đã có AWS SDK, S3SourceObjectStorage,
+    S3Presigner và cấu hình endpoint/path-style nên có nền tảng tích hợp sẵn.
+  - File sẽ không mất khi Cloud Run thay instance hoặc scale-to-zero.
+
+Việc cần làm:
+  - STORAGE_PROVIDER=s3.
+  - S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com.
+  - S3_REGION=auto; bucket private; dùng access key/secret có quyền tối thiểu.
+  - Kiểm thử S3_PATH_STYLE với AWS SDK đang dùng; ưu tiên cấu hình đúng theo API
+    R2 và chạy integration test upload/download/delete/presign.
+  - RAG worker phải tải file từ R2 theo objectKey hoặc URL ký ngắn hạn, không chờ
+    volume dùng chung từ Spring.
+  - File tạm chỉ được dùng trong /tmp khi parse và phải xóa sau request/job.
+  - Cấu hình lifecycle cho file tạm, bản reindex cũ và dữ liệu đã soft-delete.
+  - CORS bucket chỉ cần khi browser upload trực tiếp. Nếu upload vẫn đi qua
+    Spring thì không mở CORS công khai.
+
+Lưu ý bảo mật:
+  - Presigned URL là bearer token; đặt thời hạn ngắn và giới hạn object/method.
+  - Không public bucket chứa tài liệu học tập của người dùng.
+  - ClamAV hiện là container riêng trong Docker Compose. Cloud Run không thể giả
+    định có daemon ClamAV cùng host; cần một malware scanning service/job riêng,
+    hoặc quy trình quarantine trước khi chuyển object sang trạng thái READY.
+
+Kết luận: rất phù hợp, nhưng phải sửa cả Spring và RAG cùng đọc một object R2.
+
+
+3.4 Spring Boot -> Cloud Run
+
+Đánh giá: PHÙ HỢP CHO API; WORKER CẦN TÁCH RIÊNG.
+
+Spring API:
+  - Deploy backend/Dockerfile thành Cloud Run service bkquiz-api.
+  - Đặt WORKER_ENABLED=false để API không poll job nền.
+  - Dùng readiness/liveness actuator, graceful shutdown và max instances có giới
+    hạn theo pool Neon.
+  - Khởi đầu: 1-2 vCPU, 1-2 GiB RAM, concurrency 20-40; đo tải rồi điều chỉnh.
+  - Đặt min-instances=1 nếu cần giảm cold start cho đăng nhập và Workspace.
+
+Spring worker:
+  - Scheduled JobWorker hiện tại không phù hợp với service scale-to-zero vì mã
+    nền không được đảm bảo chạy khi không có request.
+  - Sau khi chuyển sang Pub/Sub/Cloud Tasks, deploy handler worker thành Cloud Run
+    service private nhận HTTP push, hoặc Cloud Run worker pool nếu dùng pull.
+  - Không chạy chung API và worker trong một revision.
+
+WebSocket:
+  - Cloud Run có hỗ trợ WebSocket nhưng connection vẫn chịu request timeout và
+    client phải reconnect. SimpleBroker trong memory không đồng bộ giữa các
+    instance. Vì vậy Ably là lựa chọn hợp lý hơn cho realtime lâu dài.
+
+Kết luận: phù hợp; bắt buộc tách API stateless khỏi worker nền.
+
+
+3.5 FAISS -> Qdrant
+
+Đánh giá: RẤT PHÙ HỢP VÀ GẦN NHƯ BẮT BUỘC NẾU RAG SCALE TRÊN CLOUD RUN.
+
+Lý do:
+  - FAISS hiện ghi vectors.faiss và manifest vào USER_INDEX_DIR/SYSTEM_INDEX_DIR.
+    Filesystem Cloud Run không phải kho lưu trữ bền vững/dùng chung.
+  - Qdrant cung cấp vector search, HNSW, payload metadata và filtering theo tenant,
+    document, source/chunk mà BKQuiz cần.
+
+Thiết kế đề xuất:
+  - Không tạo một collection cho mỗi user. Dùng collection theo embedding model
+    hoặc môi trường, ví dụ bkquiz_chunks_v1.
+  - Point ID dùng chunk UUID.
+  - Payload tối thiểu: userId/tenantId, documentId, chunkId, chunkIndex, heading,
+    pageNumber, slideNumber, sourceStatus, indexFingerprint và text cần thiết.
+  - Tạo payload index kiểu keyword cho userId, documentId, chunkId và fingerprint;
+    Qdrant Cloud strict mode không cho filter field chưa index.
+  - Mọi search bắt buộc filter userId và documentIds phía server.
+  - Reindex ghi fingerprint/version mới, validate count, chuyển active fingerprint
+    nguyên tử ở Neon rồi xóa version cũ bất đồng bộ.
+  - Text/chunk canonical vẫn nằm ở Neon; Qdrant là projection có thể rebuild.
+  - Giữ BM25 hiện tại ở đâu cần quyết định rõ: triển khai sparse vector/hybrid ở
+    Qdrant hoặc một search service riêng. Không để BM25 cache chỉ sống trong một
+    instance rồi kỳ vọng kết quả đồng nhất toàn cụm.
+
+Migration:
+  - Không thể restore file FAISS trực tiếp thành Qdrant.
+  - Đọc chunk canonical từ Neon/RAG metadata, batch upsert embedding vào collection
+    mới, kiểm tra recall/tenant isolation, sau đó chuyển feature flag.
+
+Kết luận: phù hợp; đây là thay đổi code đáng kể chứ không phải đổi URL.
+
+
+3.6 SQLite -> PostgreSQL/Neon
+
+Đánh giá: PHÙ HỢP VÀ BẮT BUỘC TRƯỚC KHI FASTAPI SCALE NHIỀU INSTANCE.
+
+Lý do:
+  - SQLite hiện bật WAL và lưu document/indexing job/math cache. File rag.db trên
+    Cloud Run không được chia sẻ và có thể mất khi instance bị thay.
+  - Nhiều API/worker ghi cùng SQLite sẽ tạo sai khác trạng thái hoặc lock.
+
+Việc cần làm:
+  - Chuyển model SQLAlchemy/Alembic sang PostgreSQL portable.
+  - Bỏ connect_args check_same_thread và PRAGMA SQLite khi URL là PostgreSQL.
+  - Thay các kiểu/default/query SQLite-specific; chạy migration test trên Postgres
+    thật bằng Testcontainers.
+  - Dùng schema/database RAG riêng và role riêng trong Neon.
+  - Chuyển dữ liệu theo ETL: SQLite read-only -> PostgreSQL staging -> kiểm tra
+    document/job/chunk count và foreign key -> cutover.
+  - Không coi Qdrant là database metadata; Qdrant chỉ lưu vector projection.
+
+Kết luận: phù hợp; không deploy FastAPI autoscaling trước khi hoàn thành bước này.
+
+
+3.7 FastAPI -> Cloud Run
+
+Đánh giá: PHÙ HỢP SAU KHI ĐÃ CHUYỂN R2 + NEON + QDRANT.
+
+Lý do:
+  - FastAPI là HTTP service phù hợp với container Cloud Run.
+  - Tuy nhiên bản hiện tại còn preload ONNX, dùng SQLite, FAISS và thư mục file/index
+    local; deploy nguyên trạng chỉ an toàn với một instance và vẫn có nguy cơ mất
+    dữ liệu.
+
+Cấu hình khởi đầu đề xuất:
+  - Một Uvicorn worker/container; Cloud Run tự scale instance.
+  - 2 vCPU, 3-4 GiB RAM, concurrency 2-4 cho RAG nặng CPU.
+  - min-instances=1 để model embedding được warm và tránh cold search dài.
+  - Startup probe chỉ UP sau khi Settings, DB, Qdrant và model cần thiết sẵn sàng.
+  - Request timeout đủ cho streaming quiz, nhưng job dài nên ưu tiên background
+    event/checkpoint thay vì giữ HTTP hàng chục phút.
+  - RAG API private; chỉ Spring service account hoặc authenticated invocation được
+    gọi. X-Internal-API-Key vẫn có thể giữ như lớp phòng thủ bổ sung.
+  - Tắt OLLAMA_ENABLED và loại Ollama khỏi health/provider order production.
+
+Math Vision và Gemini:
+  - Gemini API key đặt trong Secret Manager.
+  - Nếu dùng OAuth/ADC, gắn service account đúng quyền/quota project; không mang
+    file ADC cá nhân lên container.
+
+Kết luận: phù hợp có điều kiện; không dựa vào disk local hoặc singleton process.
+
+
+3.8 Celery/Redis broker -> Pub/Sub + event worker
+
+Đánh giá: PHÙ HỢP VỀ KIẾN TRÚC, NHƯNG PUB/SUB KHÔNG PHẢI DROP-IN REPLACEMENT.
+
+Những gì Pub/Sub làm tốt:
+  - Phân phối event/job đến Cloud Run push endpoint hoặc pull worker.
+  - At-least-once delivery, dead-letter topic và autoscaling theo request.
+
+Những gì cần thay thế riêng:
+  - Celery retry/countdown 5 phút: ưu tiên Cloud Tasks có scheduleTime cho từng job.
+    Nếu chỉ dùng Pub/Sub, phải lưu availableAt trong Neon và dùng Cloud Scheduler
+    chạy reconciliation để publish lại job đến hạn.
+  - Celery beat: thay bằng Cloud Scheduler gọi endpoint/job recovery định kỳ.
+  - Celery result/state: tiếp tục dùng bảng jobs/checkpoint/job_events trong Neon.
+  - Worker heartbeat: dùng Cloud Run health/metrics; không dùng heartbeat để quyết
+    định tính đúng của job.
+
+Mẫu xử lý an toàn:
+  1. Spring transaction tạo/cập nhật job trong Neon.
+  2. Sau commit, publish message chỉ chứa jobId, operation và correlationId.
+  3. Worker xác thực Pub/Sub JWT, claim job bằng compare-and-set/row lock.
+  4. Nếu job đã SUCCEEDED hoặc checkpoint đã hoàn tất thì ACK không làm lại.
+  5. Worker cập nhật checkpoint sau từng batch.
+  6. Chỉ ACK sau khi trạng thái bền vững đã commit.
+  7. Retry có exponential backoff; nghiệp vụ yêu cầu đúng 5 phút dùng Cloud Tasks.
+  8. Sau ngưỡng retry, đưa message vào DLQ và job thành FAILED rõ nguyên nhân.
+
+Lưu ý: Pub/Sub push không hỗ trợ exactly-once. Hệ thống phải idempotent dù dùng
+message ID/dedupe key. Exactly-once của Pub/Sub chỉ áp dụng cho pull subscription
+trong các điều kiện được tài liệu Google nêu.
+
+Kết luận: dùng Pub/Sub + Cloud Tasks + Cloud Scheduler là đầy đủ hơn chỉ Pub/Sub.
+
+
+3.9 Redis cache -> Upstash Redis
+
+Đánh giá: PHÙ HỢP CÓ ĐIỀU KIỆN; KHÔNG DÙNG LÀM CELERY BROKER SAU MIGRATION.
+
+Phạm vi phù hợp:
+  - Retrieval/query cache ngắn hạn.
+  - Rate limit.
+  - Circuit breaker và distributed dedupe/lock có TTL.
+
+Việc cần làm:
+  - Chọn region gần Cloud Run và dùng native Redis TCP qua TLS.
+  - Dùng rediss://, timeout ngắn, connection pool nhỏ và reconnect khi connection
+    bị reset.
+  - Kiểm tra toàn bộ command/Lua script hiện tại trong bảng compatibility Upstash.
+  - Mọi cache key phải có tenant, index fingerprint và TTL.
+  - Thiết kế cache miss/eviction không làm sai dữ liệu; lock hết TTL phải an toàn.
+  - Tách namespace hoặc database production/staging.
+
+Không nên lưu:
+  - Trạng thái job duy nhất, checkpoint, citation, Quiz hoặc quyền người dùng.
+
+Kết luận: phù hợp cho cache/lock/rate limit, Neon vẫn là nguồn sự thật.
+
+
+3.10 STOMP -> Ably
+
+Đánh giá: PHÙ HỢP, NHƯNG NÊN MIGRATE SANG ABLY SDK THAY VÌ GIỮ NGUYÊN STOMP.
+
+Lý do:
+  - Spring hiện dùng enableSimpleBroker, tức broker nằm trong memory của từng
+    instance. Khi Cloud Run scale nhiều instance, client kết nối vào instance A
+    không chắc nhận event phát từ instance B.
+  - Ably cung cấp channel realtime, reconnect, history/presence và SDK web/Java.
+
+Thiết kế đề xuất:
+  - React dùng Ably JavaScript SDK để subscribe classroom:<classroomId>.
+  - Spring dùng Ably REST/Java SDK để publish sau khi transaction message/resource
+    đã commit.
+  - Thêm endpoint token auth tại Spring. Backend kiểm tra thành viên active rồi cấp
+    capability chỉ subscribe/publish đúng channel được phép.
+  - Không đưa Ably root API key xuống frontend.
+  - Neon vẫn lưu MessageResponse/resource; Ably payload chỉ mang event ID/version
+    để frontend refetch hoặc một preview an toàn.
+  - Client phải dedupe theo message/event ID và có REST catch-up sau reconnect.
+
+Ably có protocol adapters, kể cả STOMP, nhưng tài liệu Ably khuyến nghị SDK cho
+ứng dụng production để có connection recovery và token renewal đầy đủ. Vì vậy
+không nên kỳ vọng chỉ đổi brokerURL của @stomp/stompjs là hoàn tất migration.
+
+Kết luận: phù hợp; cần thay client và publish path, không phải cấu hình một dòng.
+
+
+======================================================================
+4. THỨ TỰ TRIỂN KHAI KHUYẾN NGHỊ
+======================================================================
+
+GIAI ĐOẠN 0 - Chuẩn bị repository và môi trường
+
+  - Tạo GCP project production/staging; bật Artifact Registry, Cloud Run,
+    Pub/Sub, Cloud Tasks, Cloud Scheduler, Secret Manager và Logging.
+  - Tạo Cloudflare Pages project, R2 bucket private và domain.
+  - Tạo Neon, Qdrant Cloud, Upstash và Ably app theo hai môi trường riêng.
+  - Chọn cùng/ gần một region, ví dụ Cloud Run và Neon cùng khu vực; đo latency
+    Qdrant/Upstash từ region đó trước khi chốt.
+  - Chuẩn hóa image tag bằng Git SHA; không dùng latest cho production.
+  - Tạo service account riêng cho API, Spring worker, RAG API và RAG worker.
+
+Gate: secret scan sạch, image build reproducible, staging DNS hoạt động.
+
+
+GIAI ĐOẠN 1 - Deploy frontend và Spring API cơ bản
+
+  - Deploy React lên Pages.
+  - Deploy Spring API lên Cloud Run với WORKER_ENABLED=false.
+  - Kết nối Neon staging; chạy Flyway bằng một Cloud Run Job.
+  - Thiết lập same-origin /api proxy hoặc hoàn tất thiết kế cross-domain cookie.
+  - Cấu hình COOKIE_SECURE=true, FRONTEND_ORIGINS chính xác, không dùng wildcard.
+
+Gate: đăng ký, đăng nhập, refresh token, CSRF, CRUD Topic/Quiz hoạt động qua HTTPS.
+
+
+GIAI ĐOẠN 2 - Chuyển file sang R2
+
+  - Bật S3 storage cho source và classroom attachment.
+  - Sửa RAG ingestion đọc object R2 thay vì file local/stream phụ thuộc volume.
+  - Viết công cụ copy file hiện có lên R2, giữ checksum/objectKey.
+  - Thêm quarantine/malware scan và lifecycle cleanup.
+
+Gate: upload TXT/PDF, reindex, download attachment, xóa và rollback đều hoạt động
+khi API/worker chạy ở hai instance không có volume chung.
+
+
+GIAI ĐOẠN 3 - Chuyển SQLite RAG sang Neon
+
+  - Làm SQLAlchemy portable, tạo Alembic migration PostgreSQL.
+  - ETL metadata và kiểm tra count/checksum/foreign key.
+  - Chạy dual-read hoặc shadow validation ngắn hạn; sau đó khóa SQLite read-only.
+
+Gate: hai RAG instance thấy cùng document/job/math cache và không phát sinh lock
+SQLite hoặc trạng thái khác nhau.
+
+
+GIAI ĐOẠN 4 - Chuyển FAISS sang Qdrant
+
+  - Tạo collection và payload index theo tenant/document/fingerprint.
+  - Viết VectorStore abstraction gồm FAISS và Qdrant để chuyển bằng feature flag.
+  - Re-embed/batch upsert dữ liệu staging, chạy recall@5, MRR, citation grounding
+    và tenant-isolation regression.
+  - Shadow search FAISS/Qdrant; so sánh rồi chuyển read sang Qdrant.
+
+Gate: không có truy vấn cross-tenant; p95 và chất lượng đạt ngưỡng hiện tại; có
+backup/rebuild procedure.
+
+
+GIAI ĐOẠN 5 - Deploy FastAPI RAG stateless lên Cloud Run
+
+  - Gắn Neon, R2, Qdrant, Upstash và Gemini secrets.
+  - Tắt Ollama hoàn toàn.
+  - Cấu hình min instance, RAM/CPU, concurrency, startup/readiness probe.
+  - Giới hạn ingress và xác thực Spring -> RAG.
+
+Gate: restart/scale RAG không mất document/index/job; upload -> search -> generate
+Quiz có citation hoạt động.
+
+
+GIAI ĐOẠN 6 - Thay Celery bằng Pub/Sub/Cloud Tasks
+
+  - Tạo topic/subscription/DLQ cho source ingestion và quiz generation.
+  - Tạo Cloud Run private event worker với idempotent claim/checkpoint.
+  - Chuyển delayed retry sang Cloud Tasks; stale recovery sang Cloud Scheduler.
+  - Chạy shadow publish trong staging, sau đó dừng Celery beat/worker.
+
+Gate: redelivery cùng message không tạo vector/câu hỏi trùng; worker chết giữa batch
+tiếp tục từ checkpoint; retry và DLQ được quan sát rõ.
+
+
+GIAI ĐOẠN 7 - Thay STOMP bằng Ably
+
+  - Thêm token auth/capability endpoint.
+  - Backend publish Ably sau commit; frontend subscribe bằng Ably SDK.
+  - Dedupe event và REST catch-up khi reconnect.
+  - Chạy feature flag song song STOMP/Ably trong staging trước khi xóa STOMP.
+
+Gate: hai tài khoản trong một lớp nhận message/resource preview realtime; user ngoài
+lớp không subscribe được; reconnect không mất hoặc nhân đôi tin nhắn.
+
+
+GIAI ĐOẠN 8 - Go-live và ổn định
+
+  - Canary Cloud Run theo revision; theo dõi 5xx, latency, cold start và DB pool.
+  - Backup Neon/Qdrant, lifecycle R2, DLQ alert, budget alert và quota Gemini.
+  - Chạy smoke test end-to-end và diễn tập rollback.
+
+
+======================================================================
+5. CẤU HÌNH PRODUCTION TỐI THIỂU
+======================================================================
+
+Frontend Pages:
+  VITE_API_BASE_URL=/api
+
+Spring Cloud Run:
+  SPRING_PROFILES_ACTIVE=prod
+  DATABASE_URL=jdbc:postgresql://<neon-pooled-host>/<db>?sslmode=require
+  DATABASE_USERNAME=<runtime-role>
+  DATABASE_PASSWORD=<secret>
+  DATABASE_POOL_SIZE=4 hoặc 6
+  WORKER_ENABLED=false
+  STORAGE_PROVIDER=s3
+  S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+  S3_REGION=auto
+  S3_BUCKET=<private-bucket>
+  S3_ACCESS_KEY=<secret>
+  S3_SECRET_KEY=<secret>
+  RAG_SERVICE_URL=<private-rag-cloud-run-url>
+  RAG_INTERNAL_API_KEY=<secret>
+  FRONTEND_ORIGINS=https://app.example.com
+  COOKIE_SECURE=true
+  JWT_ACCESS_SECRET=<secret tối thiểu 32 byte ngẫu nhiên>
+
+RAG Cloud Run:
+  APP_ENV=production
+  DATABASE_URL=postgresql+psycopg://<rag-role>:<secret>@<neon-host>/<rag-db>
+  QDRANT_URL=<qdrant-cloud-url>
+  QDRANT_API_KEY=<secret>
+  REDIS_URL=rediss://default:<secret>@<upstash-host>:<port>
+  R2/S3 credentials hoặc signed object access
+  GEMINI_API_KEY=<secret>
+  OLLAMA_ENABLED=false
+  LLM_FALLBACK_ENABLED chỉ bật nếu còn ít nhất một provider cloud hợp lệ
+
+Tên biến QDRANT/R2 chính xác cần được bổ sung vào Settings sau khi triển khai các
+adapter; đây chưa phải contract tồn tại đầy đủ trong mã hiện tại.
+
+
+======================================================================
+6. CI/CD VÀ MIGRATION
+======================================================================
+
+Pipeline pull request:
+  1. Backend: mvnw verify, migration V1->latest, image build.
+  2. RAG: pytest, Ruff, mypy, Alembic upgrade, OpenAPI drift, image build.
+  3. Frontend: test, typecheck, lint, build.
+  4. Dependency/secret/container scan.
+
+Pipeline production:
+  1. Build image một lần và push Artifact Registry bằng Git SHA.
+  2. Chạy backup/checkpoint.
+  3. Chạy Flyway/Alembic migration job tương thích ngược.
+  4. Deploy RAG/worker revision chưa nhận traffic.
+  5. Deploy Spring canary, chạy smoke test.
+  6. Chuyển traffic dần 10% -> 50% -> 100%.
+  7. Deploy Pages sau khi API contract sẵn sàng.
+
+Quy tắc migration:
+  - Dùng expand/contract; không xóa cột trong cùng release có code cũ.
+  - Job/event phải giữ tương thích ít nhất một revision.
+  - Backup không được coi là hoàn tất nếu chưa thử restore.
+
+
+======================================================================
+7. BẢO MẬT, QUAN SÁT VÀ CHI PHÍ
+======================================================================
+
+Bảo mật:
+  - Cloud Run RAG/worker private; Pub/Sub push dùng OIDC/JWT.
+  - Secret Manager + service account least privilege.
+  - R2 bucket private, URL ký ngắn hạn, kiểm tra MIME và checksum server-side.
+  - Ably token capability theo classroom, thời hạn ngắn.
+  - Qdrant mọi query có tenant filter bắt buộc và payload index.
+  - Log không chứa prompt đầy đủ, tài liệu, đáp án, cookie hoặc credential.
+
+Quan sát:
+  - Dùng cùng traceId/jobId qua Spring, Pub/Sub/Tasks, worker và RAG.
+  - Dashboard: API p95/5xx, Neon connection/acquire, Qdrant latency, Pub/Sub oldest
+    unacked/DLQ, Cloud Tasks retry, Gemini quota, Upstash latency và Ably errors.
+  - Alert: job quá hạn, queue backlog, no worker, DB pool pending, RAG readiness,
+    citation degradation và chi phí vượt budget.
+
+Chi phí:
+  - Min instance RAG làm giảm cold start nhưng tạo chi phí cố định.
+  - Qdrant Cloud và Neon production có chi phí nền; benchmark kích thước vector,
+    retention và backup trước khi chọn gói.
+  - Upstash theo request có thể đắt nếu polling/cache quá dày; giữ backoff và giảm
+    các thao tác Redis không cần thiết.
+  - Ably tính theo message/connection/channel; tránh publish payload lớn hoặc event
+    progress lặp.
+
+
+======================================================================
+8. KẾ HOẠCH ROLLBACK
+======================================================================
+
+  - Cloud Run: giữ revision ổn định trước đó và chuyển traffic về revision cũ.
+  - Pages: rollback deployment trước.
+  - Neon: migration phải backward-compatible; restore/PITR là phương án cuối.
+  - R2: không xóa file local/cũ cho đến khi checksum và download từ R2 được xác
+    nhận; dùng lifecycle trễ.
+  - Qdrant: giữ FAISS read-only trong giai đoạn shadow; feature flag quay lại FAISS
+    trước khi bỏ hẳn. Sau khi production stateless ổn định, rollback dựa trên
+    Qdrant backup/rebuild từ Neon thay vì file local.
+  - Pub/Sub: giữ Celery không nhận job mới nhưng có thể bật lại trong cửa sổ chuyển
+    đổi; không để hai hệ cùng claim một job nếu chưa có lock/idempotency chung.
+  - Ably: feature flag cho phép quay về STOMP trong giai đoạn canary.
+
+
+======================================================================
+9. CHECKLIST GO-LIVE
+======================================================================
+
+[ ] Domain, TLS, Pages SPA deep-link hoạt động.
+[ ] /api same-origin hoặc cookie/CORS/CSRF cross-domain đã được test thực tế.
+[ ] Flyway và Alembic chạy một lần, Hibernate/SQLAlchemy validate thành công.
+[ ] Cloud Run API không chạy scheduler worker ngoài ý muốn.
+[ ] RAG không phụ thuộc SQLite, FAISS hoặc upload/index local để tồn tại lâu dài.
+[ ] Upload/reindex đọc file từ R2 và reindex thất bại vẫn giữ snapshot cũ.
+[ ] Qdrant tenant isolation test xanh.
+[ ] Pub/Sub/Tasks redelivery test không tạo dữ liệu trùng.
+[ ] DLQ, retry, checkpoint và timeline job hoạt động sau restart.
+[ ] Ably capability không cho user ngoài lớp subscribe/publish.
+[ ] Ollama bị tắt và không xuất hiện trong health/provider order production.
+[ ] Secret scan không phát hiện Gemini/R2/Neon/Qdrant/Ably key.
+[ ] Backup và restore Neon/Qdrant đã được diễn tập.
+[ ] Load test và budget alert đã cấu hình.
+[ ] Smoke test: đăng nhập -> upload PDF -> READY -> tạo Quiz trống -> sinh thêm AI
+    -> làm bài -> kết quả -> chat AI -> chia sẻ lớp học realtime.
+
+
+======================================================================
+10. KẾT LUẬN
+======================================================================
+
+Phương án của bạn phù hợp nếu triển khai theo chuỗi phụ thuộc sau:
+
+  Pages + Cloud Run API + Neon
+        -> R2
+        -> SQLite sang Neon
+        -> FAISS sang Qdrant
+        -> FastAPI stateless trên Cloud Run
+        -> Pub/Sub + Cloud Tasks/Scheduler
+        -> Upstash cache
+        -> Ably realtime
+
+Không nên deploy FastAPI hiện tại lên Cloud Run rồi mới xử lý SQLite/FAISS/file
+local, vì instance restart hoặc scale ngang có thể làm mất/khác dữ liệu. Không nên
+dùng Pub/Sub một mình để mô phỏng toàn bộ Celery retry/schedule. Không nên coi Ably
+là việc đổi URL STOMP; giải pháp production tốt hơn là Ably SDK + token capability.
+
+
+======================================================================
+11. NGUỒN TÀI LIỆU CHÍNH THỨC
+======================================================================
+
+Cloudflare Pages SPA:
+https://developers.cloudflare.com/pages/configuration/serving-pages/
+
+Cloudflare R2 và presigned URL:
+https://developers.cloudflare.com/r2/how-r2-works/
+https://developers.cloudflare.com/r2/api/s3/
+https://developers.cloudflare.com/r2/api/s3/presigned-urls/
+
+Neon connection pooling:
+https://neon.com/docs/connect/connection-pooling
+
+Cloud Run service/job/worker pool:
+https://cloud.google.com/run/docs/overview/what-is-cloud-run
+https://cloud.google.com/run/docs/container-contract
+https://cloud.google.com/run/docs/configuring/request-timeout
+https://cloud.google.com/run/docs/triggering/websockets
+
+Google Pub/Sub push và exactly-once:
+https://cloud.google.com/pubsub/docs/push
+https://cloud.google.com/pubsub/docs/exactly-once-delivery
+
+Qdrant architecture, payload/filter và backup:
+https://qdrant.tech/documentation/guides/
+https://qdrant.tech/documentation/concepts/payload/
+https://qdrant.tech/documentation/cloud/backups/
+
+Upstash Redis:
+https://upstash.com/docs/redis/overall/getstarted
+https://upstash.com/docs/redis/overall/compatibility
+https://upstash.com/docs/redis/features/security
+
+Ably SDK/protocol guidance:
+https://ably.com/docs/platform/products
+https://ably.com/docs/getting-started/java
+https://ably.com/docs/platform/architecture/idempotency
+

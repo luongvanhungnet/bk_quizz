@@ -95,6 +95,7 @@ class IndexingJob(Base):
     __tablename__ = "indexing_jobs"
     __table_args__ = (
         CheckConstraint("status IN ('PENDING','RUNNING','SUCCEEDED','FAILED','CANCELLED')", name="ck_indexing_jobs_status"),
+        CheckConstraint("operation IN ('UPLOAD','REINDEX')", name="ck_indexing_jobs_operation"),
         CheckConstraint("progress_percent BETWEEN 0 AND 100", name="ck_indexing_jobs_progress"),
         Index("idx_indexing_jobs_owner_created", "owner_id", "created_at"),
         Index("idx_indexing_jobs_status_heartbeat", "status", "heartbeat_at"),
@@ -109,12 +110,15 @@ class IndexingJob(Base):
             sqlite_where=text("status = 'RUNNING'"),
         ),
         Index("uq_indexing_jobs_owner_idempotency", "owner_id", "idempotency_key", unique=True, sqlite_where=text("idempotency_key IS NOT NULL")),
+        Index("uq_indexing_jobs_document_active", "document_id", unique=True,
+              sqlite_where=text("status IN ('PENDING','RUNNING')")),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     document_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
     )
     owner_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    operation: Mapped[str] = mapped_column(String(20), nullable=False, default="UPLOAD")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
     progress_percent: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     current_step: Mapped[str] = mapped_column(String(64), nullable=False, default="PENDING")

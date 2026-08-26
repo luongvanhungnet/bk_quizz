@@ -11,9 +11,11 @@ import {
   AlertTriangle,
   Bot,
   FileQuestion,
+  FileSpreadsheet,
   FileUp,
   Link as LinkIcon,
   Plus,
+  Pencil,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -22,15 +24,20 @@ import { useAuth } from "../../auth/AuthProvider";
 import {
   bkquizApi,
   type CognitiveMode,
+  type CognitiveLevel,
+  type Question,
   type QuestionType,
   type Quiz,
   type Source,
-  type Visibility,
 } from "../../api/bkquiz";
-import { cognitiveDistribution, cognitiveLabel, cognitiveOptions } from "../lib/cognitive";
+import { cognitiveLabel, cognitiveOptions } from "../lib/cognitive";
+import {
+  MAX_QUESTIONS_PER_QUIZ,
+  remainingQuestionCapacity,
+} from "../lib/quizLimits";
 import { ApiRequestError } from "../../api/client";
 import { citationLocation } from "./citationLocation";
-import { describeSourceProcessing } from "./sourceProcessing";
+import { describeSourceProcessing, shouldShowReindexAction } from "./sourceProcessing";
 import { adaptivePollInterval } from "./polling";
 import { describeQuizGenerationError } from "./quizGenerationError";
 import { describeQuizBatchStatus } from "./quizBatchStatus";
@@ -45,9 +52,25 @@ import {
 } from "./QuizGenerationTimeline";
 import { Badge, Button, Card, Checkbox, Input, Modal } from "../components/ui";
 import { MathMarkdown } from "../components/MathMarkdown";
+import {
+  questionFormToRequest,
+  questionToFormState,
+  type QuestionFormState,
+} from "./questionForm";
+import { canManageQuizQuestions } from "./questionPermissions";
+import { QuestionImportModal } from "./QuestionImportModal";
+import { BlankQuizModal } from "./BlankQuizModal";
 
 const message = (error: unknown) =>
   error instanceof Error ? error.message : "Thao tác thất bại.";
+const requestErrorMessage = (error: unknown) => {
+  if (!(error instanceof ApiRequestError)) return message(error);
+  return [
+    error.message,
+    error.code ? `Mã lỗi: ${error.code}` : null,
+    error.traceId ? `Mã yêu cầu: ${error.traceId}` : null,
+  ].filter(Boolean).join(" · ");
+};
 const formatBytes = (bytes: number) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(
     bytes < 1024 * 1024 ? bytes / 1024 : bytes / (1024 * 1024),
@@ -76,7 +99,7 @@ export default function Workspace() {
   const client = useQueryClient();
   const { user, resendVerification } = useAuth();
   const [selectedQuiz, setSelectedQuiz] = useState<string | null>(null);
-  const [mode, setMode] = useState<"AI" | "MANUAL">("AI");
+  const [blankQuizOpen, setBlankQuizOpen] = useState(false);
   const [activeJob, setActiveJob] = useState<{
     quizId: string;
     jobId: string;
@@ -87,6 +110,9 @@ export default function Workspace() {
   } | null>(null);
   const [addSource, setAddSource] = useState(false);
   const [addQuestion, setAddQuestion] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
+  const [questionImportOpen, setQuestionImportOpen] = useState(false);
   const [appendQuiz, setAppendQuiz] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendSending, setResendSending] = useState(false);
@@ -422,21 +448,21 @@ export default function Workspace() {
                       )}
                       {processing.warning && (
                         <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900">
-                          <b>DOCUMENT_PROCESSOR_UNAVAILABLE</b>
+                          <b>{source.indexingStep === "REINDEX_FAILED" ? "REINDEX_FAILED" : "DOCUMENT_PROCESSOR_UNAVAILABLE"}</b>
                           <p>{processing.warning}</p>
                           <Button size="sm" variant="outline" className="mt-2" onClick={() => void sources.refetch()}>
                             Kiểm tra lại
                           </Button>
                         </div>
                       )}
-                      {source.errorCode && (
+                      {source.errorCode && source.errorCode !== "REINDEX_FAILED" && (
                         <div className="mt-2 rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800">
                           <b>{source.errorCode}</b>
                           <p>{source.errorMessage ?? "Không thể xử lý tài liệu."}</p>
                         </div>
                       )}
                     </div>
-                    {(source.status === "FAILED" || (source.status === "READY" && (!source.indexedAt || source.mathExtractionStatus === "PARTIAL" || source.mathExtractionStatus === "FAILED"))) && (
+                    {shouldShowReindexAction(source) && (
                       <Button size="sm" variant="outline" onClick={async () => {
                         try {
                           await bkquizApi.reindexSource(source.id);
@@ -444,7 +470,7 @@ export default function Workspace() {
                           await refresh();
                         }
                         catch (error) { toast.error(message(error)); }
-                      }}>Lập chỉ mục</Button>
+                      }}>{source.indexingStep === "REINDEX_FAILED" ? "Thử xử lý lại" : "Lập chỉ mục"}</Button>
                     )}
                     <button
                       onClick={async () => {
@@ -470,46 +496,22 @@ export default function Workspace() {
             </section>
             <section>
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-xl font-black">Tạo quiz</h2>
-                <div className="flex rounded-md border bg-white p-1">
-                  <button
-                    className={`rounded px-3 py-1 text-sm font-bold ${mode === "AI" ? "bg-[#FDE7EA] text-[#C8102E]" : ""}`}
-                    onClick={() => setMode("AI")}
-                  >
-                    Sinh bằng AI
-                  </button>
-                  <button
-                    className={`rounded px-3 py-1 text-sm font-bold ${mode === "MANUAL" ? "bg-[#FDE7EA] text-[#C8102E]" : ""}`}
-                    onClick={() => setMode("MANUAL")}
-                  >
-                    Thủ công
-                  </button>
+                <div>
+                  <h2 className="text-xl font-black">Quiz</h2>
+                  <p className="text-sm text-slate-600">
+                    Tạo một Quiz trống, sau đó thêm câu thủ công, import Excel hoặc sinh thêm bằng AI.
+                  </p>
                 </div>
+                <Button onClick={() => setBlankQuizOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                  Tạo quiz trống
+                </Button>
               </div>
-              <QuizForm
-                mode={mode}
-                topicId={id}
-                sources={sources.data ?? []}
-                verified={Boolean(user?.emailVerified)}
-                onCreated={async (result) => {
-                  if ("jobId" in result) {
-                    setActiveJob({
-                      quizId: result.quiz.id,
-                      jobId: result.jobId,
-                    });
-                    setViewJob({
-                      quizId: result.quiz.id,
-                      jobId: result.jobId,
-                    });
-                    await client.invalidateQueries({
-                      queryKey: ["quiz-generation-jobs", result.quiz.id],
-                    });
-                  }
-                  await refresh();
-                  if ("quiz" in result) setSelectedQuiz(result.quiz.id);
-                  else setSelectedQuiz(result.id);
-                }}
-              />
+              {!quizzes.isLoading && !quizzes.data?.items.length && (
+                <Card className="p-5 text-sm text-slate-600">
+                  Chủ đề chưa có Quiz. Hãy tạo một Quiz trống để bắt đầu.
+                </Card>
+              )}
               {effectiveJobId && (
                 <Card className="mt-3 border-blue-200 bg-blue-50 p-4 text-sm">
                   <b>{quizBatchStatus.label}</b>
@@ -596,11 +598,11 @@ export default function Workspace() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              setMode("AI");
-                              document.getElementById("quiz-form")?.scrollIntoView({
-                                behavior: "smooth",
-                                block: "start",
-                              });
+                              if (currentQuiz && ["DRAFT", "READY"].includes(currentQuiz.status)) {
+                                setAppendQuiz(true);
+                              } else {
+                                setBlankQuizOpen(true);
+                              }
                             }}
                           >
                             Điều chỉnh và sinh lại
@@ -622,7 +624,7 @@ export default function Workspace() {
                       phút · {currentQuiz.status}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap justify-end gap-2">
                     {["DRAFT", "READY"].includes(currentQuiz.status) && (
                       <Button
                         size="sm"
@@ -645,20 +647,34 @@ export default function Workspace() {
 	                    <Button
 	                      size="sm"
 	                      variant="outline"
-	                      disabled={generationRunning}
+	                      disabled={generationRunning || currentQuiz.questionCount >= MAX_QUESTIONS_PER_QUIZ}
+	                      title={currentQuiz.questionCount >= MAX_QUESTIONS_PER_QUIZ ? "Quiz đã đạt giới hạn 100 câu" : undefined}
 	                      onClick={() => setAddQuestion(true)}
                     >
                       <Plus className="h-4 w-4" />
                       Câu hỏi
 	                    </Button>
-	                    {["DRAFT", "READY"].includes(currentQuiz.status) &&
-	                      currentQuiz.questionCount < 50 && (
+	                    {canManageQuizQuestions(currentQuiz.status) && (
+	                      <Button
+	                        size="sm"
+	                        variant="outline"
+	                        disabled={generationRunning || currentQuiz.questionCount >= MAX_QUESTIONS_PER_QUIZ}
+	                        title={currentQuiz.questionCount >= MAX_QUESTIONS_PER_QUIZ ? "Quiz đã đạt giới hạn 100 câu" : "Import câu hỏi từ Excel"}
+	                        onClick={() => setQuestionImportOpen(true)}
+	                      >
+	                        <FileSpreadsheet className="h-4 w-4" />
+	                        Import Excel
+	                      </Button>
+	                    )}
+	                    {["DRAFT", "READY"].includes(currentQuiz.status) && (
 	                        <Button
 	                          size="sm"
 	                          variant="outline"
 	                          disabled={
-	                            generationRunning || !user?.emailVerified
+	                            generationRunning || !user?.emailVerified ||
+	                            currentQuiz.questionCount >= MAX_QUESTIONS_PER_QUIZ
 	                          }
+	                          title={currentQuiz.questionCount >= MAX_QUESTIONS_PER_QUIZ ? "Quiz đã đạt giới hạn 100 câu" : undefined}
 	                          onClick={() => setAppendQuiz(true)}
 	                        >
 	                          <Bot className="h-4 w-4" />
@@ -734,8 +750,8 @@ export default function Workspace() {
                 <div className="space-y-3">
                   {questions.data?.map((question, index) => (
                     <Card key={question.id} className="p-4">
-                      <div className="flex justify-between gap-3">
-                        <div>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+                        <div className="min-w-0 flex-1">
                           <div className="font-bold">
                             <span>Câu {index + 1}. </span>
                             <MathMarkdown inline normalizeLegacy>{question.prompt}</MathMarkdown>
@@ -845,18 +861,44 @@ export default function Workspace() {
                             </div>
                           )}
                         </div>
-                        <button
-                          onClick={async () => {
-                            try {
-                              await bkquizApi.deleteQuestion(question.id);
-                              await refresh();
-                            } catch (e) {
-                              toast.error(message(e));
-                            }
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </button>
+                        {canManageQuizQuestions(currentQuiz.status) && (
+                          <div className="flex w-full shrink-0 items-start justify-end gap-2 border-t pt-3 sm:w-auto sm:border-0 sm:pt-0">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={generationRunning || deletingQuestionId === question.id}
+                              aria-label={`Sửa câu ${index + 1}`}
+                              title="Sửa câu hỏi"
+                              onClick={() => setEditingQuestion(question)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Sửa
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={generationRunning || deletingQuestionId === question.id}
+                              aria-label={`Xóa câu ${index + 1}`}
+                              title="Xóa câu hỏi"
+                              onClick={async () => {
+                                if (!window.confirm(`Xóa câu ${index + 1}? Lịch sử các lượt làm trước đây vẫn được giữ lại.`)) return;
+                                setDeletingQuestionId(question.id);
+                                try {
+                                  await bkquizApi.deleteQuestion(question.id);
+                                  await refresh();
+                                  toast.success("Đã xóa câu hỏi.");
+                                } catch (error) {
+                                  toast.error(requestErrorMessage(error));
+                                } finally {
+                                  setDeletingQuestionId(null);
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                              Xóa
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </Card>
                   ))}
@@ -916,6 +958,28 @@ export default function Workspace() {
           }}
         />
       )}
+      {editingQuestion && currentQuiz && (
+        <QuestionModal
+          key={editingQuestion.id}
+          quiz={currentQuiz}
+          question={editingQuestion}
+          onClose={() => setEditingQuestion(null)}
+          onDone={async () => {
+            setEditingQuestion(null);
+            await refresh();
+          }}
+        />
+      )}
+      {questionImportOpen && currentQuiz && (
+        <QuestionImportModal
+          quizId={currentQuiz.id}
+          onClose={() => setQuestionImportOpen(false)}
+          onDone={async () => {
+            setQuestionImportOpen(false);
+            await refresh();
+          }}
+        />
+      )}
       {appendQuiz && currentQuiz && (
         <AppendQuizModal
           quiz={currentQuiz}
@@ -938,171 +1002,18 @@ export default function Workspace() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function QuizForm({
-  mode,
-  topicId,
-  sources,
-  verified,
-  onCreated,
-}: {
-  mode: "AI" | "MANUAL";
-  topicId: string;
-  sources: Source[];
-  verified: boolean;
-  onCreated: (result: Quiz | { quiz: Quiz; jobId: string }) => Promise<void>;
-}) {
-  const [title, setTitle] = useState("");
-  const [cognitiveMode, setCognitiveMode] = useState<CognitiveMode>("BALANCED");
-  const [duration, setDuration] = useState(45);
-  const [visibility, setVisibility] = useState<Visibility>("PRIVATE");
-  const [counts, setCounts] = useState({
-    singleChoice: 10,
-    multipleSelect: 5,
-    fillBlank: 5,
-  });
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<ApiRequestError | null>(null);
-  const [selectedSources, setSelectedSources] = useState<string[]>([]);
-  const ready = sources.filter((source) => source.status === "READY" && source.indexedAt);
-  const submit = async () => {
-    if (!title.trim()) return toast.error("Nhập tên quiz.");
-    if (mode === "AI" && !verified)
-      return toast.error("Bạn cần xác minh email trước khi dùng AI.");
-    if (mode === "AI" && selectedSources.length === 0)
-      return toast.error("Hãy chọn ít nhất một tài liệu đã lập chỉ mục.");
-    setSaving(true);
-    setFormError(null);
-    try {
-      const result =
-        mode === "AI"
-          ? await bkquizApi.generateQuiz({
-              topicId,
-              sourceIds: selectedSources.slice(0, 10),
-              title,
-              cognitiveMode,
-              durationMinutes: duration,
-              visibility,
-              questionCounts: counts,
-            })
-          : await bkquizApi.createQuiz({
-              topicId,
-              title,
-              cognitiveMode,
-              durationMinutes: duration,
-              visibility,
-            });
-      await onCreated(result);
-      setTitle("");
-      toast.success(
-        mode === "AI" ? "Đã gửi yêu cầu sinh quiz." : "Đã tạo quiz thủ công.",
-      );
-    } catch (e) {
-      if (e instanceof ApiRequestError) setFormError(e);
-      else toast.error(message(e));
-    } finally {
-      setSaving(false);
-    }
-  };
-  return (
-    <Card id="quiz-form" className="grid gap-4 p-5 md:grid-cols-2">
-      <label className="text-sm font-black md:col-span-2">
-        Tên quiz
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-      </label>
-	      <fieldset className="text-sm font-black md:col-span-2">
-	        <legend>Mức độ tư duy</legend>
-        <div className="mt-2 grid gap-2 md:grid-cols-2">
-          {cognitiveOptions.map((option) => (
-            <label key={option.value} className={`cursor-pointer rounded-lg border p-3 ${cognitiveMode === option.value ? "border-blue-600 bg-blue-50" : "bg-white"}`}>
-              <span className="flex items-center gap-2 font-bold">
-                <input type="radio" name="cognitiveMode" value={option.value}
-                  checked={cognitiveMode === option.value}
-                  onChange={() => setCognitiveMode(option.value)} />
-                {option.label}
-              </span>
-              <span className="mt-1 block text-xs text-slate-600">{option.description}</span>
-	            </label>
-          ))}
-        </div>
-        {cognitiveMode === "BALANCED" && (() => {
-          const total = counts.singleChoice + counts.multipleSelect + counts.fillBlank;
-          const distribution = cognitiveDistribution(total);
-          return <div className="mt-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-700">
-            <div className="flex flex-wrap gap-3">
-              {(["L1", "L2", "L3", "L4", "L5"] as const).map((level) =>
-                <span key={level}><b>{cognitiveLabel(level)}</b>: {distribution[level]} câu</span>)}
-            </div>
-            <p className="mt-2">Tỷ lệ 10% / 25% / 35% / 25% / 5% · {Math.ceil(total / 20)} nhóm Gemini</p>
-          </div>;
-        })()}
-	      </fieldset>
-      <label className="text-sm font-black">
-        Thời lượng
-        <Input
-          type="number"
-          min={1}
-          max={300}
-          value={duration}
-          onChange={(e) => setDuration(Number(e.target.value))}
+      {blankQuizOpen && (
+        <BlankQuizModal
+          topicId={id}
+          onClose={() => setBlankQuizOpen(false)}
+          onCreated={async (quiz) => {
+            setBlankQuizOpen(false);
+            await refresh();
+            setSelectedQuiz(quiz.id);
+          }}
         />
-      </label>
-      <label className="text-sm font-black">
-        Hiển thị
-        <select
-          className="mt-1 h-10 w-full rounded-md border bg-white px-3"
-          value={visibility}
-          onChange={(e) => setVisibility(e.target.value as Visibility)}
-        >
-          <option value="PRIVATE">Riêng tư</option>
-          <option value="PUBLIC">Công khai</option>
-        </select>
-      </label>
-      {mode === "AI" && (
-        <div className="space-y-2 md:col-span-2">
-          <b className="text-sm">Tài liệu dùng để sinh quiz</b>
-          {ready.map((source) => <label key={source.id} className="flex items-center gap-2 rounded border p-2 text-sm">
-            <Checkbox checked={selectedSources.includes(source.id)} onChange={(event) => setSelectedSources((current) => event.target.checked ? [...new Set([...current, source.id])] : current.filter((id) => id !== source.id))} />
-            <span>{source.name} · {source.chunkCount} đoạn</span>
-          </label>)}
-          {!ready.length && <p className="text-sm text-amber-700">Chưa có tài liệu READY đã lập chỉ mục.</p>}
-        </div>
       )}
-      {mode === "AI" && (
-        <div className="grid grid-cols-3 gap-2 md:col-span-2">
-          {(["singleChoice", "multipleSelect", "fillBlank"] as const).map(
-            (key) => (
-              <label key={key} className="text-xs font-bold">
-                {key}
-                <Input
-                  type="number"
-                  min={0}
-                  max={50}
-                  value={counts[key]}
-                  onChange={(e) =>
-                    setCounts((current) => ({
-                      ...current,
-                      [key]: Number(e.target.value),
-                    }))
-                  }
-                />
-              </label>
-            ),
-          )}
-        </div>
-      )}
-      <Button disabled={saving} className="md:col-span-2" onClick={submit}>
-        {saving
-          ? "Đang xử lý..."
-          : mode === "AI"
-            ? "Sinh quiz bằng AI"
-            : "Tạo quiz thủ công"}
-      </Button>
-      {formError && <div className="md:col-span-2"><ErrorPanel error={formError} /></div>}
-    </Card>
+    </div>
   );
 }
 
@@ -1119,7 +1030,7 @@ function AppendQuizModal({
     result: { quiz: Quiz; jobId: string },
   ) => Promise<void>;
 }) {
-  const remaining = Math.max(0, 50 - quiz.questionCount);
+  const remaining = remainingQuestionCapacity(quiz.questionCount);
   const [cognitiveMode, setCognitiveMode] =
     useState<CognitiveMode>("BALANCED");
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
@@ -1359,63 +1270,66 @@ function SourceModal({
 
 function QuestionModal({
   quiz,
+  question,
   onClose,
   onDone,
 }: {
   quiz: Quiz;
+  question?: Question;
   onClose: () => void;
   onDone: () => Promise<void>;
 }) {
-  const [type, setType] = useState<QuestionType>("SINGLE_CHOICE");
-  const [prompt, setPrompt] = useState("");
-  const [explanation, setExplanation] = useState("");
-  const [options, setOptions] = useState(["", "", "", ""]);
-  const [correct, setCorrect] = useState<number[]>([0]);
-  const [answers, setAnswers] = useState("");
+  const [form, setForm] = useState<QuestionFormState>(() => question
+    ? questionToFormState(question)
+    : {
+        type: "SINGLE_CHOICE",
+        prompt: "",
+        explanation: "",
+        points: "1",
+        cognitiveLevel: quiz.cognitiveMode === "BALANCED" ? "L3" : quiz.cognitiveMode,
+        options: ["", "", "", ""],
+        correct: [0],
+        answers: "",
+      });
   const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const submit = async () => {
     setSaving(true);
+    setSubmitError(null);
     try {
-      await bkquizApi.createQuestion(quiz.id, {
-        type,
-        prompt,
-        explanation,
-        points: 1,
-        cognitiveLevel: quiz.cognitiveMode === "BALANCED" ? "L3" : quiz.cognitiveMode,
-        options:
-          type === "FILL_BLANK"
-            ? []
-            : options.map((text, index) => ({
-                text,
-                correct: correct.includes(index),
-              })),
-        acceptedAnswers:
-          type === "FILL_BLANK"
-            ? answers
-                .split("\n")
-                .map((value) => value.trim())
-                .filter(Boolean)
-            : [],
-      });
+      const payload = questionFormToRequest(form);
+      if (question) await bkquizApi.updateQuestion(question.id, payload);
+      else await bkquizApi.createQuestion(quiz.id, payload);
       await onDone();
-      toast.success("Đã thêm câu hỏi.");
-    } catch (e) {
-      toast.error(message(e));
+      toast.success(question ? "Đã cập nhật câu hỏi." : "Đã thêm câu hỏi.");
+    } catch (error) {
+      const value = requestErrorMessage(error);
+      setSubmitError(value);
+      toast.error(value);
     } finally {
       setSaving(false);
     }
   };
+  const changeType = (type: QuestionType) => setForm((current) => ({
+    ...current,
+    type,
+    options: type === "FILL_BLANK"
+      ? current.options
+      : [...current.options, "", "", "", ""].slice(0, 4),
+    correct: type === "MULTIPLE_SELECT" ? [0, 1] : [0],
+  }));
   return (
-    <Modal title="Thêm câu hỏi" onClose={onClose} className="max-w-2xl">
+    <Modal title={question ? "Sửa câu hỏi" : "Thêm câu hỏi"} onClose={onClose} className="max-w-2xl">
       <div className="max-h-[75vh] space-y-4 overflow-y-auto p-5">
+        {question && question.citations.length > 0 && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+            Việc sửa nội dung hoặc đáp án sẽ gỡ các trích dẫn AI hiện tại để tránh hiển thị nguồn không còn khớp.
+          </div>
+        )}
         <select
           className="h-10 w-full rounded-md border bg-white px-3"
-          value={type}
-          onChange={(e) => {
-            const next = e.target.value as QuestionType;
-            setType(next);
-            setCorrect(next === "MULTIPLE_SELECT" ? [0, 1] : [0]);
-          }}
+          value={form.type}
+          onChange={(event) => changeType(event.target.value as QuestionType)}
         >
           {["SINGLE_CHOICE", "MULTIPLE_SELECT", "FILL_BLANK"].map((value) => (
             <option key={value}>{value}</option>
@@ -1424,34 +1338,61 @@ function QuestionModal({
         <textarea
           className="min-h-24 w-full rounded-md border p-3"
           placeholder="Nội dung câu hỏi"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          value={form.prompt}
+          onChange={(event) => setForm((current) => ({ ...current, prompt: event.target.value }))}
         />
-        {type !== "FILL_BLANK" ? (
-          options.map((value, index) => (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm font-semibold">
+            Điểm
+            <Input
+              className="mt-1"
+              type="number"
+              min="0.25"
+              step="0.25"
+              value={form.points}
+              onChange={(event) => setForm((current) => ({ ...current, points: event.target.value }))}
+            />
+          </label>
+          <label className="text-sm font-semibold">
+            Mức độ tư duy
+            <select
+              className="mt-1 h-10 w-full rounded-md border bg-white px-3"
+              value={form.cognitiveLevel}
+              onChange={(event) => setForm((current) => ({
+                ...current,
+                cognitiveLevel: event.target.value as CognitiveLevel,
+              }))}
+            >
+              {cognitiveOptions.filter((option) => option.value !== "BALANCED").map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {form.type !== "FILL_BLANK" ? (
+          form.options.map((value, index) => (
             <div key={index} className="flex items-center gap-2">
               <Checkbox
-                checked={correct.includes(index)}
+                checked={form.correct.includes(index)}
                 onChange={() =>
-                  setCorrect((current) =>
-                    type === "SINGLE_CHOICE"
+                  setForm((current) => ({
+                    ...current,
+                    correct: current.type === "SINGLE_CHOICE"
                       ? [index]
-                      : current.includes(index)
-                        ? current.filter((i) => i !== index)
-                        : [...current, index],
-                  )
+                      : current.correct.includes(index)
+                        ? current.correct.filter((item) => item !== index)
+                        : [...current.correct, index],
+                  }))
                 }
               />
               <Input
                 value={value}
                 placeholder={`Lựa chọn ${index + 1}`}
-                onChange={(e) =>
-                  setOptions((current) =>
-                    current.map((item, i) =>
-                      i === index ? e.target.value : item,
-                    ),
-                  )
-                }
+                onChange={(event) => setForm((current) => ({
+                  ...current,
+                  options: current.options.map((item, optionIndex) =>
+                    optionIndex === index ? event.target.value : item),
+                }))}
               />
             </div>
           ))
@@ -1459,34 +1400,44 @@ function QuestionModal({
           <textarea
             className="min-h-24 w-full rounded-md border p-3"
             placeholder="Mỗi đáp án chấp nhận trên một dòng"
-            value={answers}
-            onChange={(e) => setAnswers(e.target.value)}
+            value={form.answers}
+            onChange={(event) => setForm((current) => ({ ...current, answers: event.target.value }))}
           />
         )}
         <textarea
           className="min-h-20 w-full rounded-md border p-3"
           placeholder="Giải thích"
-          value={explanation}
-          onChange={(e) => setExplanation(e.target.value)}
+          value={form.explanation}
+          onChange={(event) => setForm((current) => ({ ...current, explanation: event.target.value }))}
         />
-        {(prompt.trim() || options.some((value) => value.trim()) || explanation.trim()) && (
+        {(form.prompt.trim() || form.options.some((value) => value.trim()) || form.explanation.trim()) && (
           <Card className="space-y-3 bg-gray-50 p-4">
             <b>Xem trước</b>
-            {prompt.trim() && <MathMarkdown normalizeLegacy>{prompt}</MathMarkdown>}
-            {type !== "FILL_BLANK" && options.map((value, index) => value.trim() && (
+            {form.prompt.trim() && <MathMarkdown normalizeLegacy>{form.prompt}</MathMarkdown>}
+            {form.type !== "FILL_BLANK" && form.options.map((value, index) => value.trim() && (
               <div key={`preview-${index}`} className="flex gap-2 text-sm">
                 <span>{index + 1}.</span><MathMarkdown inline normalizeLegacy>{value}</MathMarkdown>
               </div>
             ))}
-            {explanation.trim() && <MathMarkdown className="text-sm text-[#6B7280]" normalizeLegacy>{explanation}</MathMarkdown>}
+            {form.explanation.trim() && <MathMarkdown className="text-sm text-[#6B7280]" normalizeLegacy>{form.explanation}</MathMarkdown>}
           </Card>
+        )}
+        {submitError && (
+          <div role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {submitError}
+          </div>
         )}
         <Button
           className="w-full"
-          disabled={saving || !prompt.trim()}
+          disabled={
+            saving ||
+            !form.prompt.trim() ||
+            !Number.isFinite(Number(form.points)) ||
+            Number(form.points) <= 0
+          }
           onClick={submit}
         >
-          Lưu câu hỏi
+          {saving ? "Đang lưu…" : question ? "Lưu thay đổi" : "Lưu câu hỏi"}
         </Button>
       </div>
     </Modal>

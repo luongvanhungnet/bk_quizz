@@ -24,6 +24,15 @@ public final class RagDtos {
                         String rawText, boolean mathEnhanced) {}
     public record Pagination(int page, int size, long totalItems, int totalPages) {}
     public record Chunks(List<Chunk> items, Pagination pagination) {}
+    public record TutorHistory(String role, String content) {}
+    public record TutorSource(String sourceId, UUID sourceChunkId, UUID sourceDocumentId,
+                              String filename, Integer pageNumber,
+                              Integer slideNumber, int chunkIndex, String heading,
+                              String evidenceQuote) {}
+    public record TutorRequest(int questionNumber, String questionType, String prompt,
+                               List<String> options, String learnerAnswer, String correctAnswer,
+                               String explanation, List<TutorSource> sources,
+                               List<TutorHistory> conversationHistory, String message) {}
     public record Counts(int singleChoice, int multipleSelect, int fillBlank) {}
     public record CognitiveConstraint(String cognitiveLevel, int conceptMin, int conceptMax,
                                       int reasoningMin, int reasoningMax, boolean requiresNovelScenario,

@@ -90,3 +90,86 @@ def test_live_and_metrics_are_public(settings) -> None:
         metrics = client.get("/metrics")
         assert metrics.status_code == 200
         assert "rag_http_requests_total" in metrics.text
+
+
+def test_v2_reindex_reuses_ready_document_and_active_job(settings) -> None:
+    dispatcher = CapturingDispatcher()
+    app = create_app(
+        settings=settings,
+        embedding_service=DeterministicEmbedding(),
+        job_dispatcher=dispatcher,
+    )
+    with TestClient(app) as client:
+        uploaded = client.post(
+            "/api/v2/user-documents",
+            headers=headers("user-a"),
+            files={"file": ("notes.txt", "Nội dung đủ để lập chỉ mục lại", "text/plain")},
+        ).json()
+        client.app.state.async_document_processor.process(uploaded["jobId"])
+
+        first = client.post(
+            f"/api/v2/user-documents/{uploaded['documentId']}/reindex",
+            headers=headers("user-a"),
+        )
+        assert first.status_code == 202, first.text
+        assert first.json()["documentId"] == uploaded["documentId"]
+        assert first.json()["documentStatus"] == "READY"
+
+        repeated = client.post(
+            f"/api/v2/user-documents/{uploaded['documentId']}/reindex",
+            headers=headers("user-a"),
+        )
+        assert repeated.status_code == 202
+        assert repeated.json()["jobId"] == first.json()["jobId"]
+
+        hidden = client.post(
+            f"/api/v2/user-documents/{uploaded['documentId']}/reindex",
+            headers=headers("user-b"),
+        )
+        assert hidden.status_code == 404
+
+
+def test_failed_reindex_keeps_ready_document(settings) -> None:
+    dispatcher = CapturingDispatcher()
+    app = create_app(
+        settings=settings,
+        embedding_service=DeterministicEmbedding(),
+        job_dispatcher=dispatcher,
+    )
+    with TestClient(app) as client:
+        uploaded = client.post(
+            "/api/v2/user-documents",
+            headers=headers("user-a"),
+            files={"file": ("notes.txt", "Nội dung chỉ mục đang hoạt động", "text/plain")},
+        ).json()
+        client.app.state.async_document_processor.process(uploaded["jobId"])
+        before = client.get(
+            f"/api/v2/user-documents/{uploaded['documentId']}",
+            headers=headers("user-a"),
+        ).json()
+        reindex = client.post(
+            f"/api/v2/user-documents/{uploaded['documentId']}/reindex",
+            headers=headers("user-a"),
+        ).json()
+
+        def fail_parse(*_args, **_kwargs):
+            raise ValueError("broken parser")
+
+        client.app.state.user_document_service._parser.parse = fail_parse
+        try:
+            client.app.state.async_document_processor.process(reindex["jobId"])
+        except Exception:
+            pass
+
+        after = client.get(
+            f"/api/v2/user-documents/{uploaded['documentId']}",
+            headers=headers("user-a"),
+        ).json()
+        job = client.get(
+            f"/api/v2/indexing-jobs/{reindex['jobId']}",
+            headers=headers("user-a"),
+        ).json()
+        assert after["status"] == "READY"
+        assert after["chunkCount"] == before["chunkCount"]
+        assert after["indexedAt"] == before["indexedAt"]
+        assert job["status"] == "FAILED"

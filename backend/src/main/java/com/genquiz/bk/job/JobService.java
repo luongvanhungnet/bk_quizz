@@ -87,6 +87,14 @@ public class JobService {
                 Set.of(JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.RETRY));
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Job> activeSourceIngestion(UUID sourceId) {
+        return jobs.findFirstByResourceIdAndTypeAndStatusInOrderByCreatedAtDesc(
+                sourceId,
+                JobType.SOURCE_INGESTION,
+                Set.of(JobStatus.QUEUED, JobStatus.RUNNING, JobStatus.RETRY));
+    }
+
     @Transactional
     public Job retryOwnedQuizGeneration(UUID actorId, UUID quizId) {
         Job job = jobs.findFirstByResourceIdAndSubjectUserIdAndTypeOrderByCreatedAtDesc(

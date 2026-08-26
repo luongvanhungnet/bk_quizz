@@ -70,6 +70,21 @@ class QuestionServiceValidationTest {
                 List.of(single), new QuizDtos.QuestionCounts(0, 1, 0)));
     }
 
+    @Test
+    void rejectsAQuestionWithZeroPointsBeforeWritingToTheDatabase() {
+        var request = new QuizDtos.QuestionRequest(
+                QuestionType.SINGLE_CHOICE,
+                "Câu hỏi?",
+                "Giải thích",
+                BigDecimal.ZERO,
+                Difficulty.MEDIUM,
+                null,
+                List.of(option("A", true), option("B", false), option("C", false), option("D", false)),
+                List.of());
+
+        assertThrows(ResponseStatusException.class, () -> QuestionService.validate(request));
+    }
+
     private static QuizDtos.QuestionRequest request(QuestionType type, List<QuizDtos.OptionRequest> options,
                                                      List<String> acceptedAnswers) {
         return new QuizDtos.QuestionRequest(type, "Câu hỏi?", "Giải thích", BigDecimal.ONE,

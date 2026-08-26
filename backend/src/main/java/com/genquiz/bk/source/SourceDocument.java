@@ -175,9 +175,25 @@ public class SourceDocument {
     }
 
     public void queueReindex(Instant now) {
-        ragDocumentId = null; ragJobId = null; status = SourceStatus.UPLOADED;
-        indexingProgress = 0; indexingStep = "QUEUED"; indexingProgressAt = now;
+        ragJobId = null; status = SourceStatus.EMBEDDING;
+        indexingProgress = 0; indexingStep = "REINDEX_QUEUED"; indexingProgressAt = now;
         errorCode = null; errorMessage = null; updatedAt = now;
+    }
+
+    public void adoptRagDocument(UUID documentId, Instant now) {
+        ragDocumentId = documentId;
+        updatedAt = now;
+    }
+
+    public void failReindex(String safeMessage, Instant now) {
+        status = SourceStatus.READY;
+        indexingStep = "REINDEX_FAILED";
+        indexingProgressAt = now;
+        errorCode = "REINDEX_FAILED";
+        errorMessage = safeMessage == null
+                ? "Lập chỉ mục lại thất bại; phiên bản trước vẫn có thể sử dụng."
+                : safeMessage.substring(0, Math.min(1000, safeMessage.length()));
+        updatedAt = now;
     }
 
     public void fail(String safeCode, String safeMessage, Instant now) {

@@ -30,6 +30,7 @@ class IndexingJobService:
         owner_id: str,
         document_id: str,
         idempotency_key: str | None,
+        operation: str = "UPLOAD",
     ) -> IndexingJob:
         if idempotency_key:
             existing = session.scalar(select(IndexingJob).where(
@@ -41,6 +42,7 @@ class IndexingJobService:
         job = IndexingJob(
             id=str(uuid.uuid4()), document_id=document_id, owner_id=owner_id,
             max_attempts=self._max_attempts, idempotency_key=idempotency_key,
+            operation=operation,
         )
         session.add(job)
         JOB_TRANSITIONS.labels("PENDING").inc()
@@ -123,7 +125,8 @@ class IndexingJobService:
             job.error_code, job.error_message = code[:80], message[:500]
             job.heartbeat_at = job.updated_at = job.finished_at = now
             document = session.get(DocumentRecord, job.document_id)
-            if document is not None and document.status != "DELETED":
+            if (document is not None and document.status != "DELETED"
+                    and job.operation != "REINDEX"):
                 document.status, document.error_message = "FAILED", code[:500]
                 document.updated_at = now
             self.audit_in_session(session, job.owner_id, "INDEXING_FAILED", "INDEXING_JOB", job.id, {"code": code})
@@ -143,7 +146,8 @@ class IndexingJobService:
                 job.status, job.current_step, job.finished_at = "CANCELLED", "CANCELLED", now
                 job.updated_at = now
                 document = session.get(DocumentRecord, job.document_id)
-                if document is not None and document.status != "DELETED":
+                if (document is not None and document.status != "DELETED"
+                        and job.operation != "REINDEX"):
                     document.status = "FAILED"
                     document.error_message = "INDEXING_CANCELLED"
                     document.updated_at = now
@@ -170,7 +174,8 @@ class IndexingJobService:
             job.error_code = job.error_message = job.finished_at = None
             job.updated_at = now
             document = session.get(DocumentRecord, job.document_id)
-            if document is not None and document.status != "DELETED":
+            if (document is not None and document.status != "DELETED"
+                    and job.operation != "REINDEX"):
                 document.status, document.error_message = "PROCESSING", None
                 document.updated_at = now
             self.audit_in_session(session, owner_id, "INDEXING_RETRIED", "INDEXING_JOB", job.id)
@@ -207,9 +212,12 @@ class IndexingJobService:
                 )
             ).all())
 
-    def raw(self, job_id: str) -> tuple[str, str] | None:
+    def raw(self, job_id: str) -> tuple[str, str, str] | None:
         with self._database.session() as session:
-            row = session.execute(select(IndexingJob.owner_id, IndexingJob.document_id).where(IndexingJob.id == job_id)).one_or_none()
+            row = session.execute(select(
+                IndexingJob.owner_id, IndexingJob.document_id,
+                IndexingJob.operation,
+            ).where(IndexingJob.id == job_id)).one_or_none()
             return tuple(row) if row else None
 
     def cancel_for_document(self, owner_id: str, document_id: str) -> None:

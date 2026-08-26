@@ -10,12 +10,15 @@ public class ChatMessage {
     @Id private UUID id;
     @Column(name = "thread_id", nullable = false, updatable = false) private UUID threadId;
     @Column(name = "job_id") private UUID jobId;
+    @Column(name = "question_snapshot_id", updatable = false) private UUID questionSnapshotId;
+    @Column(name = "client_message_id", updatable = false) private UUID clientMessageId;
+    @Column(name = "reply_to_message_id", updatable = false) private UUID replyToMessageId;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private ChatRole role;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20) private ChatMessageStatus status;
     @Column(nullable = false, columnDefinition = "text") private String content;
     @Column(length = 100) private String model;
-    @Column(name = "prompt_tokens") private Integer promptTokens;
-    @Column(name = "completion_tokens") private Integer completionTokens;
+    @Column(name = "input_tokens") private Integer promptTokens;
+    @Column(name = "output_tokens") private Integer completionTokens;
     @Column(name = "total_tokens") private Integer totalTokens;
     @Column(name = "error_code", length = 80) private String errorCode;
     @Column(name = "error_message", length = 1000) private String errorMessage;
@@ -23,12 +26,19 @@ public class ChatMessage {
     @Column(name = "completed_at") private Instant completedAt;
 
     protected ChatMessage() {}
-    public static ChatMessage user(UUID threadId, String content, Instant now) {
+    public static ChatMessage user(UUID threadId, UUID questionSnapshotId, UUID clientMessageId,
+                                   String content, Instant now) {
         ChatMessage message = base(threadId, ChatRole.USER, ChatMessageStatus.COMPLETED, content, now);
+        message.questionSnapshotId = questionSnapshotId;
+        message.clientMessageId = clientMessageId;
         message.completedAt = now; return message;
     }
-    public static ChatMessage pendingAssistant(UUID threadId, Instant now) {
-        return base(threadId, ChatRole.ASSISTANT, ChatMessageStatus.PENDING, "", now);
+    public static ChatMessage pendingAssistant(UUID threadId, UUID questionSnapshotId,
+                                               UUID replyToMessageId, Instant now) {
+        ChatMessage message = base(threadId, ChatRole.ASSISTANT, ChatMessageStatus.PENDING, "", now);
+        message.questionSnapshotId = questionSnapshotId;
+        message.replyToMessageId = replyToMessageId;
+        return message;
     }
     private static ChatMessage base(UUID threadId, ChatRole role, ChatMessageStatus status, String content, Instant now) {
         ChatMessage message = new ChatMessage(); message.id = UUID.randomUUID(); message.threadId = threadId;
@@ -49,10 +59,20 @@ public class ChatMessage {
     public void fail(String code, String message, Instant now) {
         status = ChatMessageStatus.FAILED; errorCode = code;
         errorMessage = message == null ? null : message.substring(0, Math.min(1000, message.length()));
-        completedAt = null;
+        completedAt = now;
+    }
+    public void cancel(String partialContent, Instant now) {
+        status = ChatMessageStatus.CANCELLED;
+        content = partialContent == null ? "" : partialContent;
+        errorCode = "AI_RESPONSE_CANCELLED";
+        errorMessage = "Người dùng đã dừng phản hồi.";
+        completedAt = now;
     }
     public UUID getId() { return id; } public UUID getThreadId() { return threadId; }
     public UUID getJobId() { return jobId; } public ChatRole getRole() { return role; }
+    public UUID getQuestionSnapshotId() { return questionSnapshotId; }
+    public UUID getClientMessageId() { return clientMessageId; }
+    public UUID getReplyToMessageId() { return replyToMessageId; }
     public ChatMessageStatus getStatus() { return status; } public String getContent() { return content; }
     public String getModel() { return model; } public Integer getPromptTokens() { return promptTokens; }
     public Integer getCompletionTokens() { return completionTokens; } public Integer getTotalTokens() { return totalTokens; }

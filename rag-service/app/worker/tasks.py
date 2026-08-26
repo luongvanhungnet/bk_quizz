@@ -24,7 +24,7 @@ def process_indexing_job(self: Task, job_id: str) -> None:
         raw = jobs.raw(job_id)
         if raw is None or self.request.retries >= self.max_retries:
             return
-        owner_id, _ = raw
+        owner_id, _, _ = raw
         jobs.retry(owner_id, job_id)
         countdown = min(60, (2 ** self.request.retries) + random.uniform(0, 1))
         raise self.retry(exc=error, countdown=countdown)

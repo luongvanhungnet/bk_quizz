@@ -10,7 +10,7 @@ from app.db.models import Base
 # Keep this in sync with the migration graph. A regression test compares the
 # runtime guard with Alembic's actual head so a newly added ORM column cannot
 # be deployed while an older SQLite schema is still reported as ready.
-ALEMBIC_HEAD = "0004_pdf_math_extraction"
+ALEMBIC_HEAD = "0005_document_reindex"
 
 
 class Database:

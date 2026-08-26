@@ -13,6 +13,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.Duration;
 import java.util.List;
+import com.genquiz.bk.quiz.QuizLimits;
 
 @Validated
 @ConfigurationProperties(prefix = "bkquiz")
@@ -49,7 +50,7 @@ public record AppProperties(
             @Min(128) @Max(3072) int embeddingDimensions,
             @NotNull Duration timeout,
             @Min(1) @Max(5) int maxAttempts,
-            @Min(1) @Max(50) int maxQuestions,
+            @Min(1) @Max(QuizLimits.MAX_QUESTIONS_PER_QUIZ) int maxQuestions,
             @Min(1) @Max(10) int maxSources,
             @Min(1) int minSourceCharacters
     ) {}

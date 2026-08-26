@@ -169,6 +169,10 @@ export interface Question {
   validationReviewNote?: string | null;
   version: number;
 }
+export interface QuestionImportResult {
+  importedCount: number;
+  totalQuestionCount: number;
+}
 export interface Citation {
   sourceChunkId: string;
   sourceDocumentId: string;
@@ -290,6 +294,12 @@ export interface AttemptResult {
   submittedAt: string;
   questions: Array<{
     snapshotId: string;
+    type: QuestionType;
+    prompt: string;
+    position: number;
+    options: Array<{ id: string; text: string; position: number }>;
+    selectedOptionIds: string[];
+    textAnswer: string | null;
     correct: boolean | null;
     awardedPoints: number;
     maxPoints: number;
@@ -298,6 +308,88 @@ export interface AttemptResult {
     explanation: string | null;
     citations: Citation[];
   }>;
+}
+
+export type AttemptChatStatus = "PENDING" | "GENERATING" | "COMPLETED" | "FAILED" | "CANCELLED";
+export interface AttemptChatCitation {
+  sourceChunkId: string | null;
+  sourceDocumentId: string | null;
+  filename: string;
+  pageNumber: number | null;
+  slideNumber: number | null;
+  chunkIndex: number;
+  heading: string | null;
+  evidenceQuote: string;
+}
+export interface AttemptChatMessage {
+  id: string;
+  questionSnapshotId: string;
+  role: "USER" | "ASSISTANT";
+  status: AttemptChatStatus;
+  content: string;
+  model: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  replyToMessageId: string | null;
+  createdAt: string;
+  completedAt: string | null;
+  citations: AttemptChatCitation[];
+}
+export interface AttemptChatHistory {
+  items: AttemptChatMessage[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+export interface AttemptChatStreamEvent {
+  type: "MESSAGE_STARTED" | "DELTA" | "SOURCES" | "COMPLETED" | "FAILED" | "CANCELLED";
+  assistantMessageId?: string;
+  delta?: string;
+  message?: string;
+  errorCode?: string;
+  retryable?: boolean;
+  retryAfterSeconds?: number;
+  sources?: AttemptChatCitation[];
+}
+
+async function streamAttemptChat(
+  path: string,
+  body: unknown | undefined,
+  signal: AbortSignal,
+  onEvent: (event: AttemptChatStreamEvent) => void,
+): Promise<void> {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || "/api";
+  const token = accessTokenStore.get();
+  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`, {
+    method: "POST",
+    credentials: "include",
+    signal,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+      Accept: "application/x-ndjson",
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  if (!response.ok || !response.body) {
+    let message = `Không thể kết nối trợ giảng AI (HTTP ${response.status}).`;
+    try {
+      const payload = await response.json() as { message?: string; errors?: Array<{ message?: string }> };
+      message = payload.errors?.[0]?.message || payload.message || message;
+    } catch { /* keep safe fallback */ }
+    throw new Error(message);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    for (const line of lines) if (line.trim()) onEvent(JSON.parse(line) as AttemptChatStreamEvent);
+    if (done) break;
+  }
+  if (buffer.trim()) onEvent(JSON.parse(buffer) as AttemptChatStreamEvent);
 }
 
 export interface Classroom {
@@ -656,8 +748,23 @@ export const bkquizApi = {
       method: "POST",
       ...json(body),
     }),
+  updateQuestion: (id: string, body: unknown) =>
+    apiClient.request<Question>(`/questions/${id}`, {
+      method: "PUT",
+      ...json(body),
+    }),
   deleteQuestion: (id: string) =>
     apiClient.request<void>(`/questions/${id}`, { method: "DELETE" }),
+  questionImportTemplate: () =>
+    apiClient.requestBlob!("/questions/import-template"),
+  importQuestions: (quizId: string, file: File) => {
+    const body = new FormData();
+    body.append("file", file);
+    return apiClient.request<QuestionImportResult>(`/quizzes/${quizId}/questions/import`, {
+      method: "POST",
+      body,
+    });
+  },
   reviewQuestionValidation: (id: string, note?: string) =>
     apiClient.request<Question>(`/questions/${id}/validation-review`, {
       method: "PUT",
@@ -710,6 +817,36 @@ export const bkquizApi = {
     }),
   result: (id: string) =>
     apiClient.request<AttemptResult>(`/attempts/${id}/result`),
+  attemptChatHistory: async (attemptId: string) => {
+    const items: AttemptChatMessage[] = [];
+    let afterId: string | null = null;
+    let hasMore = true;
+    while (hasMore) {
+      const page: AttemptChatHistory = await apiClient.request<AttemptChatHistory>(
+        `/attempts/${attemptId}/ai-chat/messages?limit=100${afterId ? `&afterId=${encodeURIComponent(afterId)}` : ""}`,
+      );
+      items.push(...page.items);
+      afterId = page.nextCursor;
+      hasMore = page.hasMore && Boolean(afterId);
+    }
+    return { items, nextCursor: afterId, hasMore: false } satisfies AttemptChatHistory;
+  },
+  streamAttemptChat: (
+    attemptId: string,
+    body: { snapshotId: string; clientMessageId: string; message: string },
+    signal: AbortSignal,
+    onEvent: (event: AttemptChatStreamEvent) => void,
+  ) => streamAttemptChat(`/attempts/${attemptId}/ai-chat/messages/stream`, body, signal, onEvent),
+  regenerateAttemptChat: (
+    attemptId: string,
+    messageId: string,
+    signal: AbortSignal,
+    onEvent: (event: AttemptChatStreamEvent) => void,
+  ) => streamAttemptChat(
+    `/attempts/${attemptId}/ai-chat/messages/${messageId}/regenerate/stream`, undefined, signal, onEvent,
+  ),
+  clearAttemptChat: (attemptId: string) =>
+    apiClient.request<void>(`/attempts/${attemptId}/ai-chat`, { method: "DELETE" }),
   classrooms: (page = 1) =>
     requestPage<Classroom>(pageQuery("/classrooms", { page, limit: 50 })),
   classroom: (id: string) => apiClient.request<Classroom>(`/classrooms/${id}`),

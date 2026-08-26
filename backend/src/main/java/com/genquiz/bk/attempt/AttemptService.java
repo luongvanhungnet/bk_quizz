@@ -458,7 +458,14 @@ public class AttemptService {
             detail = snapshots.findByAttemptIdOrderByPosition(attempt.getId()).stream().map(snapshot -> {
                 AttemptAnswer answer = bySnapshot.get(snapshot.getId());
                 AnswerKey key = read(snapshot.getAnswerKey(), AnswerKey.class);
-                return new AttemptDtos.QuestionResult(snapshot.getId(), answer == null ? Boolean.FALSE : answer.getCorrect(),
+                List<SnapshotOption> optionValues = read(snapshot.getOptionsPayload(), new TypeReference<>() {});
+                List<UUID> selected = answer == null ? List.of()
+                        : read(answer.getSelectedOptionIds(), new TypeReference<>() {});
+                return new AttemptDtos.QuestionResult(snapshot.getId(), snapshot.getQuestionType(),
+                        snapshot.getPrompt(), snapshot.getPosition(), optionValues.stream()
+                        .map(value -> new AttemptDtos.Option(value.id(), value.text(), value.position())).toList(),
+                        selected, answer == null ? null : answer.getTextAnswer(),
+                        answer == null ? Boolean.FALSE : answer.getCorrect(),
                         answer == null ? BigDecimal.ZERO : answer.getAwardedPoints(), snapshot.getPoints(),
                         key.correctOptionIds(), key.acceptedAnswers(), snapshot.getExplanation(),
                         read(snapshot.getCitationsPayload(), new TypeReference<>() {}));

@@ -271,3 +271,14 @@ python -m pytest tests/test_math_markup.py tests/test_pdf_math_extractor.py test
 ```
 
 Upload hoặc reindex PDF có tích phân/chỉ số rồi kiểm tra document trả `mathExtractionStatus`, `mathFormulaCount`, `mathWarningCount`; endpoint chunks trả cả `text`, `rawText` và `mathEnhanced`. `PARTIAL` là kết quả hợp lệ khi Vision không khả dụng, không phải lỗi indexing.
+
+Reindex tài liệu `READY` mà không upload lại file:
+
+```powershell
+$reindex = Invoke-RestMethod -Method Post `
+  -Uri "$base/user-documents/$($upload.documentId)/reindex" `
+  -Headers @{ "X-Internal-API-Key"=$internalKey; "X-User-Id"=$userId }
+$reindex | ConvertTo-Json
+```
+
+Kỳ vọng HTTP `202`, `documentId` không đổi và một `jobId` mới. Gọi lại khi job còn `PENDING/RUNNING` phải trả cùng `jobId`; upload file trùng qua endpoint upload vẫn trả `DUPLICATE_DOCUMENT`.

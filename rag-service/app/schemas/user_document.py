@@ -125,9 +125,9 @@ class UserChunkListResponse(BaseModel):
 
 
 class QuizQuestionCounts(BaseModel):
-    singleChoice: int = Field(ge=0, le=50)
-    multipleSelect: int = Field(ge=0, le=50)
-    fillBlank: int = Field(ge=0, le=50)
+    singleChoice: int = Field(ge=0, le=100)
+    multipleSelect: int = Field(ge=0, le=100)
+    fillBlank: int = Field(ge=0, le=100)
 
     @model_validator(mode="after")
     def validate_total(self) -> "QuizQuestionCounts":
@@ -205,7 +205,7 @@ class GroundedQuizRequest(BaseModel):
     totalBatches: int = Field(default=1, ge=1, le=13)
     difficultyPlan: list[str] | None = None
     questionPlan: list[CognitiveQuestionPlan] | None = None
-    excludedPrompts: list[str] = Field(default_factory=list, max_length=50)
+    excludedPrompts: list[str] = Field(default_factory=list, max_length=100)
     acceptedQuestions: list[GroundedQuizQuestionOutput] = Field(
         default_factory=list, max_length=20
     )
