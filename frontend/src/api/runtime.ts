@@ -1,10 +1,10 @@
 import { createAuthApi } from "../auth/api";
 import { accessTokenStore } from "../auth/accessToken";
 import { createApiClient } from "./client";
+import { configuredApiBaseUrl } from "./configuredBaseUrl";
 
-const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || "/api";
 const sessionClient = createApiClient({
-  baseUrl,
+  baseUrl: configuredApiBaseUrl,
   getAccessToken: accessTokenStore.get,
 });
 const sessionAuthApi = createAuthApi(sessionClient);
@@ -21,7 +21,7 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export const apiClient = createApiClient({
-  baseUrl,
+  baseUrl: configuredApiBaseUrl,
   getAccessToken: accessTokenStore.get,
   refreshAccessToken,
 });

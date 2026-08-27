@@ -3,6 +3,7 @@ import type { PaginatedResult } from "./client";
 import type { UserDto } from "../auth/types";
 import type { AuthPayload } from "../auth/types";
 import { accessTokenStore } from "../auth/accessToken";
+import { configuredApiBaseUrl } from "./configuredBaseUrl";
 
 export type Visibility = "PRIVATE" | "PUBLIC";
 export type TopicStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
@@ -357,9 +358,8 @@ async function streamAttemptChat(
   signal: AbortSignal,
   onEvent: (event: AttemptChatStreamEvent) => void,
 ): Promise<void> {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL?.trim() || "/api";
   const token = accessTokenStore.get();
-  const response = await fetch(`${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`, {
+  const response = await fetch(`${configuredApiBaseUrl}/${path.replace(/^\//, "")}`, {
     method: "POST",
     credentials: "include",
     signal,

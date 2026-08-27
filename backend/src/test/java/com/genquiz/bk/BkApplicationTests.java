@@ -83,6 +83,15 @@ class BkApplicationTests {
     }
 
     @Test
+    void cognitiveScoreColumnsMatchJavaIntegerMappings() {
+        assertThat(columnType("questions", "concept_count")).isEqualTo("integer");
+        assertThat(columnType("questions", "reasoning_step_count")).isEqualTo("integer");
+        assertThat(columnType("questions", "complexity_score")).isEqualTo("integer");
+        assertThat(columnType("attempt_question_snapshots", "complexity_score"))
+                .isEqualTo("integer");
+    }
+
+    @Test
     void migrationAlignsUserPreferencesWithEntity() {
         Integer studyColumn = jdbc.queryForObject("""
                 select count(*) from information_schema.columns
@@ -97,6 +106,16 @@ class BkApplicationTests {
 
         assertThat(studyColumn).isEqualTo(1);
         assertThat(legacyColumn).isZero();
+    }
+
+    private String columnType(String tableName, String columnName) {
+        return jdbc.queryForObject("""
+                SELECT data_type
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                  AND table_name = ?
+                  AND column_name = ?
+                """, String.class, tableName, columnName);
     }
 
     @Test

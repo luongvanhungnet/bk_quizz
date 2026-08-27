@@ -3,6 +3,7 @@ import path from 'path'
 import { fileURLToPath } from 'node:url'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { resolveApiBaseUrl } from './src/api/apiBaseUrl'
 
 
 const directory = path.dirname(fileURLToPath(import.meta.url))
@@ -22,6 +23,10 @@ function figmaAssetResolver() {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, directory, '')
   const apiTarget = env.VITE_DEV_API_TARGET?.trim() || 'http://localhost:8080'
+  resolveApiBaseUrl(env.VITE_API_BASE_URL, {
+    production: mode === 'production',
+    sameOriginProxy: env.VITE_API_SAME_ORIGIN_PROXY === 'true',
+  })
 
   return {
     plugins: [

@@ -16,6 +16,24 @@ rewriting the path. Copy `.env.example` to `.env.local` only when you need to ov
 
 The frontend sends cookies with API calls. The backend must allow the frontend origin and local development must use `COOKIE_SECURE=false`.
 
+## Cloudflare Pages
+
+Configure this build variable before deploying:
+
+```text
+VITE_API_BASE_URL=https://<cloud-run-service-host>/api
+```
+
+The value is embedded by Vite at build time, so changing it requires a new Pages
+deployment. Do not leave it as `/api`: Vite's development proxy does not exist on
+Cloudflare Pages and POST requests such as registration would be sent to the
+static site and return HTTP 405.
+
+Only set `VITE_API_SAME_ORIGIN_PROXY=true` when Cloudflare actually has a Worker
+or another reverse proxy forwarding `/api` to Spring. The Spring environment
+`FRONTEND_ORIGINS` must contain the exact Pages/custom-domain origin without a
+path or trailing slash.
+
 ## Quality checks
 
 - `npm test` runs the Vitest and React Testing Library suite once.

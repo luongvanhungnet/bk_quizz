@@ -29,7 +29,10 @@ public class StartupSecurityValidator implements ApplicationRunner {
                 throw new IllegalStateException("COOKIE_SECURE phải được bật trong production.");
             }
             if (properties.frontendOrigins().stream().anyMatch(origin -> origin.contains("localhost"))) {
-                throw new IllegalStateException("FRONTEND_ORIGINS production không được chứa localhost.");
+                throw new IllegalStateException(
+                        "FRONTEND_ORIGINS production không được chứa localhost. "
+                                + "Hãy đặt origin HTTPS thật của Cloudflare Pages hoặc custom domain, "
+                                + "ví dụ https://bkquiz.pages.dev.");
             }
         }
         if (properties.ai().enabled() && environment.getProperty("spring.ai.google.genai.api-key", "").isBlank()) {
