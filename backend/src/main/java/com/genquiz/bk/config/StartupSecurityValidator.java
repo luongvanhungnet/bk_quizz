@@ -38,6 +38,10 @@ public class StartupSecurityValidator implements ApplicationRunner {
     }
 
     private void validateOrigin(String origin) {
+        if (origin.contains("*")) {
+            throw new IllegalStateException(
+                    "FRONTEND_ORIGINS không được chứa wildcard khi CORS cho phép credentials.");
+        }
         URI uri;
         try { uri = URI.create(origin); }
         catch (IllegalArgumentException exception) { throw new IllegalStateException("FRONTEND_ORIGINS chứa URL không hợp lệ."); }
