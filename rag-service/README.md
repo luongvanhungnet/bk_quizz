@@ -334,6 +334,7 @@ phục vụ cổng HTTP.
 - PDF được đọc bằng structured layout của PyMuPDF. Vùng công thức chưa chắc chắn được crop 300 DPI và gửi theo lô tối đa 4 vùng qua Gemini Vision theo thứ tự API key rồi OAuth; crop không được lưu.
 - Text thô được giữ để audit. Chỉ LaTeX vượt kiểm tra region, dấu ngoặc, command an toàn và ký hiệu nhận diện mới được đưa vào text dùng cho retrieval/citation.
 - Vision timeout/hết quota không làm indexing thất bại: document vẫn `READY`, trạng thái math là `PARTIAL` và có thể reindex sau. Cache `math_extractions` tái sử dụng crop đã nhận dạng thành công.
+- API v2 xử lý lại bằng `POST /api/v2/user-documents/{documentId}/reindex`; không gửi lại multipart. Snapshot cũ tiếp tục phục vụ nếu job reindex thất bại. `GET /api/v2/user-documents/resolve?sha256=...` chỉ dành cho Spring khôi phục mapping legacy theo đúng owner.
 
 ```env
 MATH_VISION_ENABLED=true

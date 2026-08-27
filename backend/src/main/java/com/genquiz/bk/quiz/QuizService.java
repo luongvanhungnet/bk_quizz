@@ -197,11 +197,13 @@ public class QuizService {
         List<Question> existing =
                 questions.findByQuizIdOrderByPosition(quizId);
         int requested = request.questionCounts().total();
-        if (requested < 1 || existing.size() + requested > 50) {
+        if (requested < 1
+                || existing.size() + requested > QuizLimits.MAX_QUESTIONS_PER_QUIZ) {
             throw new ApiException(
                     HttpStatus.UNPROCESSABLE_CONTENT,
                     "QUIZ_QUESTION_LIMIT_EXCEEDED",
-                    "Tổng số câu hỏi của Quiz không được vượt quá 50.");
+                    "Tổng số câu hỏi của Quiz không được vượt quá "
+                            + QuizLimits.MAX_QUESTIONS_PER_QUIZ + ".");
         }
         validateGenerationSources(
                 actorId, quiz.getTopicId(), request.sourceIds());
@@ -228,6 +230,15 @@ public class QuizService {
                 scopedKey,
                 maxJobAttempts(request.questionCounts()));
         return new GenerationResult(quiz, job);
+    }
+
+    void requireNoActiveQuestionGeneration(UUID quizId) {
+        if (jobs.hasActiveQuizGeneration(quizId)) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "QUIZ_GENERATION_IN_PROGRESS",
+                    "Không thể sửa câu hỏi khi Quiz đang được sinh thêm bằng AI.");
+        }
     }
 
     @Transactional
@@ -341,9 +352,10 @@ public class QuizService {
     private void validateGeneration(UUID actorId, QuizDtos.GenerateRequest request) {
         topics.getOwned(actorId, request.topicId());
         int total = request.questionCounts().total();
-        if (total < 1 || total > 50) {
+        if (total < 1 || total > QuizLimits.MAX_QUESTIONS_PER_QUIZ) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_CONTENT,
-                    "Tổng số câu hỏi phải từ 1 đến 50");
+                    "Tổng số câu hỏi phải từ 1 đến "
+                            + QuizLimits.MAX_QUESTIONS_PER_QUIZ);
         }
         validateGenerationSources(actorId, request.topicId(), request.sourceIds());
     }

@@ -19,6 +19,8 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
             UUID resourceId, UUID subjectUserId, JobType type, Pageable pageable);
     boolean existsByResourceIdAndTypeAndStatusIn(
             UUID resourceId, JobType type, Set<JobStatus> statuses);
+    Optional<Job> findFirstByResourceIdAndTypeAndStatusInOrderByCreatedAtDesc(
+            UUID resourceId, JobType type, Set<JobStatus> statuses);
 
     @Query(value = """
             select * from jobs

@@ -1,9 +1,11 @@
 package com.genquiz.bk;
 
+import com.genquiz.bk.job.JobWorker;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -46,6 +48,9 @@ class BkApplicationTests {
     @Autowired
     ObjectMapper objectMapper;
 
+    @Autowired
+    ApplicationContext applicationContext;
+
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
@@ -57,6 +62,25 @@ class BkApplicationTests {
 
     @Test
     void contextLoadsAndFlywaySchemaMatchesEntities() {}
+
+    @Test
+    void workerIsNotCreatedWhenDisabled() {
+        assertThat(applicationContext.getBeansOfType(JobWorker.class)).isEmpty();
+    }
+
+    @Test
+    void actuatorReadinessReportsUpWhenDatabaseIsAvailable() throws Exception {
+        mockMvc.perform(get("/actuator/health/readiness"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+    }
+
+    @Test
+    void applicationHealthReportsConnectedDatabase() throws Exception {
+        mockMvc.perform(get("/api/health"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.database").value("connected"));
+    }
 
     @Test
     void migrationAlignsUserPreferencesWithEntity() {

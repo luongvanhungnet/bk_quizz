@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeSourceProcessing } from "./sourceProcessing";
+import { describeSourceProcessing, shouldShowReindexAction } from "./sourceProcessing";
 
 describe("describeSourceProcessing", () => {
   it("explains that a newly uploaded document is waiting for the processor", () => {
@@ -64,5 +64,43 @@ describe("describeSourceProcessing", () => {
 
     expect(description.label).toBe("Đã tải lên, đang chờ bộ xử lý RAG");
     expect(description.warning).toContain("Bộ xử lý RAG chưa hoạt động");
+  });
+
+  it("labels an in-place reindex without presenting it as a new upload", () => {
+    const description = describeSourceProcessing({
+      status: "EMBEDDING",
+      indexingStep: "REINDEX_QUEUED",
+      processingStage: "REINDEX_QUEUED",
+      indexingProgress: 0,
+      processingDelayed: false,
+      processorAvailable: true,
+    });
+
+    expect(description.label).toBe("Đang xử lý lại tài liệu");
+  });
+
+  it("explains that the previous snapshot remains usable after reindex failure", () => {
+    const description = describeSourceProcessing({
+      status: "READY",
+      indexingStep: "REINDEX_FAILED",
+      processingStage: "REINDEX_FAILED",
+      indexingProgress: 0,
+      processingDelayed: false,
+      processorAvailable: true,
+    });
+
+    expect(description.label).toBe("Sẵn sàng với chỉ mục trước đó");
+    expect(description.warning).toBe(
+      "Lập chỉ mục lại thất bại; phiên bản trước vẫn có thể sử dụng.",
+    );
+  });
+
+  it("offers retry after an in-place reindex failure", () => {
+    expect(shouldShowReindexAction({
+      status: "READY",
+      indexingStep: "REINDEX_FAILED",
+      indexedAt: "2026-08-23T00:00:00Z",
+      mathExtractionStatus: "NOT_DETECTED",
+    })).toBe(true);
   });
 });

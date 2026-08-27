@@ -190,14 +190,37 @@ public class SourceService {
     @Transactional
     public Job reindex(UUID actorId, UUID sourceId) {
         SourceDocument source = getOwned(actorId, sourceId);
+        var active = jobs.activeSourceIngestion(sourceId);
+        if (active.isPresent()) return active.get();
         source.queueReindex(Instant.now());
         return jobs.enqueue(JobType.SOURCE_INGESTION, actorId, sourceId, jsonPayload(source),
                 "source-reindex:" + sourceId + ":" + source.getVersion(), 3);
     }
 
+    @Transactional(readOnly = true)
+    public String storedFileHash(UUID sourceId) {
+        SourceDocument source = require(sourceId);
+        if (source.getFileId() == null) return null;
+        return storedFiles.findByIdAndDeletedAtIsNull(source.getFileId())
+                .map(StoredFile::getSha256)
+                .orElse(null);
+    }
+
+    @Transactional
+    public void adoptRagDocument(UUID sourceId, UUID ragDocumentId) {
+        require(sourceId).adoptRagDocument(ragDocumentId, Instant.now());
+    }
+
     @Transactional
     public void markFailed(UUID sourceId, String code, String message) {
-        require(sourceId).fail(code, message, Instant.now());
+        SourceDocument source = require(sourceId);
+        if (source.getIndexedAt() != null && source.getRagDocumentId() != null) {
+            source.failReindex(
+                    "Lập chỉ mục lại thất bại; phiên bản trước vẫn có thể sử dụng.",
+                    Instant.now());
+            return;
+        }
+        source.fail(code, message, Instant.now());
     }
 
     @Transactional

@@ -29,6 +29,7 @@ export interface ApiClientOptions {
 export interface ApiClient {
   request<T>(path: string, init?: RequestInit): Promise<T>;
   requestPage?<T>(path: string, init?: RequestInit): Promise<PaginatedResult<T>>;
+  requestBlob?(path: string, init?: RequestInit): Promise<Blob>;
 }
 
 export type Pagination = NonNullable<ApiEnvelope<unknown>["pagination"]>;
@@ -39,6 +40,7 @@ export class ApiRequestError extends Error {
   readonly code: string;
   readonly field: string | undefined;
   readonly traceId: string | undefined;
+  readonly details: ApiErrorDetail[];
 
   constructor(status: number, envelope: ApiEnvelope<unknown>) {
     const detail = envelope.errors?.[0];
@@ -48,6 +50,7 @@ export class ApiRequestError extends Error {
     this.code = detail?.code ?? "API_ERROR";
     this.field = detail?.field;
     this.traceId = envelope.traceId;
+    this.details = envelope.errors ? [...envelope.errors] : [];
   }
 }
 
@@ -149,6 +152,51 @@ export function createApiClient({ baseUrl, getAccessToken, refreshAccessToken }:
         });
       }
       return { items: envelope.data, pagination: envelope.pagination };
+    },
+    async requestBlob(path: string, init: RequestInit = {}): Promise<Blob> {
+      const fetchBlob = async (token?: string | null) => {
+        const headers = Object.fromEntries(new Headers(init.headers).entries());
+        if (token) headers.Authorization = `Bearer ${token}`;
+        return fetch(`${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`, {
+          ...init,
+          credentials: "include",
+          headers,
+        });
+      };
+      try {
+        let response = await fetchBlob(getAccessToken?.());
+        if (response.status === 401 && refreshAccessToken) {
+          refreshInFlight ??= refreshAccessToken().finally(() => {
+            refreshInFlight = null;
+          });
+          const freshToken = await refreshInFlight;
+          if (freshToken) response = await fetchBlob(freshToken);
+        }
+        if (!response.ok) {
+          let envelope: ApiEnvelope<unknown>;
+          try {
+            envelope = JSON.parse(await response.text()) as ApiEnvelope<unknown>;
+          } catch {
+            envelope = {
+              success: false,
+              message: `Không thể tải file mẫu (HTTP ${response.status}).`,
+              data: null,
+              errors: [{ code: "HTTP_ERROR", message: `Không thể tải file mẫu (HTTP ${response.status}).` }],
+            };
+          }
+          throw new ApiRequestError(response.status, envelope);
+        }
+        return response.blob();
+      } catch (cause) {
+        if (cause instanceof ApiRequestError) throw cause;
+        const message = "Không thể kết nối đến máy chủ BKQuiz. Vui lòng kiểm tra backend và thử lại.";
+        throw new ApiRequestError(0, {
+          success: false,
+          message,
+          data: null,
+          errors: [{ code: "NETWORK_ERROR", message }],
+        });
+      }
     },
   };
 }

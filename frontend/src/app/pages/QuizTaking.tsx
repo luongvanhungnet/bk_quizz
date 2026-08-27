@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Clock, Flag, Trophy, XCircle } from "lucide-react";
@@ -14,6 +14,7 @@ import { questionVisualState } from "./attemptQuestionState";
 import { Badge, Button, Card, Checkbox, Input, Modal } from "../components/ui";
 import { cognitiveLabel } from "../lib/cognitive";
 import { MathMarkdown } from "../components/MathMarkdown";
+import { AttemptAiChatPanel, type PendingAttemptQuestion } from "./AttemptAiChatPanel";
 
 type AnswerValue = { selectedOptionIds: string[]; textAnswer: string };
 const errorText = (error: unknown) =>
@@ -700,8 +701,26 @@ function ResultView({
   result: AttemptResult;
   quizTitle?: string | undefined;
 }) {
+  const [chatOpen, setChatOpen] = useState(false);
+  const [activeQuestion, setActiveQuestion] = useState(() => ({
+    snapshotId: result.questions[0]?.snapshotId || "",
+    questionNumber: 1,
+  }));
+  const [questionDrafts, setQuestionDrafts] = useState<Record<string, string>>({});
+  const [pendingChat, setPendingChat] = useState<PendingAttemptQuestion | null>(null);
+  const chatRequestNonce = useRef(0);
+  const askQuestion = (snapshotId: string, questionNumber: number) => {
+    const message = (questionDrafts[snapshotId] || "").trim();
+    setActiveQuestion({ snapshotId, questionNumber });
+    setChatOpen(true);
+    if (message.length >= 2) {
+      chatRequestNonce.current += 1;
+      setPendingChat({ nonce: chatRequestNonce.current, snapshotId, questionNumber, message });
+      setQuestionDrafts((current) => ({ ...current, [snapshotId]: "" }));
+    }
+  };
   return (
-    <div className="min-h-screen bg-[#F7F7F8] p-5 md:p-10">
+    <div className={`min-h-screen bg-[#F7F7F8] p-5 transition-[padding] md:p-10 ${chatOpen ? "md:pr-[460px]" : ""}`}>
       <div className="mx-auto max-w-4xl space-y-6">
         <Card className="p-8 text-center">
           <Trophy className="mx-auto h-14 w-14 text-amber-500" />
@@ -741,6 +760,18 @@ function ResultView({
                     Câu {index + 1}: {item.awardedPoints}/{item.maxPoints} điểm
                   </b>
                 </div>
+                <MathMarkdown className="mt-3 font-semibold" normalizeLegacy>{item.prompt}</MathMarkdown>
+                {item.options.length > 0 && <ol className="mt-3 space-y-2 text-sm">
+                  {item.options.map((option, optionIndex) => {
+                    const selected = item.selectedOptionIds.includes(option.id);
+                    const correct = item.correctOptionIds?.includes(option.id);
+                    return <li key={option.id} className={`rounded border p-2 ${correct ? "border-green-300 bg-green-50" : selected ? "border-red-200 bg-red-50" : ""}`}>
+                      <span className="mr-2 font-bold">{optionIndex + 1}.</span><MathMarkdown inline normalizeLegacy>{option.text}</MathMarkdown>
+                      {selected && <span className="ml-2 text-xs font-semibold">Bạn đã chọn</span>}
+                    </li>;
+                  })}
+                </ol>}
+                {item.textAnswer && <div className="mt-2 text-sm">Câu trả lời của bạn: <MathMarkdown inline normalizeLegacy>{item.textAnswer}</MathMarkdown></div>}
                 {item.correctOptionIds?.length ? (
                   <p className="mt-2 text-sm">
                     Đáp án đúng: {item.correctOptionIds.join(", ")}
@@ -766,6 +797,18 @@ function ResultView({
                     ))}
                   </details>
                 )}
+                <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-3">
+                  <label className="text-sm font-bold text-blue-950" htmlFor={`ask-ai-${item.snapshotId}`}>Hỏi AI về câu này</label>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                    <textarea id={`ask-ai-${item.snapshotId}`} className="min-h-16 flex-1 resize-y rounded-lg border bg-white p-2 text-sm outline-none focus:border-blue-500"
+                      maxLength={4000} value={questionDrafts[item.snapshotId] || ""}
+                      onChange={(event) => setQuestionDrafts((current) => ({ ...current, [item.snapshotId]: event.target.value }))}
+                      placeholder="Ví dụ: Giải thích vì sao đáp án này đúng?" />
+                    <Button type="button" onClick={() => askQuestion(item.snapshotId, index + 1)}>
+                      {(questionDrafts[item.snapshotId] || "").trim().length >= 2 ? "Hỏi AI" : "Mở trợ giảng"}
+                    </Button>
+                  </div>
+                </div>
               </Card>
             ))}
           </div>
@@ -780,6 +823,14 @@ function ResultView({
           </Link>
         </div>
       </div>
+      {chatOpen && activeQuestion.snapshotId && <AttemptAiChatPanel
+        attemptId={result.attemptId}
+        questions={result.questions}
+        activeQuestion={activeQuestion}
+        pending={pendingChat}
+        onConsumed={() => setPendingChat(null)}
+        onClose={() => setChatOpen(false)}
+      />}
     </div>
   );
 }

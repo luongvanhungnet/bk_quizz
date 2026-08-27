@@ -6,7 +6,7 @@ from collections import defaultdict, deque
 from contextvars import ContextVar
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 import httpx
 from google import genai
@@ -154,6 +154,79 @@ class GeminiService:
                     await asyncio.sleep(delay)
 
         raise ServiceError(503, "GEMINI_UNAVAILABLE", "Gemini tạm thời không khả dụng.")
+
+    async def generate_stream(
+        self,
+        message: str,
+        *,
+        system_instruction: str,
+        on_delta: Callable[[str], Awaitable[None]],
+        trace_id: str | None = None,
+        user_id: str | None = None,
+        temperature: float | None = None,
+        max_output_tokens: int | None = None,
+    ) -> GeminiResult:
+        """Stream plain-text tutoring output while preserving shared limits/errors."""
+        self._check_circuit()
+        self._check_rate_limit(user_id or GEMINI_USER_CONTEXT.get())
+        started_at = perf_counter()
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction,
+            temperature=self._settings.gemini_temperature if temperature is None else temperature,
+            max_output_tokens=(
+                self._settings.gemini_max_output_tokens
+                if max_output_tokens is None else max_output_tokens
+            ),
+        )
+        parts: list[str] = []
+        usage = TokenUsage(0, 0, 0)
+        try:
+            async with self._semaphore:
+                response_stream = await self._client.aio.models.generate_content_stream(
+                    model=self._settings.gemini_model,
+                    contents=message,
+                    config=config,
+                )
+                async for response in response_stream:
+                    candidates = getattr(response, "candidates", None) or []
+                    finish_reason = str(getattr(candidates[0], "finish_reason", "")) if candidates else ""
+                    if "SAFETY" in finish_reason.upper():
+                        raise ServiceError(
+                            422, "GEMINI_SAFETY_BLOCKED",
+                            "Gemini đã chặn phản hồi theo chính sách an toàn.",
+                        )
+                    try:
+                        delta = response.text or ""
+                    except (AttributeError, ValueError):
+                        delta = ""
+                    if delta:
+                        parts.append(delta)
+                        await on_delta(delta)
+                    metadata = getattr(response, "usage_metadata", None)
+                    if metadata is not None:
+                        input_tokens = int(getattr(metadata, "prompt_token_count", 0) or 0)
+                        output_tokens = int(getattr(metadata, "candidates_token_count", 0) or 0)
+                        total_tokens = int(
+                            getattr(metadata, "total_token_count", input_tokens + output_tokens)
+                            or input_tokens + output_tokens
+                        )
+                        usage = TokenUsage(input_tokens, output_tokens, total_tokens)
+            answer = "".join(parts).strip()
+            if not answer:
+                raise ServiceError(502, "GEMINI_EMPTY_RESPONSE", "Gemini không trả về nội dung hợp lệ.")
+            self._consecutive_failures = 0
+            self._circuit_opened_at = None
+            GEMINI_CALLS.labels("success").inc()
+            GEMINI_LATENCY.observe(perf_counter() - started_at)
+            return GeminiResult(answer=answer, model=self._settings.gemini_model, usage=usage)
+        except asyncio.CancelledError:
+            raise
+        except Exception as exception:
+            GEMINI_CALLS.labels("error").inc()
+            self._record_failure()
+            if isinstance(exception, ServiceError):
+                raise
+            raise self._map_exception(exception) from exception
 
     def _check_rate_limit(self, user_id: str | None) -> None:
         now = time.monotonic()

@@ -12,11 +12,32 @@ export interface SourceProcessingDescription {
   warning: string | undefined;
 }
 
+export function shouldShowReindexAction(source: {
+  status: string;
+  indexingStep: string | null;
+  indexedAt?: string | null;
+  mathExtractionStatus?: string;
+}): boolean {
+  return source.status === "FAILED"
+    || source.indexingStep === "REINDEX_FAILED"
+    || (source.status === "READY" && (
+      !source.indexedAt
+      || source.mathExtractionStatus === "PARTIAL"
+      || source.mathExtractionStatus === "FAILED"
+    ));
+}
+
 export function describeSourceProcessing(
   source: SourceProcessingInput,
 ): SourceProcessingDescription {
   const processing = !["READY", "FAILED", "DELETED"].includes(source.status);
   const stage = source.processingStage ?? source.indexingStep ?? source.status;
+  if (stage === "REINDEX_FAILED" && source.status === "READY") {
+    return {
+      label: "Sẵn sàng với chỉ mục trước đó",
+      warning: "Lập chỉ mục lại thất bại; phiên bản trước vẫn có thể sử dụng.",
+    };
+  }
   if (stage === "QUEUED" && source.status !== "UPLOADED") {
     const warning = !source.processorAvailable
       ? "Bộ xử lý RAG chưa hoạt động. Tài liệu đã được lưu và sẽ tự tiếp tục khi worker được khởi động."
@@ -33,6 +54,7 @@ export function describeSourceProcessing(
     return { label: "Đã tải lên, đang chờ bộ xử lý", warning };
   }
   const labels: Record<string, string> = {
+    REINDEX_QUEUED: "Đang xử lý lại tài liệu",
     UPLOADING_TO_RAG: "Đang chuyển tài liệu sang dịch vụ phân tích",
     VALIDATING: "Đang kiểm tra tệp",
     PARSING: "Đang đọc nội dung tài liệu",

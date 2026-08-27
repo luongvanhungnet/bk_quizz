@@ -1,3 +1,16 @@
+spring:
+  datasource:
+    # Cloud Run must receive a Neon JDBC URL. Put sslmode=require in DATABASE_URL.
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DATABASE_POOL_SIZE:4}
+      minimum-idle: ${DATABASE_MIN_IDLE:0}
+  flyway:
+    # Migrations are executed once as a release step, never by every Cloud Run replica.
+    enabled: ${FLYWAY_ENABLED:false}
+
 springdoc:
   api-docs:
     enabled: false
@@ -5,11 +18,25 @@ springdoc:
     enabled: false
 
 bkquiz:
+  jobs:
+    worker-enabled: ${WORKER_ENABLED:false}
   security:
-    cookie-secure: true
+    cookie-secure: ${COOKIE_SECURE:true}
+  storage:
+    # Cloud Run filesystem is ephemeral. Durable uploads remain blocked on the R2 stage.
+    local-root: ${LOCAL_STORAGE_ROOT:/tmp/bkquiz/uploads}
+    local-temp: ${LOCAL_STORAGE_TEMP:/tmp/bkquiz/tmp}
+
+management:
+  endpoint:
+    health:
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db
 
 logging:
   level:
     root: INFO
     org.springframework.security: WARN
-

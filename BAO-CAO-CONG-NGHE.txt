@@ -1,0 +1,386 @@
+BÁO CÁO CÔNG NGHỆ SỬ DỤNG TRONG DỰ ÁN BKQUIZ
+Ngày lập báo cáo: 25/08/2026
+
+======================================================================
+1. TỔNG QUAN HỆ THỐNG
+======================================================================
+
+BKQuiz là nền tảng tạo, quản lý, chia sẻ và làm bài quiz. Hệ thống được
+chia thành ba ứng dụng chính:
+
+1. Frontend: giao diện web dành cho người học, người tạo quiz và quản trị.
+2. Backend: quản lý nghiệp vụ, xác thực, dữ liệu quiz, lớp học, bài làm,
+   công việc nền và tích hợp với dịch vụ RAG.
+3. RAG service: xử lý tài liệu, tạo chỉ mục tìm kiếm, truy hồi kiến thức,
+   gọi mô hình AI và sinh quiz có trích dẫn nguồn.
+
+Luồng tổng quát:
+
+Trình duyệt React
+    -> REST/WebSocket tới Spring Boot
+    -> PostgreSQL và kho tệp
+    -> API nội bộ tới FastAPI RAG
+    -> SQLite + FAISS + Redis/Celery
+    -> Gemini hoặc Ollama Qwen
+
+======================================================================
+2. FRONTEND WEB
+======================================================================
+
+Ngôn ngữ và nền tảng:
+- TypeScript 6.0.3: ngôn ngữ chính của frontend.
+- React 18.3.1: xây dựng giao diện theo component.
+- React DOM 18.3.1: kết xuất ứng dụng React trên trình duyệt.
+- Vite 6.4.3: development server và công cụ đóng gói bản production.
+
+Điều hướng và quản lý dữ liệu:
+- React Router 7.18.1: định tuyến giữa Dashboard, Workspace, Classroom,
+  trang làm bài, trang kết quả và các màn hình khác.
+- TanStack React Query 5.101.2: gọi API, cache dữ liệu server, refetch,
+  polling trạng thái job và đồng bộ giao diện sau mutation.
+
+Giao diện và trải nghiệm người dùng:
+- Tailwind CSS 4.1.12: hệ thống utility CSS và responsive layout.
+- Lucide React 0.487.0: bộ biểu tượng giao diện.
+- Sonner 2.0.3: toast cho các thông báo thao tác ngắn.
+- clsx và tailwind-merge: ghép class CSS có điều kiện và xử lý xung đột
+  class Tailwind.
+- tw-animate-css: hiệu ứng chuyển động cho giao diện.
+
+Hiển thị nội dung học tập:
+- react-markdown 10.1.0: hiển thị nội dung Markdown an toàn.
+- remark-math, rehype-katex và KaTeX 0.18.1: nhận dạng và hiển thị công
+  thức toán LaTeX trong câu hỏi, lựa chọn, giải thích và trích dẫn.
+- Raw HTML không được bật trong Markdown nhằm hạn chế nguy cơ XSS.
+
+Giao tiếp thời gian thực:
+- @stomp/stompjs 7.3.0: kết nối STOMP qua WebSocket cho chat lớp học và
+  các sự kiện realtime.
+- Fetch API, ReadableStream và NDJSON được dùng cho các luồng phản hồi AI
+  dạng streaming thông qua backend.
+
+Kiểm thử và chất lượng frontend:
+- Vitest 4.1.10: chạy unit test và component test.
+- Testing Library: kiểm thử hành vi người dùng trên component React.
+- jsdom: mô phỏng môi trường trình duyệt trong test.
+- ESLint 10 và typescript-eslint: kiểm tra quy tắc và chất lượng mã nguồn.
+- TypeScript compiler: kiểm tra kiểu bằng lệnh tsc --noEmit.
+
+======================================================================
+3. BACKEND NGHIỆP VỤ
+======================================================================
+
+Ngôn ngữ và framework:
+- Java 17: ngôn ngữ triển khai backend.
+- Spring Boot 4.1.0: nền tảng chính để cấu hình và vận hành ứng dụng.
+- Maven/Maven Wrapper: quản lý dependency, build và chạy kiểm thử.
+
+API và xử lý request:
+- Spring Web MVC: xây dựng REST API và xử lý multipart upload.
+- Bean Validation: kiểm tra dữ liệu request và ràng buộc đầu vào.
+- Jackson: chuyển đổi JSON, dùng UTC và UTF-8 trong giao tiếp API.
+- Springdoc OpenAPI 3.0.0: sinh OpenAPI tại /api/openapi.json và Swagger UI
+  tại /api/docs.
+
+Các miền nghiệp vụ chính trong backend:
+- Người dùng và xác thực.
+- Topic, nguồn tài liệu và chunk nguồn.
+- Quiz, câu hỏi, lựa chọn, đáp án và citation.
+- Attempt, snapshot câu hỏi, lưu tiến trình và chấm điểm.
+- Classroom, assignment, chat và chia sẻ tài nguyên.
+- Community/Explore, thông báo, quản trị và kiểm tra trạng thái hệ thống.
+- Job nền cho xử lý tài liệu và sinh quiz theo batch.
+
+Truy cập dữ liệu:
+- Spring Data JPA: repository và truy vấn dữ liệu nghiệp vụ.
+- Hibernate ORM: ánh xạ entity Java với PostgreSQL.
+- HikariCP: connection pool; cấu hình local tối đa 6 kết nối.
+- JDBC batching: batch insert/update kích thước 50 và
+  reWriteBatchedInserts để giảm round-trip PostgreSQL.
+- Flyway: quản lý và kiểm tra migration schema backend.
+
+Bảo mật:
+- Spring Security: xác thực và phân quyền endpoint.
+- JWT/Jose: access token và refresh token.
+- BCrypt: băm mật khẩu, strength mặc định 12.
+- Refresh token dùng cookie; XSRF token được cấu hình để chống CSRF.
+- Phân quyền theo owner, thành viên lớp và vai trò Admin.
+- API nội bộ Spring-RAG dùng internal API key và truyền X-User-Id,
+  X-Request-Id để cô lập tenant và truy vết.
+
+Tác vụ nền:
+- JobWorker của Spring xử lý job lưu trong PostgreSQL.
+- Worker dùng polling, lease, heartbeat, retry và availableAt.
+- Quiz generation có checkpoint, chia batch, retry có trì hoãn và commit
+  nguyên tử sau khi đủ điều kiện.
+- Timeline job được lưu bền vững trong PostgreSQL và frontend đọc theo
+  cursor.
+
+Realtime:
+- Spring WebSocket và STOMP: chat lớp học và sự kiện chia sẻ tài nguyên.
+
+Tích hợp AI trong backend:
+- Spring AI 2.0.0 và Google GenAI starter có trong dependency.
+- Luồng sinh quiz thực tế đi qua RAG service để bảo đảm retrieval,
+  citation, Cognitive Level và provider fallback được quản lý tập trung.
+
+Xử lý tệp và tài liệu tại backend:
+- Apache Tika 3.2.3: nhận dạng và xử lý metadata/nội dung tệp.
+- Apache POI 5.4.1: hỗ trợ tài liệu Microsoft Office.
+- OpenPDF 2.0.4: chức năng liên quan tới PDF.
+- AWS SDK for Java 2.34.0: giao tiếp kho lưu trữ tương thích S3.
+- Lưu trữ local là mặc định; MinIO/S3 là lựa chọn cấu hình.
+- ClamAV là lựa chọn quét virus cho tệp upload.
+
+Email:
+- Resend HTTP API được cấu hình để gửi email khi có API key.
+
+Quan sát hệ thống:
+- Spring Boot Actuator: health, info và metrics.
+- Micrometer/Prometheus endpoint: xuất metric cho hệ thống giám sát.
+- Trace ID được đưa vào log để liên kết lỗi frontend, backend và RAG.
+
+Kiểm thử backend:
+- JUnit Jupiter: framework unit/integration test.
+- Spring Boot Test, Spring MVC Test, Spring Data JPA Test và
+  Spring Security Test.
+- Testcontainers 1.21.4 với PostgreSQL: kiểm thử database thực trong
+  container.
+- ArchUnit 1.4.1: kiểm tra quy tắc kiến trúc.
+- JaCoCo: đo độ bao phủ mã nguồn.
+
+======================================================================
+4. CƠ SỞ DỮ LIỆU VÀ LƯU TRỮ
+======================================================================
+
+PostgreSQL 16 và pgvector:
+- Image triển khai: pgvector/pgvector:pg16.
+- Là nguồn sự thật nghiệp vụ cho user, topic, source, quiz, question,
+  citation, attempt, classroom, job và timeline.
+- pgvector có sẵn trong image để hỗ trợ dữ liệu vector khi cần ở tầng
+  PostgreSQL; chỉ mục tìm kiếm RAG chính hiện được quản lý bằng FAISS.
+- Flyway quản lý schema và Hibernate chạy ở chế độ validate.
+
+SQLite:
+- RAG service dùng SQLite qua SQLAlchemy làm kho metadata cục bộ cho
+  document, chunk và indexing job.
+- Alembic quản lý migration của SQLite.
+- Chế độ WAL, transaction ngắn và các index dành cho job giúp giảm khóa
+  ghi trong topology một máy.
+
+FAISS:
+- faiss-cpu 1.14.3 lưu và tìm kiếm vector embedding.
+- Index được tách theo tenant/user và có manifest/fingerprint để nhận biết
+  thay đổi model hoặc phiên bản extraction.
+
+Redis:
+- Redis 7.4 Alpine trong Docker.
+- Là broker cho Celery, distributed lock của FAISS index, heartbeat worker,
+  rate limiting, dedupe và một số cache vận hành.
+- Production yêu cầu Redis cho thao tác index phân tán; development có thể
+  dùng local lock theo cấu hình.
+
+Kho tệp:
+- Docker volume/local filesystem là mặc định cho file upload và index.
+- MinIO là kho object tương thích S3 tùy chọn, chạy bằng profile s3.
+- Không đưa file, vector index hoặc dữ liệu nghiệp vụ vào frontend.
+
+======================================================================
+5. RAG SERVICE VÀ TRÍ TUỆ NHÂN TẠO
+======================================================================
+
+Ngôn ngữ và web framework:
+- Python 3.x.
+- FastAPI 0.139.2 và Starlette 1.3.1: API bất đồng bộ.
+- Uvicorn 0.51.0: ASGI server.
+- Pydantic Settings 2.14.2: schema request/response và cấu hình môi trường.
+- python-multipart: nhận file upload multipart.
+- HTTPX 0.28.1: HTTP client bất đồng bộ và streaming.
+
+Mô hình embedding và tìm kiếm:
+- sentence-transformers 5.6.0 trong môi trường phát triển/model export.
+- ONNX Runtime 1.27.0 trong runtime production.
+- Embedding backend mặc định ONNX, precision INT8, giúp giảm RAM và latency.
+- tokenizers và Hugging Face Hub: tokenizer và phân phối model.
+- NumPy 2.4.6: xử lý vector và ma trận.
+- FAISS CPU: vector similarity search.
+- rank-bm25 0.2.2: lexical search BM25.
+- Hybrid retrieval kết hợp vector search và BM25, sau đó fusion/rerank theo
+  cấu hình.
+- Cache retrieval và fingerprint index tránh tính lại dữ liệu không đổi.
+
+Mô hình sinh nội dung:
+- Google GenAI SDK 2.14.0: gọi Gemini bằng API key.
+- google-auth 2.56.2: gọi Gemini OAuth/ADC và tự refresh credential.
+- Thứ tự fallback sinh quiz:
+  1. Gemini API key.
+  2. Gemini OAuth.
+  3. Ollama chạy Qwen local.
+- Gemini được chia tối đa 10 câu mỗi request.
+- Ollama mặc định dùng qwen3:1.7b, tắt thinking, tối đa 2 câu/request,
+  context 4096 và output budget 2400 token.
+- Các provider dùng chung structured output, question plan, Cognitive Level
+  và bộ kiểm tra citation.
+
+Cognitive Level và kiểm tra chất lượng:
+- Câu hỏi AI dùng L1 đến L5 thay cho Easy/Medium/Hard.
+- Mỗi câu có số khái niệm, số bước suy luận, cờ tình huống mới, câu trả lời
+  trực tiếp và yêu cầu so sánh.
+- Complexity Score được tính theo công thức K + 2R + T + C.
+- Lỗi chất lượng như citation thiếu, Cognitive chưa đạt hoặc câu gần trùng
+  được lưu thành warning; lỗi cấu trúc không thể làm bài vẫn là error.
+
+Citation và grounding:
+- Citation được kiểm tra theo exact match, normalized match, lexical match
+  và semantic match.
+- Quote gần đúng phải được ánh xạ về span nguyên văn trong chunk trước khi
+  lưu; metadata nguồn lấy từ RAG index, không tin dữ liệu AI tự khai báo.
+- Tenant isolation bảo đảm chỉ dùng document thuộc đúng người dùng và danh
+  sách nguồn được chọn.
+
+Xử lý tài liệu:
+- PyMuPDF 1.28.0: đọc PDF theo page, block, span và bounding box.
+- python-docx 1.2.0: đọc DOCX.
+- python-pptx 1.0.2: đọc PPTX và metadata slide.
+- TXT/Markdown được xử lý như nội dung văn bản.
+- Pipeline gồm parse, chunk, embedding, index và đồng bộ chunk metadata.
+- PDF toán học dùng layout extraction và có Gemini Vision fallback cho vùng
+  công thức khó nhận dạng.
+- Nội dung công thức được chuẩn hóa sang LaTeX; lỗi nhận dạng không làm mất
+  toàn bộ tài liệu mà tạo cảnh báo PARTIAL/FAILED phù hợp.
+
+Job xử lý tài liệu:
+- Celery 5.5.3: chạy indexing job và các tác vụ phục hồi.
+- Redis là message broker.
+- Celery worker dùng pool solo, concurrency 1 để tương thích Windows,
+  SQLite và FAISS single-host.
+- Celery Beat chỉ lập lịch recovery/reconciliation; worker mới trực tiếp
+  xử lý tài liệu.
+- Heartbeat Redis giúp API biết worker còn hoạt động hay không.
+
+Streaming và khả năng phục hồi:
+- RAG trả NDJSON streaming cho tiến trình sinh quiz và trợ lý AI.
+- Event gồm provider, batch, part, stage, warning, lỗi và kết quả.
+- Checkpoint giữ output có cấu trúc để không gọi lại AI khi bước hậu kiểm
+  hoặc kết nối backend bị gián đoạn.
+- Circuit breaker được áp dụng cho provider fallback phù hợp; Gemini API key
+  vẫn được thử đầu tiên ở mỗi batch theo chính sách hiện tại.
+
+Quan sát và kiểm thử RAG:
+- prometheus-client 0.22.1: metric API, provider, retrieval và worker.
+- pytest: unit, integration và regression test.
+- Ruff: lint/format checks.
+- mypy: static type checking.
+- pip-audit và pip check: kiểm tra dependency.
+- OpenAPI drift check: bảo đảm tài liệu API đồng bộ với code.
+
+======================================================================
+6. GIAO TIẾP GIỮA CÁC THÀNH PHẦN
+======================================================================
+
+Frontend -> Backend:
+- HTTPS/HTTP REST với JSON.
+- Multipart/form-data cho upload tài liệu.
+- WebSocket/STOMP cho chat và sự kiện lớp học.
+- NDJSON/ReadableStream cho phản hồi AI streaming qua backend.
+- JWT, refresh cookie và XSRF token cho phiên đăng nhập.
+
+Backend -> RAG:
+- REST API nội bộ dùng JSON hoặc multipart.
+- NDJSON stream cho timeline sinh quiz và chat AI.
+- X-Internal-API-Key để xác thực dịch vụ.
+- X-User-Id để cô lập tenant.
+- X-Request-Id để correlation log và tra cứu lỗi.
+- Capabilities endpoint để phát hiện lệch contract giữa Spring và RAG.
+
+RAG -> AI provider:
+- Google GenAI SDK cho API key.
+- Google AuthorizedSession/OAuth ADC cho OAuth.
+- HTTP API của Ollama cho Qwen local.
+
+======================================================================
+7. HẠ TẦNG VÀ TRIỂN KHAI
+======================================================================
+
+Container hóa:
+- Dockerfile riêng cho backend và RAG service.
+- Docker Compose điều phối PostgreSQL, API, Spring worker, Redis, RAG API,
+  RAG worker, Celery Beat, ClamAV và MinIO tùy profile.
+- Named volumes giữ PostgreSQL, file upload, RAG metadata/index và Redis.
+
+Các service chính trong Docker Compose:
+- postgres: PostgreSQL 16 kèm pgvector.
+- api: Spring Boot REST API.
+- worker: Spring JobWorker.
+- rag-redis: Redis broker/lock/cache.
+- rag-api: FastAPI RAG service.
+- rag-worker: Celery worker solo.
+- rag-beat: bộ lập lịch phục hồi job.
+- clamav: quét tệp tùy cấu hình.
+- minio và minio-init: object storage tùy profile s3.
+
+CI/CD và kiểm soát chất lượng:
+- GitHub Actions.
+- Backend pipeline chạy Maven verify.
+- Frontend pipeline chạy npm ci, lint, typecheck, test và build.
+- RAG pipeline chạy Alembic migration, pytest, Ruff, mypy, pip check,
+  pip-audit, OpenAPI drift, Docker build và Docker integration test.
+
+======================================================================
+8. TÓM TẮT CÔNG NGHỆ THEO TRÁCH NHIỆM
+======================================================================
+
+Giao diện web:
+  React, TypeScript, Vite, Tailwind CSS, React Router, React Query,
+  React Markdown, KaTeX, STOMP/WebSocket.
+
+API và nghiệp vụ:
+  Java 17, Spring Boot, Spring MVC, Spring Security, JPA/Hibernate,
+  Bean Validation, Jackson, Springdoc OpenAPI.
+
+Dữ liệu nghiệp vụ:
+  PostgreSQL 16, Flyway, HikariCP, JDBC batching.
+
+RAG và tìm kiếm:
+  Python, FastAPI, ONNX Runtime, Sentence Transformers, FAISS, BM25,
+  NumPy, SQLite, SQLAlchemy, Alembic.
+
+AI sinh nội dung:
+  Gemini API key, Gemini OAuth/ADC, Ollama, Qwen3 1.7B,
+  structured output và Cognitive Level L1-L5.
+
+Xử lý tài liệu:
+  PyMuPDF, python-docx, python-pptx, Apache Tika, Apache POI,
+  Gemini Vision cho công thức PDF khó nhận dạng.
+
+Tác vụ bất đồng bộ:
+  Spring JobWorker, PostgreSQL job queue, Celery, Redis và Celery Beat.
+
+Lưu trữ tệp:
+  Local filesystem/Docker volume; AWS S3 SDK và MinIO tùy chọn.
+
+Bảo mật:
+  Spring Security, JWT/Jose, BCrypt, refresh cookie, XSRF,
+  internal API key và tenant isolation.
+
+Giám sát:
+  Spring Actuator, Micrometer, Prometheus metrics, health/readiness,
+  structured log và trace/request ID.
+
+Kiểm thử:
+  JUnit, Spring Test, Testcontainers, ArchUnit, JaCoCo, Vitest,
+  Testing Library, pytest, Ruff, mypy, pip-audit và GitHub Actions.
+
+======================================================================
+9. GHI CHÚ PHẠM VI
+======================================================================
+
+- Báo cáo được lập từ manifest, cấu hình và mã nguồn hiện có trong repo
+  D:\BKQuiz tại ngày ghi trên đầu tài liệu.
+- MinIO/S3, ClamAV và một số provider AI có thể được bật hoặc tắt bằng biến
+  môi trường; việc có dependency không có nghĩa thành phần luôn chạy.
+- PostgreSQL là nguồn sự thật nghiệp vụ. SQLite và FAISS thuộc RAG service.
+- Frontend không gọi trực tiếp Gemini, Ollama, Redis hoặc RAG; mọi luồng đi
+  qua Spring Boot để bảo vệ secret, quyền truy cập và dữ liệu người dùng.
+- Phiên bản thư viện được lấy từ package.json, pom.xml và requirements tại
+  thời điểm lập báo cáo; chúng có thể thay đổi ở các lần nâng cấp sau.

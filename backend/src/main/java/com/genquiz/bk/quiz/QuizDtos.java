@@ -22,9 +22,9 @@ public final class QuizDtos {
     }
 
     public record QuestionCounts(
-            @Min(0) @Max(50) int singleChoice,
-            @Min(0) @Max(50) int multipleSelect,
-            @Min(0) @Max(50) int fillBlank) {
+            @Min(0) @Max(QuizLimits.MAX_QUESTIONS_PER_QUIZ) int singleChoice,
+            @Min(0) @Max(QuizLimits.MAX_QUESTIONS_PER_QUIZ) int multipleSelect,
+            @Min(0) @Max(QuizLimits.MAX_QUESTIONS_PER_QUIZ) int fillBlank) {
         public int total() { return singleChoice + multipleSelect + fillBlank; }
     }
 
@@ -70,6 +70,7 @@ public final class QuizDtos {
     }
 
     public record GenerateResponse(QuizResponse quiz, UUID jobId) {}
+    public record QuestionImportResponse(int importedCount, long totalQuestionCount) {}
     public record AppendGenerateRequest(
             @NotEmpty @Size(max = 10) List<UUID> sourceIds,
             @NotNull CognitiveMode cognitiveMode,

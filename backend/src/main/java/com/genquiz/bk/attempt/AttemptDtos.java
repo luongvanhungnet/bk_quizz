@@ -67,6 +67,12 @@ public final class AttemptDtos {
 
     public record QuestionResult(
             UUID snapshotId,
+            QuestionType type,
+            String prompt,
+            int position,
+            List<Option> options,
+            List<UUID> selectedOptionIds,
+            String textAnswer,
             Boolean correct,
             BigDecimal awardedPoints,
             BigDecimal maxPoints,

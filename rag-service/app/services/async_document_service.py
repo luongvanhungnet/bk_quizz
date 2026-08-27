@@ -84,6 +84,68 @@ class AsyncDocumentService:
             staging.unlink(missing_ok=True)
             await upload.close()
 
+    def reindex(self, context: UserContext, document_id: str) -> AsyncUploadResponse:
+        with self._database.session() as session:
+            document = session.scalar(select(DocumentRecord).where(
+                DocumentRecord.id == document_id,
+                DocumentRecord.owner_id == context.owner_id,
+                DocumentRecord.status == "READY",
+            ))
+            if document is None:
+                raise ServiceError(404, "DOCUMENT_NOT_FOUND", "Không tìm thấy tài liệu.")
+            source = self._upload_root / context.safe_key / document.id / document.stored_filename
+            if not source.is_file():
+                raise ServiceError(
+                    409, "DOCUMENT_SOURCE_FILE_MISSING",
+                    "Không tìm thấy tệp nguồn để xử lý lại.",
+                )
+            active = session.scalar(select(IndexingJob).where(
+                IndexingJob.document_id == document.id,
+                IndexingJob.status.in_(["PENDING", "RUNNING"]),
+            ).order_by(IndexingJob.created_at.desc()))
+            if active is None:
+                try:
+                    active = self._jobs.create_in_session(
+                        session,
+                        owner_id=context.owner_id,
+                        document_id=document.id,
+                        idempotency_key=None,
+                        operation="REINDEX",
+                    )
+                    self._jobs.audit_in_session(
+                        session, context.owner_id, "DOCUMENT_REINDEX_REQUESTED",
+                        "DOCUMENT", document.id,
+                    )
+                    session.commit()
+                except IntegrityError:
+                    session.rollback()
+                    active = session.scalar(select(IndexingJob).where(
+                        IndexingJob.document_id == document.id,
+                        IndexingJob.status.in_(["PENDING", "RUNNING"]),
+                    ).order_by(IndexingJob.created_at.desc()))
+                    if active is None:
+                        raise
+            return AsyncUploadResponse(
+                documentId=document.id,
+                jobId=active.id,
+                documentStatus=document.status,
+                jobStatus=active.status,
+            )
+
+    def resolve_by_hash(self, owner_id: str, file_hash: str):
+        normalized = file_hash.strip().casefold()
+        if len(normalized) != 64 or any(char not in "0123456789abcdef" for char in normalized):
+            raise ServiceError(422, "VALIDATION_ERROR", "SHA-256 không hợp lệ.")
+        with self._database.session() as session:
+            document = session.scalar(select(DocumentRecord).where(
+                DocumentRecord.owner_id == owner_id,
+                DocumentRecord.file_hash == normalized,
+                DocumentRecord.status == "READY",
+            ).order_by(DocumentRecord.created_at.desc()))
+            if document is None:
+                raise ServiceError(404, "DOCUMENT_NOT_FOUND", "Không tìm thấy tài liệu.")
+            return self._documents._dto(document)
+
     def _reserve(self, context: UserContext, document_id: str, filename: str,
                  mime: str, size: int, file_hash: str,
                  idempotency_key: str | None) -> tuple[DocumentRecord, IndexingJob]:
@@ -172,7 +234,7 @@ class AsyncDocumentProcessor:
         raw = self._jobs.raw(job_id)
         if raw is None:
             return
-        owner_id, document_id = raw
+        owner_id, document_id, _operation = raw
         try:
             record = self._documents._owned_record(owner_id, document_id)
             if record.status == "DELETED" or self._jobs.is_cancelled(job_id):
@@ -232,6 +294,11 @@ class AsyncDocumentProcessor:
             if job is None or job.status != "RUNNING":
                 session.rollback()
                 raise ServiceError(409, "INDEXING_CANCELLED", "Job lập chỉ mục đã được hủy.")
+            snapshot = self._documents._indexes.snapshot_for(owner_id)
+            previous_chunks = [] if snapshot is None else [
+                chunk for chunk in snapshot.chunks
+                if chunk.document_id == document_id and chunk.owner_id == owner_id
+            ]
             self._documents._indexes.replace_document(owner_id, document_id, chunks)
             try:
                 document = session.get(DocumentRecord, document_id)
@@ -252,5 +319,7 @@ class AsyncDocumentProcessor:
                 session.commit()
             except Exception:
                 session.rollback()
-                self._documents._indexes.remove_document(owner_id, document_id)
+                self._documents._indexes.replace_document(
+                    owner_id, document_id, previous_chunks
+                )
                 raise

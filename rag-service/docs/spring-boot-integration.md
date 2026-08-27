@@ -41,6 +41,8 @@ Spring trả `202` cho frontend và poll `GET /indexing-jobs/{jobId}` với back
   `quizGenerationContract=cognitive-repair-v1`.
 - `GET /user-documents?page=1&size=20&status=READY`
 - `GET /user-documents/{id}`
+- `GET /user-documents/resolve?sha256={hash}`: owner-only, dùng để khôi phục mapping Spring bị mất; chỉ trả document `READY` có đúng SHA-256.
+- `POST /user-documents/{id}/reindex`: tạo job `REINDEX` trên document hiện có và trả `202`. Nếu đã có job active, trả lại cùng job. Không upload file lần nữa và không phát sinh `DUPLICATE_DOCUMENT`.
 - `GET /user-documents/{id}/chunks?page=1&size=500`: đồng bộ chunk ID, text, trang/slide/heading về PostgreSQL.
 - `DELETE /user-documents/{id}`: hủy job chưa xong, loại khỏi search ngay.
 - `POST /user-rag/search`: body `{question,topK?,documentIds?,conversationHistory?,debug?}`.
@@ -58,6 +60,7 @@ Spring trả `202` cho frontend và poll `GET /indexing-jobs/{jobId}` với back
   nhận `EASY|MEDIUM|HARD` cho client cũ; Spring không gửi field này trong request Cognitive.
   `acceptedQuestions` luôn là mảng; dùng `[]` khi chưa có checkpoint.
 - `DELETE /users/{userId}/data`: Spring chỉ gọi khi path user trùng principal; xóa file, metadata, job, audit, index và cache tenant.
+- `POST /attempt-tutor/chat/stream`: nhận context Attempt đã được Spring kiểm tra release policy và trả NDJSON `STARTED → DELTA* → SOURCES → COMPLETED|FAILED`. Spring phải tự lấy question/answer/citation từ snapshot, không chuyển dữ liệu do trình duyệt tự khai báo thành context tin cậy.
 
 Timeout đề xuất: search 15 giây, ask 75 giây, delete 30 giây. Không tự retry ask nếu chưa có idempotency ở tầng Spring. Có thể retry GET, upload với cùng idempotency key, và lỗi có `retryable=true` theo `retryAfterSeconds`.
 
@@ -81,7 +84,7 @@ Timeout đề xuất: search 15 giây, ask 75 giây, delete 30 giây. Không t�
 | Auth/context | `INVALID_INTERNAL_API_KEY`, `USER_CONTEXT_REQUIRED` | Không retry; kiểm tra cấu hình/JWT mapping |
 | Validation | `VALIDATION_ERROR`, `FILE_TOO_LARGE`, `DUPLICATE_DOCUMENT` | Không retry tự động |
 | Queue/Redis | `JOB_QUEUE_UNAVAILABLE`, `RATE_LIMIT_STORE_UNAVAILABLE`, `INDEX_LOCK_UNAVAILABLE`, `INDEX_MUTATION_IN_PROGRESS` | Retry theo `retryAfterSeconds`; production không fallback local lock |
-| Job | `INDEXING_JOB_NOT_FOUND`, `JOB_NOT_RETRYABLE` | Hiển thị trạng thái cụ thể |
+| Job | `INDEXING_JOB_NOT_FOUND`, `JOB_NOT_RETRYABLE`, `DOCUMENT_SOURCE_FILE_MISSING` | Hiển thị trạng thái cụ thể; reindex lỗi vẫn giữ snapshot `READY` trước đó |
 | Gemini | `GEMINI_RATE_LIMITED`, `GEMINI_QUOTA_EXHAUSTED`, `GEMINI_TIMEOUT`, `GEMINI_MODEL_UNAVAILABLE`, `GEMINI_SAFETY_BLOCKED`, `GEMINI_AUTH_ERROR`, `AI_SERVICE_TEMPORARILY_UNAVAILABLE` | Chỉ retry khi `retryable=true` |
 | Retrieval | `INVALID_DOCUMENT_SELECTION`, `USER_INDEX_REBUILD_REQUIRED` | Không đổi tenant/filter; yêu cầu rebuild khi cần |
 
@@ -98,5 +101,7 @@ OpenAPI đã commit tại [openapi.json](openapi.json). CI chạy `python script
 ## Điểm nối với backend hiện tại
 
 Spring lưu cặp `sourceDocumentId ↔ ragDocumentId/jobId`, poll indexing, đồng bộ chunk và chỉ cho sinh quiz khi nguồn đã `READY`. Frontend không được truyền `X-User-Id`; Spring luôn lấy owner từ principal hoặc resource đã kiểm tra quyền.
+
+Khi xử lý lại, Spring phải giữ `ragDocumentId` và gọi endpoint reindex. Với dữ liệu cũ đã mất mapping, Spring resolve theo SHA-256 rồi nhận lại document ID. Chỉ khi resolve trả `DOCUMENT_NOT_FOUND` mới upload như một nguồn legacy chưa tồn tại trong RAG.
 
 Document v2 bổ sung `mathExtractionStatus`, `mathFormulaCount`, `mathWarningCount`. Chunk sync bổ sung `rawText` và `mathEnhanced`; Spring lưu `text` làm nội dung retrieval/citation và chỉ cho owner/admin truy cập raw text. `PARTIAL`/`FAILED` ở math extraction không đổi trạng thái document `READY`.

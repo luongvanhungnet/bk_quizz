@@ -102,6 +102,7 @@ public class QuizController {
     }
 
     @PostMapping("/generate")
+    @Deprecated(since = "2026-08", forRemoval = false)
     public ResponseEntity<QuizDtos.GenerateResponse> generate(
             @Valid @RequestBody QuizDtos.GenerateRequest request,
             @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,

@@ -35,4 +35,23 @@ class SourceDocumentStateTest {
 
         assertEquals(started, source.getIndexingProgressAt());
     }
+
+    @Test
+    void queueReindexPreservesExistingRagSnapshot() {
+        SourceDocument source = SourceDocument.uploaded(
+                UUID.randomUUID(), UUID.randomUUID(), "lesson.pdf",
+                "application/pdf", 1024, "source/lesson.pdf");
+        UUID documentId = UUID.randomUUID();
+        source.startRagIndex(documentId, UUID.randomUUID(), Instant.now());
+        source.completeRagIndex(
+                2, 4, "Nội dung tài liệu đã được lập chỉ mục dài hơn một trăm ký tự để kiểm tra việc giữ snapshot cũ khi xử lý lại.",
+                "NOT_DETECTED", 0, 0, Instant.now());
+
+        source.queueReindex(Instant.now());
+
+        assertEquals(documentId, source.getRagDocumentId());
+        assertEquals(SourceStatus.EMBEDDING, source.getStatus());
+        assertEquals("REINDEX_QUEUED", source.getIndexingStep());
+        assertEquals(4, source.getChunkCount());
+    }
 }

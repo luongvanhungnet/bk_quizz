@@ -7,6 +7,8 @@ import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,6 +17,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 import com.genquiz.bk.security.CurrentUser;
 import com.genquiz.bk.user.Role;
 
@@ -24,12 +28,14 @@ public class QuestionController {
     private final QuestionService service;
     private final ActorIdentityService actors;
     private final CurrentUser currentUser;
+    private final QuestionExcelImportService excelImport;
 
     public QuestionController(QuestionService service, ActorIdentityService actors,
-                              CurrentUser currentUser) {
+                              CurrentUser currentUser, QuestionExcelImportService excelImport) {
         this.service = service;
         this.actors = actors;
         this.currentUser = currentUser;
+        this.excelImport = excelImport;
     }
 
     @GetMapping("/quizzes/{quizId}/questions")
@@ -43,6 +49,26 @@ public class QuestionController {
                                                             Principal principal) {
         var question = service.create(actors.requireUserId(principal), quizId, request);
         return ResponseEntity.created(URI.create("/api/questions/" + question.id())).body(question);
+    }
+
+    @GetMapping("/questions/import-template")
+    public ResponseEntity<byte[]> importTemplate() {
+        byte[] content = excelImport.template();
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(content.length)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=BKQuiz-Mau-Import-Cau-Hoi.xlsx")
+                .body(content);
+    }
+
+    @PostMapping(value = "/quizzes/{quizId}/questions/import",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public QuizDtos.QuestionImportResponse importQuestions(
+            @PathVariable UUID quizId, @RequestPart("file") MultipartFile file,
+            Principal principal) {
+        return excelImport.importFile(actors.requireUserId(principal), quizId, file);
     }
 
     @PutMapping("/questions/{questionId}")

@@ -57,6 +57,10 @@ cognitiveRationale giải thích ngắn hành vi tư duy cần thiết, nhưng k
 """
 
 
+def _llm_prompt_exclusions(prompts: list[str]) -> list[str]:
+    return list(prompts[-50:])
+
+
 class InvalidCitationError(Exception):
     def __init__(
         self,
@@ -177,7 +181,8 @@ class GroundedQuizService:
             f"Tạo chính xác {counts.singleChoice} SINGLE_CHOICE, "
             f"{counts.multipleSelect} MULTIPLE_SELECT, {counts.fillBlank} FILL_BLANK.\n"
             f"Batch {request.batchIndex + 1}/{request.totalBatches}.\n"
-            f"Không lặp lại các câu hỏi trước: {request.excludedPrompts}\n"
+            "Không lặp lại các câu hỏi trước: "
+            f"{_llm_prompt_exclusions(request.excludedPrompts)}\n"
             f"<context>\n{context.text}\n</context>"
         )
         system_instruction = QUIZ_INSTRUCTION + MATH_FORMATTING_INSTRUCTION + (

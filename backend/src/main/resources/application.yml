@@ -33,11 +33,13 @@ spring:
               LOG_QUERIES_SLOWER_THAN_MS: ${DATABASE_SLOW_QUERY_MS:300}
         format_sql: false
   flyway:
-    enabled: true
+    enabled: ${FLYWAY_ENABLED:true}
     locations: classpath:db/migration
     validate-migration-naming: true
     user: ${DATABASE_MIGRATION_USERNAME:${DATABASE_USERNAME:${BKQUIZ_DATABASE_USERNAME:bkquiz}}}
     password: ${DATABASE_MIGRATION_PASSWORD:${DATABASE_PASSWORD:${BKQUIZ_DATABASE_PASSWORD:bkquiz}}}
+  lifecycle:
+    timeout-per-shutdown-phase: ${SHUTDOWN_TIMEOUT:30s}
   servlet:
     multipart:
       max-file-size: ${MAX_UPLOAD_SIZE:50MB}
@@ -115,7 +117,7 @@ bkquiz:
     embedding-dimensions: ${GEMINI_EMBEDDING_DIMENSIONS:768}
     timeout: ${GEMINI_TIMEOUT:60s}
     max-attempts: ${GEMINI_MAX_ATTEMPTS:3}
-    max-questions: ${MAX_QUESTIONS_PER_QUIZ:50}
+    max-questions: ${MAX_QUESTIONS_PER_QUIZ:100}
     max-sources: ${MAX_SOURCES_PER_GENERATION:10}
     min-source-characters: ${MIN_SOURCE_CHARACTERS:100}
   quiz-generation:

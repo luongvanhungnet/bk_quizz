@@ -1,5 +1,6 @@
 package com.genquiz.bk.quiz;
 
+import com.genquiz.bk.common.error.ApiException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -14,12 +15,14 @@ import java.security.MessageDigest;
 import java.util.HexFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class QuestionService {
+    private static final int POSITION_COMPACTION_OFFSET = 1000;
     private final QuestionRepository questions;
     private final QuestionOptionRepository options;
     private final AcceptedAnswerRepository acceptedAnswers;
@@ -59,8 +62,17 @@ public class QuestionService {
     public QuizDtos.QuestionResponse create(UUID actorId, UUID quizId, QuizDtos.QuestionRequest request) {
         Quiz quiz = quizzes.getOwned(actorId, quizId);
         requireEditable(quiz);
+        quizzes.requireNoActiveQuestionGeneration(quizId);
+        long currentCount = questions.countByQuizId(quizId);
+        if (currentCount >= QuizLimits.MAX_QUESTIONS_PER_QUIZ) {
+            throw new ApiException(
+                    HttpStatus.UNPROCESSABLE_CONTENT,
+                    "QUIZ_QUESTION_LIMIT_EXCEEDED",
+                    "Quiz đã đạt giới hạn "
+                            + QuizLimits.MAX_QUESTIONS_PER_QUIZ + " câu hỏi.");
+        }
         validate(request);
-        int position = Math.toIntExact(questions.countByQuizId(quizId));
+        int position = Math.toIntExact(currentCount);
         Question question = questions.save(newQuestion(quizId, request.sourceChunkId(), request, position));
         replaceAnswers(question, request);
         if (citations != null) citations.deleteByQuestionId(question.getId());
@@ -68,14 +80,68 @@ public class QuestionService {
     }
 
     @Transactional
+    public QuizDtos.QuestionImportResponse importQuestions(
+            UUID actorId, UUID quizId, List<QuestionExcelWorkbook.ParsedQuestion> imported) {
+        Quiz quiz = quizzes.getOwned(actorId, quizId);
+        requireEditable(quiz);
+        quizzes.requireNoActiveQuestionGeneration(quizId);
+        List<Question> existing = questions.findByQuizIdOrderByPosition(quizId);
+        List<com.genquiz.bk.common.api.ApiFieldError> errors = new ArrayList<>();
+        if (imported == null || imported.isEmpty()) {
+            errors.add(new com.genquiz.bk.common.api.ApiFieldError(
+                    "QUESTION_IMPORT_EMPTY", "CauHoi", "File chưa có câu hỏi để import."));
+        } else if (existing.size() + imported.size()
+                > QuizLimits.MAX_QUESTIONS_PER_QUIZ) {
+            errors.add(new com.genquiz.bk.common.api.ApiFieldError(
+                    "QUIZ_QUESTION_LIMIT_EXCEEDED", "CauHoi",
+                    "Quiz hiện có " + existing.size() + " câu; chỉ có thể import thêm "
+                            + Math.max(0, QuizLimits.MAX_QUESTIONS_PER_QUIZ
+                                    - existing.size()) + " câu."));
+        }
+        Set<String> prompts = existing.stream().map(Question::getPrompt)
+                .map(QuestionService::normalizePrompt).collect(java.util.stream.Collectors.toSet());
+        if (imported != null) {
+            for (QuestionExcelWorkbook.ParsedQuestion row : imported) {
+                try {
+                    validate(row.question());
+                } catch (ResponseStatusException exception) {
+                    errors.add(new com.genquiz.bk.common.api.ApiFieldError(
+                            "QUESTION_ROW_INVALID", "CauHoi!" + row.excelRowNumber(),
+                            "Hàng " + row.excelRowNumber() + ": " + exception.getReason()));
+                }
+                if (!prompts.add(normalizePrompt(row.question().prompt()))) {
+                    errors.add(new com.genquiz.bk.common.api.ApiFieldError(
+                            "DUPLICATE_QUESTION", "CauHoi!B" + row.excelRowNumber(),
+                            "Hàng " + row.excelRowNumber()
+                                    + " – Nội dung: Câu hỏi đã tồn tại trong Quiz hoặc bị trùng trong file."));
+                }
+            }
+        }
+        if (!errors.isEmpty()) {
+            throw new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, "QUESTION_IMPORT_INVALID",
+                    "File Excel có dữ liệu không hợp lệ.", errors.stream().limit(200).toList());
+        }
+        int position = existing.size();
+        for (QuestionExcelWorkbook.ParsedQuestion row : imported) {
+            QuizDtos.QuestionRequest request = row.question();
+            Question question = questions.save(newQuestion(quizId, null, request, position++));
+            replaceAnswers(question, request);
+        }
+        quizzes.refreshAiValidationStatus(quizId);
+        return new QuizDtos.QuestionImportResponse(imported.size(), existing.size() + imported.size());
+    }
+
+    @Transactional
     public QuizDtos.QuestionResponse update(UUID actorId, UUID questionId, QuizDtos.QuestionRequest request) {
         Question question = require(questionId);
         Quiz quiz = quizzes.getOwned(actorId, question.getQuizId());
         requireEditable(quiz);
+        quizzes.requireNoActiveQuestionGeneration(question.getQuizId());
         validate(request);
-        question.update(request.sourceChunkId(), request.type(), request.prompt(), request.explanation(),
+        question.update(null, request.type(), request.prompt(), request.explanation(),
                 request.points(), request.difficulty());
         applyCognitive(question, request);
+        clearExistingAnswers(question.getId());
         replaceAnswers(question, request);
         if (citations != null) citations.deleteByQuestionId(question.getId());
         quizzes.refreshAiValidationStatus(question.getQuizId());
@@ -86,12 +152,24 @@ public class QuestionService {
     public void delete(UUID actorId, UUID questionId) {
         Question question = require(questionId);
         requireEditable(quizzes.getOwned(actorId, question.getQuizId()));
-        options.deleteByQuestionId(questionId);
-        acceptedAnswers.deleteByQuestionId(questionId);
-        if (citations != null) citations.deleteByQuestionId(questionId);
-        questions.delete(question);
-        normalizePositions(question.getQuizId());
-        quizzes.refreshAiValidationStatus(question.getQuizId());
+        quizzes.requireNoActiveQuestionGeneration(question.getQuizId());
+        try {
+            options.deleteByQuestionId(questionId);
+            acceptedAnswers.deleteByQuestionId(questionId);
+            if (citations != null) citations.deleteByQuestionId(questionId);
+            questions.delete(question);
+            questions.flush();
+            questions.movePositionsAfterToTemporaryRange(
+                    question.getQuizId(), question.getPosition(), POSITION_COMPACTION_OFFSET);
+            questions.restoreTemporaryPositionsAfterDelete(
+                    question.getQuizId(), POSITION_COMPACTION_OFFSET);
+            quizzes.refreshAiValidationStatus(question.getQuizId());
+        } catch (DataIntegrityViolationException exception) {
+            throw new ApiException(
+                    HttpStatus.CONFLICT,
+                    "QUESTION_DELETE_FAILED",
+                    "Không thể xóa câu hỏi do ràng buộc dữ liệu. Vui lòng tải lại Quiz và thử lại.");
+        }
     }
 
     @Transactional
@@ -127,6 +205,7 @@ public class QuestionService {
     @Transactional
     public List<QuizDtos.QuestionResponse> reorder(UUID actorId, UUID quizId, List<UUID> orderedIds) {
         requireEditable(quizzes.getOwned(actorId, quizId));
+        quizzes.requireNoActiveQuestionGeneration(quizId);
         List<Question> existing = questions.findByQuizIdOrderByPosition(quizId);
         if (orderedIds.size() != existing.size() || new HashSet<>(orderedIds).size() != orderedIds.size()
                 || !new HashSet<>(orderedIds).equals(existing.stream().map(Question::getId).collect(java.util.stream.Collectors.toSet()))) {
@@ -207,7 +286,8 @@ public class QuestionService {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT, "QUIZ_CHANGED_DURING_GENERATION");
         }
-        if (existing.size() + generated.size() > 50) {
+        if (existing.size() + generated.size()
+                > QuizLimits.MAX_QUESTIONS_PER_QUIZ) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_CONTENT, "QUIZ_QUESTION_LIMIT_EXCEEDED");
         }
@@ -411,8 +491,6 @@ public class QuestionService {
     }
 
     private void replaceAnswers(Question question, QuizDtos.QuestionRequest request) {
-        options.deleteByQuestionId(question.getId());
-        acceptedAnswers.deleteByQuestionId(question.getId());
         if (request.type() == QuestionType.FILL_BLANK) {
             List<AcceptedAnswer> values = new ArrayList<>();
             for (int i = 0; i < request.acceptedAnswers().size(); i++) {
@@ -427,6 +505,13 @@ public class QuestionService {
             }
             options.saveAll(values);
         }
+    }
+
+    private void clearExistingAnswers(UUID questionId) {
+        options.deleteByQuestionId(questionId);
+        acceptedAnswers.deleteByQuestionId(questionId);
+        options.flush();
+        acceptedAnswers.flush();
     }
 
     public static void validate(QuizDtos.QuestionRequest request) {
@@ -597,15 +682,12 @@ public class QuestionService {
     }
 
     private static void requireEditable(Quiz quiz) {
-        if (quiz.getStatus() == QuizStatus.GENERATING || quiz.getStatus() == QuizStatus.PUBLISHED
-                || quiz.getStatus() == QuizStatus.ARCHIVED) {
+        if (quiz.getStatus() != QuizStatus.DRAFT
+                && quiz.getStatus() != QuizStatus.READY
+                && quiz.getStatus() != QuizStatus.PUBLISHED) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Không thể sửa câu hỏi ở trạng thái hiện tại của bài kiểm tra");
         }
     }
 
-    private void normalizePositions(UUID quizId) {
-        List<Question> remaining = questions.findByQuizIdOrderByPosition(quizId);
-        for (int i = 0; i < remaining.size(); i++) remaining.get(i).moveTo(i);
-    }
 }

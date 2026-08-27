@@ -70,6 +70,25 @@ public class RagClient {
                 .retrieve().body(RagDtos.Upload.class));
     }
 
+    public RagDtos.Upload reindex(UUID userId, UUID documentId) {
+        requireEnabled();
+        return call(() -> client.post()
+                .uri("/user-documents/{id}/reindex", documentId)
+                .headers(headers -> internal(headers, userId))
+                .retrieve()
+                .body(RagDtos.Upload.class));
+    }
+
+    public RagDtos.Document resolveDocument(UUID userId, String sha256) {
+        requireEnabled();
+        return call(() -> client.get()
+                .uri(builder -> builder.path("/user-documents/resolve")
+                        .queryParam("sha256", sha256).build())
+                .headers(headers -> internal(headers, userId))
+                .retrieve()
+                .body(RagDtos.Document.class));
+    }
+
     public RagDtos.Health health() {
         requireEnabled();
         return client.get()
@@ -149,6 +168,55 @@ public class RagClient {
         return call(() -> client.post().uri("/user-rag/generate-quiz")
                 .headers(headers -> internal(headers, userId)).contentType(MediaType.APPLICATION_JSON)
                 .body(request).retrieve().body(RagDtos.GeneratedQuiz.class));
+    }
+
+    public void streamAttemptTutor(UUID userId, RagDtos.TutorRequest request,
+                                   Consumer<JsonNode> eventConsumer) {
+        requireEnabled();
+        try {
+            client.post().uri("/attempt-tutor/chat/stream")
+                    .headers(headers -> internal(headers, userId))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.parseMediaType("application/x-ndjson"))
+                    .body(request)
+                    .exchange((httpRequest, response) -> {
+                        if (response.getStatusCode().isError()) {
+                            throw decodeStreamingError(
+                                    response.getStatusCode().value(),
+                                    response.getBody().readAllBytes(), null);
+                        }
+                        boolean terminal = false;
+                        try (var reader = new BufferedReader(new InputStreamReader(
+                                response.getBody(), StandardCharsets.UTF_8))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                if (line.isBlank()) continue;
+                                JsonNode event = mapper.readTree(line);
+                                String type = event.path("type").stringValue("");
+                                if ("HEARTBEAT".equals(type)) continue;
+                                eventConsumer.accept(event);
+                                if ("FAILED".equals(type)) throw streamFailure(event);
+                                if ("COMPLETED".equals(type) || "CANCELLED".equals(type)) {
+                                    terminal = true;
+                                }
+                            }
+                        }
+                        if (!terminal) {
+                            throw new RagServiceException(
+                                    "RAG_STREAM_INTERRUPTED",
+                                    "Kết nối trợ giảng AI bị gián đoạn.", true,
+                                    Duration.ofSeconds(30), null, null);
+                        }
+                        return null;
+                    });
+        } catch (RagServiceException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new RagServiceException(
+                    "RAG_STREAM_INTERRUPTED",
+                    "Kết nối trợ giảng AI bị gián đoạn.", true,
+                    Duration.ofSeconds(30), null, exception);
+        }
     }
 
     public RagDtos.GeneratedQuiz generateStreaming(

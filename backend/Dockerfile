@@ -13,5 +13,5 @@ WORKDIR /app
 COPY --from=build /workspace/target/*.jar app.jar
 USER bkquiz
 EXPOSE 8080
+STOPSIGNAL SIGTERM
 ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-Dfile.encoding=UTF-8", "-jar", "/app/app.jar"]
-

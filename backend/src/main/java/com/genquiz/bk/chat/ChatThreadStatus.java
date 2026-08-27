@@ -1,3 +1,3 @@
 package com.genquiz.bk.chat;
 
-public enum ChatThreadStatus { ACTIVE, DELETED }
+public enum ChatThreadStatus { ACTIVE, ARCHIVED, DELETED }

@@ -10,6 +10,7 @@ from app.services.gemini_service import TokenUsage
 from app.services.grounded_quiz_service import (
     CognitiveBatchValidationError,
     GroundedQuizService,
+    _llm_prompt_exclusions,
 )
 from app.services.quiz_llm_provider import (
     LLMErrorCategory,
@@ -38,6 +39,24 @@ def test_grounded_quiz_request_accepts_twenty_and_rejects_twenty_one_questions()
                 "fillBlank": 0,
             },
         })
+
+
+def test_grounded_quiz_request_accepts_one_hundred_existing_prompts() -> None:
+    request = GroundedQuizRequest.model_validate({
+        "documentIds": ["00000000-0000-0000-0000-000000000001"],
+        "title": "Append to a large quiz",
+        "cognitiveMode": "L3",
+        "questionCounts": {"singleChoice": 1, "multipleSelect": 0, "fillBlank": 0},
+        "excludedPrompts": [f"Existing question {index}" for index in range(100)],
+    })
+
+    assert len(request.excludedPrompts) == 100
+
+
+def test_llm_prompt_only_receives_the_fifty_most_recent_exclusions() -> None:
+    prompts = [f"Question {index}" for index in range(100)]
+
+    assert _llm_prompt_exclusions(prompts) == prompts[-50:]
 
 
 def test_cognitive_contract_normalizes_a_null_checkpoint_to_an_empty_list() -> None:
