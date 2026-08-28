@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.Base64;
 import java.util.Set;
 import java.util.UUID;
 
@@ -58,7 +59,7 @@ public class S3SourceObjectStorage implements SourceObjectStorage {
             String key = "sources/" + LocalDate.now() + "/" + UUID.randomUUID() + extension(requestedName);
             s3.putObject(PutObjectRequest.builder().bucket(properties.storage().bucket()).key(key)
                             .contentType(detected).contentLength(Files.size(temp))
-                            .metadata(Map.of("original-name", safeMetadata(requestedName))).build(),
+                            .metadata(Map.of("original-name-b64", safeMetadata(requestedName))).build(),
                     RequestBody.fromFile(temp));
             return new StoredObject(key, detected, "S3", sha256(temp));
         } finally {
@@ -90,7 +91,10 @@ public class S3SourceObjectStorage implements SourceObjectStorage {
     }
     private String safeMetadata(String value) {
         if (value == null) return "document";
-        return value.replaceAll("[\\r\\n]", " ").substring(0, Math.min(200, value.length()));
+        String sanitized = value.replaceAll("[\\r\\n]", " ");
+        if (sanitized.length() > 200) sanitized = sanitized.substring(0, 200);
+        return Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(sanitized.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
     private String sha256(Path path) throws IOException {
         try { var digest=java.security.MessageDigest.getInstance("SHA-256"); try(InputStream in=Files.newInputStream(path)){in.transferTo(new java.security.DigestOutputStream(OutputStream.nullOutputStream(),digest));} return java.util.HexFormat.of().formatHex(digest.digest()); }

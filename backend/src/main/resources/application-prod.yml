@@ -25,9 +25,16 @@ bkquiz:
   security:
     cookie-secure: ${COOKIE_SECURE:true}
   storage:
-    # Cloud Run filesystem is ephemeral. Durable uploads remain blocked on the R2 stage.
+    # Cloud Run filesystem is ephemeral. Production objects are stored in private Cloudflare R2.
+    provider: ${STORAGE_PROVIDER:s3}
     local-root: ${LOCAL_STORAGE_ROOT:/tmp/bkquiz/uploads}
     local-temp: ${LOCAL_STORAGE_TEMP:/tmp/bkquiz/tmp}
+    endpoint: ${S3_ENDPOINT}
+    region: ${S3_REGION:auto}
+    access-key: ${S3_ACCESS_KEY}
+    secret-key: ${S3_SECRET_KEY}
+    bucket: ${S3_BUCKET}
+    path-style: ${S3_PATH_STYLE:true}
 
 management:
   endpoint:

@@ -35,21 +35,20 @@ public class AvatarService {
     private final UserRepository users;
     private final StoredFileRepository files;
     private final ClamAvScanner scanner;
-    private final LocalFileStorage local;
+    private final AvatarObjectStorage objectStorage;
     private final Path temporaryRoot;
     private final long quotaBytes;
 
     public AvatarService(CurrentUser current, UserRepository users, StoredFileRepository files,
-                         ClamAvScanner scanner,
-                         @Value("${bkquiz.storage.local-root:./data/uploads}") String root,
+                         ClamAvScanner scanner, AvatarObjectStorage objectStorage,
                          @Value("${bkquiz.storage.local-temp:./data/tmp}") String temp,
                          @Value("${bkquiz.storage.user-quota-bytes:2147483648}") long quotaBytes) {
         this.current = current;
         this.users = users;
         this.files = files;
         this.scanner = scanner;
+        this.objectStorage = objectStorage;
         this.temporaryRoot = Path.of(temp).toAbsolutePath().normalize();
-        this.local = new LocalFileStorage(Path.of(root), temporaryRoot);
         this.quotaBytes = quotaBytes;
     }
 
@@ -64,6 +63,7 @@ public class AvatarService {
 
         Path staged = null;
         String storedPath = null;
+        StoredFile.Provider storedProvider = null;
         try {
             Files.createDirectories(temporaryRoot);
             staged = Files.createTempFile(temporaryRoot, "avatar-", ".upload");
@@ -73,11 +73,12 @@ public class AvatarService {
             scanner.requireClean(staged);
 
             Normalized normalized = normalize(staged, detected);
-            try (InputStream input = Files.newInputStream(normalized.path())) {
-                storedPath = local.store("avatar", normalized.extension(), input);
-            }
+            AvatarObjectStorage.Stored object = objectStorage.store(
+                    user.getId(), normalized.path(), normalized.extension(), normalized.mediaType());
+            storedPath = object.path();
+            storedProvider = object.provider();
             StoredFile stored = files.save(new StoredFile(user.getId(), StoredFile.Purpose.AVATAR,
-                    StoredFile.Provider.LOCAL, storedPath, safeName(upload.getOriginalFilename()),
+                    storedProvider, storedPath, safeName(upload.getOriginalFilename()),
                     upload.getContentType(), normalized.mediaType(), Files.size(normalized.path()), sha256(normalized.path()), true));
             UUID previous = user.getAvatarFileId();
             user.setAvatarFileId(stored.getId());
@@ -86,11 +87,14 @@ public class AvatarService {
             if (!normalized.path().equals(staged)) Files.deleteIfExists(normalized.path());
             return UserDto.from(user);
         } catch (ApiException exception) {
-            deleteQuietly(storedPath);
+            deleteQuietly(storedProvider, storedPath);
             throw exception;
         } catch (IOException exception) {
-            deleteQuietly(storedPath);
+            deleteQuietly(storedProvider, storedPath);
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "AVATAR_STORAGE_FAILED", "Không thể lưu ảnh đại diện.");
+        } catch (RuntimeException exception) {
+            deleteQuietly(storedProvider, storedPath);
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "AVATAR_STORAGE_FAILED", "Không thể kết nối kho lưu trữ ảnh đại diện.");
         } finally {
             if (staged != null) try { Files.deleteIfExists(staged); } catch (IOException ignored) { }
         }
@@ -113,10 +117,7 @@ public class AvatarService {
         StoredFile file = files.findByIdAndDeletedAtIsNull(user.getAvatarFileId())
                 .filter(value -> value.getStatus() == StoredFile.Status.READY && value.isPublicAccess())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "AVATAR_NOT_FOUND", "Không tìm thấy ảnh đại diện."));
-        if (file.getProvider() != StoredFile.Provider.LOCAL) {
-            throw new ApiException(HttpStatus.NOT_IMPLEMENTED, "LEGACY_AVATAR_PROVIDER", "Ảnh đại diện cũ chưa thể đọc từ provider này.");
-        }
-        try { return new AvatarContent(local.read(file.getStoragePath()), file.getDetectedMediaType(), file.getSizeBytes(), file.getSha256()); }
+        try { return new AvatarContent(objectStorage.read(file.getProvider(), file.getStoragePath()), file.getDetectedMediaType(), file.getSizeBytes(), file.getSha256()); }
         catch (IOException exception) { throw new ApiException(HttpStatus.NOT_FOUND, "AVATAR_NOT_FOUND", "Không tìm thấy ảnh đại diện."); }
     }
 
@@ -145,7 +146,10 @@ public class AvatarService {
         } catch (java.security.NoSuchAlgorithmException impossible) { throw new IllegalStateException(impossible); }
     }
 
-    private void deleteQuietly(String path) { if (path != null) try { local.delete(path); } catch (IOException ignored) { } }
+    private void deleteQuietly(StoredFile.Provider provider, String path) {
+        if (provider == null || path == null) return;
+        try { objectStorage.delete(provider, path); } catch (RuntimeException ignored) { }
+    }
     private ApiException invalid(String code, String message) { return new ApiException(HttpStatus.UNPROCESSABLE_CONTENT, code, message); }
     private String safeName(String value) { return value == null || value.isBlank() ? "avatar" : Path.of(value).getFileName().toString(); }
     private record Normalized(Path path, String mediaType, String extension) { }

@@ -34,9 +34,36 @@ public class StartupSecurityValidator implements ApplicationRunner {
                                 + "Hãy đặt origin HTTPS thật của Cloudflare Pages hoặc custom domain, "
                                 + "ví dụ https://bkquiz.pages.dev.");
             }
+            validateProductionStorage();
         }
         if (properties.ai().enabled() && environment.getProperty("spring.ai.google.genai.api-key", "").isBlank()) {
             throw new IllegalStateException("GEMINI_API_KEY là bắt buộc khi AI_ENABLED=true.");
+        }
+    }
+
+    private void validateProductionStorage() {
+        String provider = environment.getProperty("bkquiz.storage.provider", "local");
+        if (!"s3".equalsIgnoreCase(provider)) {
+            throw new IllegalStateException(
+                    "STORAGE_PROVIDER production phải là s3 vì filesystem Cloud Run không lưu trữ bền vững.");
+        }
+        URI endpoint;
+        try { endpoint = URI.create(properties.storage().endpoint()); }
+        catch (IllegalArgumentException exception) {
+            throw new IllegalStateException("S3_ENDPOINT production không hợp lệ.", exception);
+        }
+        if (!"https".equalsIgnoreCase(endpoint.getScheme()) || endpoint.getHost() == null
+                || !endpoint.getHost().endsWith(".r2.cloudflarestorage.com")) {
+            throw new IllegalStateException(
+                    "S3_ENDPOINT production phải là endpoint HTTPS S3 API của Cloudflare R2.");
+        }
+        if (!"auto".equalsIgnoreCase(properties.storage().region())) {
+            throw new IllegalStateException("S3_REGION cho Cloudflare R2 phải là auto.");
+        }
+        if (properties.storage().accessKey().equalsIgnoreCase("minioadmin")
+                || properties.storage().secretKey().equalsIgnoreCase("minioadmin")
+                || properties.storage().secretKey().contains("replace_me")) {
+            throw new IllegalStateException("Thông tin xác thực Cloudflare R2 production vẫn dùng giá trị mẫu.");
         }
     }
 

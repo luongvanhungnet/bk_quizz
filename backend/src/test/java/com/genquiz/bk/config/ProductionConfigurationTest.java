@@ -18,6 +18,10 @@ class ProductionConfigurationTest {
                 .withProperty("DATABASE_USERNAME", "runtime_user")
                 .withProperty("DATABASE_PASSWORD", "test-only-password")
                 .withProperty("FRONTEND_ORIGINS", "https://quiz.example.com")
+                .withProperty("S3_ENDPOINT", "https://example-account.r2.cloudflarestorage.com")
+                .withProperty("S3_ACCESS_KEY", "test-access-key")
+                .withProperty("S3_SECRET_KEY", "test-secret-key")
+                .withProperty("S3_BUCKET", "bkquiz-production")
                 .withProperty("JWT_ACCESS_SECRET", "test-only-production-access-secret-32-characters");
 
         assertThat(environment.getProperty("server.port")).isEqualTo("8080");
@@ -28,8 +32,11 @@ class ProductionConfigurationTest {
         assertThat(environment.getProperty("spring.flyway.enabled")).isEqualTo("false");
         assertThat(environment.getProperty("bkquiz.jobs.worker-enabled")).isEqualTo("false");
         assertThat(environment.getProperty("bkquiz.security.cookie-secure")).isEqualTo("true");
-        assertThat(environment.getProperty("bkquiz.storage.local-root"))
-                .isEqualTo("/tmp/bkquiz/uploads");
+        assertThat(environment.getProperty("bkquiz.storage.provider")).isEqualTo("s3");
+        assertThat(environment.getProperty("bkquiz.storage.endpoint"))
+                .isEqualTo("https://example-account.r2.cloudflarestorage.com");
+        assertThat(environment.getProperty("bkquiz.storage.region")).isEqualTo("auto");
+        assertThat(environment.getProperty("bkquiz.storage.bucket")).isEqualTo("bkquiz-production");
     }
 
     @Test
@@ -41,6 +48,10 @@ class ProductionConfigurationTest {
                 .withProperty("DATABASE_PASSWORD", "test-only-password")
                 .withProperty("DATABASE_POOL_SIZE", "7")
                 .withProperty("FRONTEND_ORIGINS", "https://quiz.example.com")
+                .withProperty("S3_ENDPOINT", "https://example-account.r2.cloudflarestorage.com")
+                .withProperty("S3_ACCESS_KEY", "test-access-key")
+                .withProperty("S3_SECRET_KEY", "test-secret-key")
+                .withProperty("S3_BUCKET", "bkquiz-production")
                 .withProperty("COOKIE_SECURE", "false")
                 .withProperty("WORKER_ENABLED", "true")
                 .withProperty("FLYWAY_ENABLED", "true");
