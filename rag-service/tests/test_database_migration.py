@@ -25,7 +25,7 @@ def test_alembic_creates_documents_and_partial_unique_index(
     indexes = {item["name"]: item for item in inspector.get_indexes("documents")}
     assert indexes["uq_documents_owner_hash_active"]["unique"] == 1
     with engine.connect() as connection:
-        assert connection.execute(text("select version_num from alembic_version")).scalar_one() == "0005_document_reindex"
+        assert connection.execute(text("select version_num from alembic_version")).scalar_one() == ALEMBIC_HEAD
     job_columns = {item["name"] for item in inspector.get_columns("indexing_jobs")}
     job_indexes = {item["name"]: item for item in inspector.get_indexes("indexing_jobs")}
     assert "operation" in job_columns

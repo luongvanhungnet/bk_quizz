@@ -8,6 +8,7 @@ from typing import Literal
 from dotenv import dotenv_values
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 RAG_SERVICE_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ENV_FILE = RAG_SERVICE_ROOT / ".env"
@@ -196,6 +197,11 @@ class Settings(BaseSettings):
     user_upload_dir: Path = Path("data/uploads/users")
     user_index_dir: Path = Path("data/indexes/users")
     database_url: str = "sqlite:///data/rag.db"
+    database_pool_size: int = Field(default=4, ge=1, le=20)
+    database_max_overflow: int = Field(default=2, ge=0, le=20)
+    database_pool_timeout_seconds: int = Field(default=10, ge=1, le=120)
+    database_pool_recycle_seconds: int = Field(default=300, ge=30, le=3600)
+    database_connect_timeout_seconds: int = Field(default=10, ge=1, le=60)
 
     @field_validator("gemini_model", "spring_boot_internal_api_key")
     @classmethod
@@ -250,10 +256,16 @@ class Settings(BaseSettings):
 
     @field_validator("database_url")
     @classmethod
-    def database_url_must_be_sqlite(cls, value: str) -> str:
+    def database_url_must_be_supported(cls, value: str) -> str:
         normalized = value.strip()
-        if not normalized.startswith("sqlite:///"):
-            raise ValueError("Phase 3 chỉ hỗ trợ DATABASE_URL SQLite.")
+        try:
+            backend = make_url(normalized).get_backend_name()
+        except Exception as error:
+            raise ValueError("DATABASE_URL không hợp lệ.") from error
+        if backend not in {"sqlite", "postgresql"}:
+            raise ValueError("DATABASE_URL chỉ hỗ trợ SQLite hoặc PostgreSQL.")
+        if backend == "postgresql" and make_url(normalized).drivername != "postgresql+psycopg":
+            raise ValueError("DATABASE_URL PostgreSQL phải dùng scheme postgresql+psycopg://.")
         return normalized
 
     @model_validator(mode="after")
@@ -264,6 +276,13 @@ class Settings(BaseSettings):
             raise ValueError("RAG_DEFAULT_TOP_K không được lớn hơn RAG_MAX_TOP_K.")
         if self.app_env == "production" and self.index_lock_mode == "local":
             raise ValueError("INDEX_LOCK_MODE=local không được phép trong production.")
+        if self.app_env == "production":
+            database = make_url(self.database_url)
+            if database.get_backend_name() != "postgresql":
+                raise ValueError("DATABASE_URL production phải dùng PostgreSQL/Neon.")
+            query = {str(key).lower(): str(value).lower() for key, value in database.query.items()}
+            if query.get("sslmode") not in {"require", "verify-ca", "verify-full"}:
+                raise ValueError("DATABASE_URL production phải bật sslmode=require hoặc mạnh hơn.")
         if self.celery_worker_heartbeat_ttl_seconds <= self.celery_worker_heartbeat_interval_seconds:
             raise ValueError("CELERY_WORKER_HEARTBEAT_TTL_SECONDS phải lớn hơn heartbeat interval.")
         if (

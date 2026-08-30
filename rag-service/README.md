@@ -1,5 +1,8 @@
 # BKQuiz RAG Service — Phase 4
 
+Hướng dẫn chuyển metadata RAG từ SQLite sang Neon PostgreSQL:
+[`docs/deploy/03-rag-neon-postgresql.md`](../docs/deploy/03-rag-neon-postgresql.md).
+
 FastAPI microservice cung cấp Gemini Gateway, RAG tài liệu hệ thống và RAG tài liệu
 riêng của người dùng. Embedding chạy local bằng Sentence Transformers, tìm kiếm exact
 cosine qua FAISS; Gemini chỉ nhận các chunk đã truy xuất để sinh câu trả lời có nguồn.

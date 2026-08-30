@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import UploadFile
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.exceptions import ServiceError
@@ -289,8 +289,9 @@ class AsyncDocumentProcessor:
     ) -> None:
         now = datetime.now(timezone.utc)
         with self._documents._indexes.lock_for(owner_id), self._documents._database.session() as session:
-            session.execute(text("BEGIN IMMEDIATE"))
-            job = session.get(IndexingJob, job_id)
+            job = session.scalar(
+                select(IndexingJob).where(IndexingJob.id == job_id).with_for_update()
+            )
             if job is None or job.status != "RUNNING":
                 session.rollback()
                 raise ServiceError(409, "INDEXING_CANCELLED", "Job lập chỉ mục đã được hủy.")

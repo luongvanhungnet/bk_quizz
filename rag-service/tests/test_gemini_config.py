@@ -13,6 +13,7 @@ def _write_env(path: Path, *, api_key: str, app_env: str = "development") -> Non
                 f"GEMINI_API_KEY={api_key}",
                 "GEMINI_MODEL=gemini-3.5-flash-lite",
                 "SPRING_BOOT_INTERNAL_API_KEY=test-internal-key",
+                "DATABASE_URL=postgresql+psycopg://user:password@example.neon.tech/rag?sslmode=require",
             ]
         ),
         encoding="utf-8",

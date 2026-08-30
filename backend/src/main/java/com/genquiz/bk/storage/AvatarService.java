@@ -11,6 +11,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
@@ -28,6 +31,7 @@ import java.util.UUID;
 
 @Service
 public class AvatarService {
+    private static final Logger log = LoggerFactory.getLogger(AvatarService.class);
     private static final long MAX_BYTES = 5L * 1024 * 1024;
     private static final Set<String> ALLOWED = Set.of("image/jpeg", "image/png", "image/webp");
 
@@ -94,6 +98,15 @@ public class AvatarService {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "AVATAR_STORAGE_FAILED", "Không thể lưu ảnh đại diện.");
         } catch (RuntimeException exception) {
             deleteQuietly(storedProvider, storedPath);
+            if (exception instanceof S3Exception s3Exception) {
+                String errorCode = s3Exception.awsErrorDetails() == null
+                        ? null : s3Exception.awsErrorDetails().errorCode();
+                log.warn("Avatar object storage failed provider=s3 status={} errorCode={} requestId={}",
+                        s3Exception.statusCode(), errorCode, s3Exception.requestId());
+            } else {
+                log.warn("Avatar object storage failed provider={} error={}", storedProvider,
+                        exception.getClass().getSimpleName());
+            }
             throw new ApiException(HttpStatus.BAD_GATEWAY, "AVATAR_STORAGE_FAILED", "Không thể kết nối kho lưu trữ ảnh đại diện.");
         } finally {
             if (staged != null) try { Files.deleteIfExists(staged); } catch (IOException ignored) { }
