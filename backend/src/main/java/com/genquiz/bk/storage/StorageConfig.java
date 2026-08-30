@@ -22,7 +22,7 @@ public class StorageConfig {
                 .region(Region.of(storage.region()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(storage.accessKey(), storage.secretKey())))
-                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(storage.pathStyle()).build())
+                .serviceConfiguration(r2CompatibleConfiguration(storage))
                 .build();
     }
 
@@ -34,7 +34,15 @@ public class StorageConfig {
                 .region(Region.of(storage.region()))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(storage.accessKey(), storage.secretKey())))
-                .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(storage.pathStyle()).build())
+                .serviceConfiguration(r2CompatibleConfiguration(storage))
+                .build();
+    }
+
+    S3Configuration r2CompatibleConfiguration(AppProperties.Storage storage) {
+        return S3Configuration.builder()
+                .pathStyleAccessEnabled(storage.pathStyle())
+                // R2 does not support the streaming SigV4/chunked encoding used by AWS SDK v2 by default.
+                .chunkedEncodingEnabled(false)
                 .build();
     }
 }

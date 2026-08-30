@@ -22,7 +22,7 @@ _release_lock = Lock()
 def worker_runtime() -> tuple[AsyncDocumentProcessor, IndexingJobService, Settings]:
     global _embedding
     settings = Settings()
-    database = Database(settings.database_url)
+    database = Database.from_settings(settings)
     database.validate_migrated()
     embedding = EmbeddingService(
         settings.embedding_model,

@@ -179,8 +179,8 @@ def create_app(
             resolved_settings.embedding_model,
         )
         owned_database = database is None
-        db = database or Database(
-            resolved_settings.database_url,
+        db = database or Database.from_settings(
+            resolved_settings,
             create_for_tests=resolved_settings.app_env == "test",
         )
         if resolved_settings.app_env != "test":

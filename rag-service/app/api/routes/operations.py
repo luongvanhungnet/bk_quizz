@@ -46,9 +46,9 @@ def ready(request: Request) -> JSONResponse:
                 oldest_pending_seconds = max(
                     0, int((datetime.now(timezone.utc) - oldest_pending).total_seconds())
                 )
-        checks["sqlite"] = "UP"
+        checks["database"] = "UP"
     except Exception:
-        checks["sqlite"] = "DOWN"
+        checks["database"] = "DOWN"
     try:
         request.app.state.redis_client.ping()
         queue_length = int(request.app.state.redis_client.llen(request.app.state.settings.celery_queue))
@@ -84,13 +84,14 @@ def ready(request: Request) -> JSONResponse:
             chunk_count = session.execute(text("SELECT COALESCE(SUM(chunk_count), 0) FROM documents WHERE status='READY'"))
             CHUNKS.set(chunk_count.scalar_one())
     except Exception:
-        checks["sqlite"] = "DOWN"
+        checks["database"] = "DOWN"
     healthy = all(value == "UP" for value in checks.values())
     return JSONResponse(
         status_code=200 if healthy else 503,
         content={
             "status": "UP" if healthy else "DOWN",
             "checks": checks,
+            "databaseBackend": request.app.state.database.backend,
             "queueLength": queue_length,
             "pendingJobs": pending_jobs,
             "runningJobs": running_jobs,

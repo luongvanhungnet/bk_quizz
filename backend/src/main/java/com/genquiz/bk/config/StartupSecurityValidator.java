@@ -7,9 +7,12 @@ import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.util.Arrays;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class StartupSecurityValidator implements ApplicationRunner {
+    private static final Logger log = LoggerFactory.getLogger(StartupSecurityValidator.class);
     private final AppProperties properties;
     private final Environment environment;
     public StartupSecurityValidator(AppProperties properties, Environment environment) {
@@ -19,7 +22,8 @@ public class StartupSecurityValidator implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         properties.frontendOrigins().forEach(this::validateOrigin);
-        boolean production = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+        boolean cloudRun = !environment.getProperty("K_SERVICE", "").isBlank();
+        boolean production = cloudRun || Arrays.asList(environment.getActiveProfiles()).contains("prod");
         if (production) {
             if (properties.security().accessSecret().contains("change-me")
                     || properties.security().accessSecret().contains("development")) {
@@ -35,6 +39,9 @@ public class StartupSecurityValidator implements ApplicationRunner {
                                 + "ví dụ https://bkquiz.pages.dev.");
             }
             validateProductionStorage();
+            URI storageEndpoint = URI.create(properties.storage().endpoint());
+            log.info("Object storage configured provider=s3 endpointHost={} region={} bucket={} cloudRun={}",
+                    storageEndpoint.getHost(), properties.storage().region(), properties.storage().bucket(), cloudRun);
         }
         if (properties.ai().enabled() && environment.getProperty("spring.ai.google.genai.api-key", "").isBlank()) {
             throw new IllegalStateException("GEMINI_API_KEY là bắt buộc khi AI_ENABLED=true.");

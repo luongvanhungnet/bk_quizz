@@ -3,6 +3,8 @@ package com.genquiz.bk.storage;
 import com.genquiz.bk.config.AppProperties;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -21,6 +23,7 @@ import java.util.UUID;
 /** Stores avatars in the configured durable provider while retaining support for legacy local files. */
 @Component
 public class AvatarObjectStorage {
+    private static final Logger log = LoggerFactory.getLogger(AvatarObjectStorage.class);
     private final S3Client s3;
     private final AppProperties properties;
     private final LocalFileStorage local;
@@ -39,7 +42,9 @@ public class AvatarObjectStorage {
     public Stored store(UUID ownerId, Path source, String extension, String mediaType) throws IOException {
         if (localProvider) {
             try (InputStream input = Files.newInputStream(source)) {
-                return new Stored(local.store("avatar", extension, input), StoredFile.Provider.LOCAL);
+                Stored stored = new Stored(local.store("avatar", extension, input), StoredFile.Provider.LOCAL);
+                log.info("Avatar object stored provider=local sizeBytes={}", Files.size(source));
+                return stored;
             }
         }
 
@@ -52,6 +57,8 @@ public class AvatarObjectStorage {
                         .contentLength(Files.size(source))
                         .build(),
                 RequestBody.fromFile(source));
+        log.info("Avatar object stored provider=s3 bucket={} sizeBytes={}",
+                properties.storage().bucket(), Files.size(source));
         return new Stored(key, StoredFile.Provider.S3);
     }
 

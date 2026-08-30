@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Any, cast
 
-from sqlalchemy import Engine, create_engine, event, inspect, text
+from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.exceptions import ServiceError
@@ -10,18 +11,42 @@ from app.db.models import Base
 # Keep this in sync with the migration graph. A regression test compares the
 # runtime guard with Alembic's actual head so a newly added ORM column cannot
 # be deployed while an older SQLite schema is still reported as ready.
-ALEMBIC_HEAD = "0005_document_reindex"
+ALEMBIC_HEAD = "0006_neon_postgresql"
 
 
 class Database:
-    def __init__(self, url: str, *, create_for_tests: bool = False) -> None:
+    def __init__(
+        self,
+        url: str,
+        *,
+        create_for_tests: bool = False,
+        pool_size: int = 4,
+        max_overflow: int = 2,
+        pool_timeout_seconds: int = 10,
+        pool_recycle_seconds: int = 300,
+        connect_timeout_seconds: int = 10,
+    ) -> None:
         self._ensure_parent(url)
-        self.engine: Engine = create_engine(
-            url,
-            connect_args={"check_same_thread": False},
-            pool_pre_ping=True,
-        )
-        event.listen(self.engine, "connect", self._configure_sqlite)
+        parsed_url = make_url(url)
+        self.backend = parsed_url.get_backend_name()
+        engine_options: dict[str, Any] = {"pool_pre_ping": True}
+        if self.backend == "sqlite":
+            engine_options["connect_args"] = {"check_same_thread": False}
+        else:
+            engine_options.update(
+                pool_size=pool_size,
+                max_overflow=max_overflow,
+                pool_timeout=pool_timeout_seconds,
+                pool_recycle=pool_recycle_seconds,
+                pool_use_lifo=True,
+                connect_args={
+                    "connect_timeout": connect_timeout_seconds,
+                    "application_name": "bkquiz-rag",
+                },
+            )
+        self.engine = create_engine(url, **engine_options)
+        if self.backend == "sqlite":
+            event.listen(self.engine, "connect", self._configure_sqlite)
         self.session_factory = sessionmaker(
             bind=self.engine,
             autoflush=False,
@@ -74,3 +99,15 @@ class Database:
 
     def dispose(self) -> None:
         self.engine.dispose()
+
+    @classmethod
+    def from_settings(cls, settings: Any, *, create_for_tests: bool = False) -> "Database":
+        return cls(
+            settings.database_url,
+            create_for_tests=create_for_tests,
+            pool_size=settings.database_pool_size,
+            max_overflow=settings.database_max_overflow,
+            pool_timeout_seconds=settings.database_pool_timeout_seconds,
+            pool_recycle_seconds=settings.database_pool_recycle_seconds,
+            connect_timeout_seconds=settings.database_connect_timeout_seconds,
+        )

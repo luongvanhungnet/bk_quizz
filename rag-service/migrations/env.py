@@ -9,6 +9,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from sqlalchemy.engine import make_url
 
 from app.db.models import Base
 from dotenv import dotenv_values
@@ -24,12 +25,13 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
+    is_sqlite = make_url(config.get_main_option("sqlalchemy.url")).get_backend_name() == "sqlite"
     context.configure(
         url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,
+        render_as_batch=is_sqlite,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -42,7 +44,11 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True)
+        context.configure(
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=connection.dialect.name == "sqlite",
+        )
         with context.begin_transaction():
             context.run_migrations()
 

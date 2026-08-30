@@ -44,6 +44,7 @@ class DocumentRecord(Base):
             "file_hash",
             unique=True,
             sqlite_where=text("status IN ('UPLOADED','PROCESSING','READY')"),
+            postgresql_where=text("status IN ('UPLOADED','PROCESSING','READY')"),
         ),
     )
 
@@ -103,15 +104,20 @@ class IndexingJob(Base):
             "idx_indexing_jobs_pending_updated",
             "updated_at",
             sqlite_where=text("status = 'PENDING'"),
+            postgresql_where=text("status = 'PENDING'"),
         ),
         Index(
             "idx_indexing_jobs_running_heartbeat",
             "heartbeat_at",
             sqlite_where=text("status = 'RUNNING'"),
+            postgresql_where=text("status = 'RUNNING'"),
         ),
-        Index("uq_indexing_jobs_owner_idempotency", "owner_id", "idempotency_key", unique=True, sqlite_where=text("idempotency_key IS NOT NULL")),
+        Index("uq_indexing_jobs_owner_idempotency", "owner_id", "idempotency_key", unique=True,
+              sqlite_where=text("idempotency_key IS NOT NULL"),
+              postgresql_where=text("idempotency_key IS NOT NULL")),
         Index("uq_indexing_jobs_document_active", "document_id", unique=True,
-              sqlite_where=text("status IN ('PENDING','RUNNING')")),
+              sqlite_where=text("status IN ('PENDING','RUNNING')"),
+              postgresql_where=text("status IN ('PENDING','RUNNING')")),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     document_id: Mapped[str] = mapped_column(

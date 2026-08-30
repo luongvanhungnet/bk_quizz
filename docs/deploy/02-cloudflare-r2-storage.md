@@ -128,11 +128,28 @@ Thay origin bằng domain Cloudflare Pages/custom domain thật, không có dấ
 | Lỗi | Nguyên nhân thường gặp | Cách xử lý |
 |---|---|---|
 | `SignatureDoesNotMatch` | Endpoint, region hoặc cặp key không đồng bộ | Dùng endpoint account R2, `S3_REGION=auto`, tạo lại token đúng bucket |
-| `AccessDenied` | Token chỉ đọc hoặc không được cấp cho bucket | Tạo token Object Read & Write, scope đúng bucket |
+| `AccessDenied` | Token chỉ đọc, token thuộc account/bucket khác, có IP restriction, hoặc đã lưu nhầm Cloudflare API token thay vì S3 credentials | Tạo R2 token Object Read & Write, scope đúng bucket; lưu đúng Access Key ID và Secret Access Key |
 | `NoSuchBucket` | Sai `S3_BUCKET` hoặc bucket thuộc account khác | Kiểm tra chính xác tên bucket và Account ID |
 | Browser chặn CORS | Origin/method không khớp policy | Dùng origin chính xác, thêm `GET` và `HEAD` |
 | Service không start | Startup validator phát hiện cấu hình local/mẫu | Xem log revision và kiểm tra đủ bảy biến storage |
+| Upload trả 200 nhưng bucket trống | Revision cũ vẫn ghi local hoặc thiếu toàn bộ biến `S3_*` | Kiểm tra image/tag và environment của latest ready revision; deploy lại image Stage 2 |
 | File lớn thất bại trước Spring | Cloud Run HTTP/1 giới hạn request 32 MiB | Tạm giữ file dưới khoảng 30 MiB; bước sau nên dùng presigned direct upload |
+
+BKQuiz tắt `chunkedEncoding` trên AWS SDK Java v2 theo yêu cầu tương thích của R2. Nếu image cũ chưa có cấu hình này, `PutObject` có thể bị R2 trả HTTP 403/`SignatureDoesNotMatch` dù endpoint và credential đều đúng.
+
+Kiểm tra nhanh cấu hình revision mà không in secret:
+
+```powershell
+gcloud run services describe bkquiz-api `
+  --region asia-southeast1 `
+  --format="value(status.latestReadyRevisionName,spec.template.spec.containers[0].image)"
+
+gcloud run services describe bkquiz-api `
+  --region asia-southeast1 `
+  --format="value(spec.template.spec.containers[0].env[].name)"
+```
+
+Khi khởi động đúng, log ứng dụng có dòng `Object storage configured provider=s3 ...`. Sau một avatar upload thành công, log có `Avatar object stored provider=s3 ...`; các dòng này không chứa credential hoặc object key.
 
 ## 7. Dữ liệu local hiện có
 
