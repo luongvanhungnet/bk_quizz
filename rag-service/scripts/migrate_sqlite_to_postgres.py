@@ -23,7 +23,13 @@ from sqlalchemy.engine import Engine, make_url
 
 from app.db.database import ALEMBIC_HEAD
 
-TABLES = ("documents", "math_extractions", "indexing_jobs", "audit_events")
+TABLES = (
+    "documents",
+    "math_extractions",
+    "indexing_jobs",
+    "audit_events",
+    "vector_index_snapshots",
+)
 
 
 def _chunks(rows: list[dict[str, Any]], size: int = 500) -> Iterator[list[dict[str, Any]]]:

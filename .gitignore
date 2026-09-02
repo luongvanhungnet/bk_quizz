@@ -21,6 +21,7 @@ rag-service/test_gemini_direct.py
 !.env.example
 backend/.env
 frontend/.env
+gha-creds-*.json
 
 # IDE / OS
 .idea/

@@ -2,10 +2,11 @@ package com.genquiz.bk.auth;
 
 import com.genquiz.bk.config.MailProperties;
 import com.genquiz.bk.config.ResendProperties;
-import com.genquiz.bk.job.NonRetryableJobException;
 import com.genquiz.bk.job.RetryableJobException;
 import java.net.http.HttpClient;
+import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -22,7 +23,10 @@ public class ResendMailClient {
 
     public ResendMailClient(ResendProperties resend, MailProperties mail, RestClient.Builder builder) {
         this.resend = resend; this.mail = mail;
-        HttpClient httpClient = HttpClient.newBuilder().connectTimeout(resend.connectTimeout()).build();
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(resend.connectTimeout())
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
         factory.setReadTimeout(resend.readTimeout());
         this.client = builder.requestFactory(factory).build();
@@ -43,23 +47,51 @@ public class ResendMailClient {
             }
             return response.id();
         } catch (ResourceAccessException exception) {
-            throw new RetryableJobException("Không thể kết nối Resend.", null, exception);
+            boolean timeout = hasCause(exception, HttpTimeoutException.class);
+            throw new ResendConnectivityException(
+                    timeout ? "RESEND_CONNECTION_TIMEOUT" : "RESEND_CONNECTION_FAILED",
+                    timeout
+                            ? "Kết nối từ máy chủ tới Resend đã quá thời gian chờ."
+                            : "Máy chủ tạm thời không thể kết nối Resend.",
+                    resend.networkRetryDelay(), exception);
         } catch (RestClientResponseException exception) {
             int status = exception.getStatusCode().value();
             if (status == 408 || status == 429 || status >= 500 || status == 409) {
                 throw new RetryableJobException("Resend tạm thời từ chối yêu cầu.", retryAfter(exception), exception);
             }
-            throw new NonRetryableJobException("Resend từ chối cấu hình hoặc nội dung email.", exception);
+            throw classifyRejectedRequest(exception);
         }
     }
 
     public void requireConfiguration() {
         if (resend.key() == null || resend.key().isBlank()) {
-            throw new NonRetryableJobException("RESEND_API_KEY là bắt buộc cho worker.");
+            throw new ResendDeliveryException("RESEND_CONFIGURATION_MISSING",
+                    "Worker gửi email chưa được cấu hình RESEND_API_KEY.");
         }
         if (mail.from() == null || mail.from().isBlank() || !mail.from().contains("@")) {
-            throw new NonRetryableJobException("APP_MAIL_FROM không hợp lệ.");
+            throw new ResendDeliveryException("RESEND_SENDER_INVALID",
+                    "Địa chỉ người gửi APP_MAIL_FROM không hợp lệ.");
         }
+    }
+
+    private ResendDeliveryException classifyRejectedRequest(RestClientResponseException exception) {
+        String providerMessage = exception.getResponseBodyAsString();
+        String normalized = providerMessage == null ? "" : providerMessage.toLowerCase(Locale.ROOT);
+        int status = exception.getStatusCode().value();
+        if (status == 401 || normalized.contains("api key is invalid")
+                || normalized.contains("invalid_api_key")) {
+            return new ResendDeliveryException("RESEND_AUTHENTICATION_FAILED",
+                    "Khóa API Resend không hợp lệ hoặc đã bị thu hồi.", exception);
+        }
+        if (normalized.contains("domain is not verified")
+                || normalized.contains("domain") && normalized.contains("not verified")
+                || normalized.contains("testing emails")
+                || normalized.contains("verify a domain")) {
+            return new ResendDeliveryException("RESEND_SENDER_NOT_VERIFIED",
+                    "Tên miền trong APP_MAIL_FROM chưa được xác minh trên Resend.", exception);
+        }
+        return new ResendDeliveryException("RESEND_REQUEST_REJECTED",
+                "Resend từ chối địa chỉ người gửi, người nhận hoặc nội dung email.", exception);
     }
 
     private Duration retryAfter(RestClientResponseException exception) {
@@ -68,6 +100,15 @@ public class ResendMailClient {
         if (value == null) return null;
         try { return Duration.ofSeconds(Math.max(0, Long.parseLong(value))); }
         catch (NumberFormatException ignored) { return null; }
+    }
+
+    private boolean hasCause(Throwable error, Class<? extends Throwable> type) {
+        Throwable current = error;
+        while (current != null) {
+            if (type.isInstance(current)) return true;
+            current = current.getCause();
+        }
+        return false;
     }
 
     private record ResendResponse(String id) {}

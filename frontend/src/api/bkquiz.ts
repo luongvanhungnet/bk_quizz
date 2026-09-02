@@ -461,6 +461,15 @@ export interface ClassroomMessage {
   createdAt: string;
   version: number;
 }
+export interface RealtimeTokenRequest {
+  keyName: string;
+  ttl: number;
+  capability: string;
+  clientId: string;
+  timestamp: number;
+  nonce: string;
+  mac: string;
+}
 export interface SharedTopicDetail {
   preview: SharedResourcePreview;
   topic: Topic;
@@ -850,6 +859,11 @@ export const bkquizApi = {
   classrooms: (page = 1) =>
     requestPage<Classroom>(pageQuery("/classrooms", { page, limit: 50 })),
   classroom: (id: string) => apiClient.request<Classroom>(`/classrooms/${id}`),
+  realtimeToken: (classroomId: string) =>
+    apiClient.request<RealtimeTokenRequest>(
+      `/realtime/token?classroomId=${encodeURIComponent(classroomId)}`,
+      { method: "POST" },
+    ),
   createClassroom: (body: { name: string; description?: string }) =>
     apiClient.request<Classroom>("/classrooms", {
       method: "POST",

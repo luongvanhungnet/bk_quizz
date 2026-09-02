@@ -1,0 +1,283 @@
+name: Release BKQuiz
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub Environment containing deployment configuration
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      run_migrations:
+        description: Run Flyway and Alembic Cloud Run Jobs before deployment
+        required: true
+        type: boolean
+        default: true
+      deploy_frontend:
+        description: Build and deploy the Cloudflare Pages frontend
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write
+  deployments: write
+
+concurrency:
+  group: bkquiz-release-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: Quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Verify Spring backend
+        working-directory: backend
+        run: |
+          chmod +x mvnw
+          ./mvnw -B verify
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Verify frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: https://release-validation.invalid
+          VITE_REALTIME_PROVIDER: ably
+        run: |
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm test -- --run
+          npm run build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: rag-service/requirements-dev.txt
+      - name: Verify RAG service
+        working-directory: rag-service
+        env:
+          DATABASE_URL: sqlite:///data/release-ci-rag.db
+          GEMINI_MODEL: contract-model
+          SPRING_BOOT_INTERNAL_API_KEY: contract-secret
+        run: |
+          pip install -r requirements-dev.txt
+          alembic upgrade head
+          pytest -q
+          ruff check app tests scripts integration
+          mypy
+          pip check
+          python scripts/export_openapi.py
+          git diff --exit-code -- docs/openapi.json
+
+  deploy-gcp:
+    name: Migrate and deploy Cloud Run
+    needs: quality
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION }}
+      REPOSITORY: ${{ vars.GCP_ARTIFACT_REPOSITORY }}
+      BACKEND_SERVICE: ${{ vars.GCP_BACKEND_SERVICE }}
+      RAG_SERVICE: ${{ vars.GCP_RAG_SERVICE }}
+      BACKEND_MIGRATION_JOB: ${{ vars.GCP_BACKEND_MIGRATION_JOB }}
+      RAG_MIGRATION_JOB: ${{ vars.GCP_RAG_MIGRATION_JOB }}
+      BACKEND_RUNTIME_SA: ${{ vars.GCP_BACKEND_RUNTIME_SERVICE_ACCOUNT }}
+      RAG_RUNTIME_SA: ${{ vars.GCP_RAG_RUNTIME_SERVICE_ACCOUNT }}
+      BACKEND_DB_URL_REF: ${{ vars.BACKEND_DATABASE_DIRECT_URL_SECRET_REF }}
+      BACKEND_DB_USER_REF: ${{ vars.BACKEND_DATABASE_USERNAME_SECRET_REF }}
+      BACKEND_DB_PASSWORD_REF: ${{ vars.BACKEND_DATABASE_PASSWORD_SECRET_REF }}
+      RAG_DB_URL_REF: ${{ vars.RAG_DATABASE_DIRECT_URL_SECRET_REF }}
+      RUN_MIGRATIONS: ${{ inputs.run_migrations }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        name: Authenticate to Google Cloud without a JSON key
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v3
+      - name: Validate release configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(PROJECT_ID REGION REPOSITORY BACKEND_SERVICE RAG_SERVICE BACKEND_MIGRATION_JOB RAG_MIGRATION_JOB BACKEND_RUNTIME_SA RAG_RUNTIME_SA)
+          if [[ "$RUN_MIGRATIONS" == "true" ]]; then
+            required+=(BACKEND_DB_URL_REF BACKEND_DB_USER_REF BACKEND_DB_PASSWORD_REF RAG_DB_URL_REF)
+          fi
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing GitHub Environment variable: $name" >&2
+              exit 1
+            fi
+          done
+          if [[ "${{ inputs.environment }}" == "production" && "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Production releases are only allowed from main." >&2
+            exit 1
+          fi
+          gcloud config set project "$PROJECT_ID"
+      - name: Build immutable images
+        shell: bash
+        run: |
+          set -euo pipefail
+          registry="$REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY"
+          echo "BACKEND_IMAGE=$registry/backend:$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "BACKEND_MIGRATION_IMAGE=$registry/backend-migrate:$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "RAG_IMAGE=$registry/rag-service:$GITHUB_SHA" >> "$GITHUB_ENV"
+          gcloud builds submit backend --tag "$registry/backend:$GITHUB_SHA" --timeout=30m --quiet
+          gcloud builds submit backend --config backend/cloudbuild.migrate.yaml \
+            --substitutions "_IMAGE=$registry/backend-migrate:$GITHUB_SHA" --timeout=20m --quiet
+          gcloud builds submit rag-service --tag "$registry/rag-service:$GITHUB_SHA" --timeout=45m --quiet
+      - name: Run one-time database migrations
+        if: ${{ inputs.run_migrations }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gcloud run jobs deploy "$BACKEND_MIGRATION_JOB" \
+            --region "$REGION" \
+            --image "$BACKEND_MIGRATION_IMAGE" \
+            --service-account "$BACKEND_RUNTIME_SA" \
+            --set-secrets "FLYWAY_URL=$BACKEND_DB_URL_REF,FLYWAY_USER=$BACKEND_DB_USER_REF,FLYWAY_PASSWORD=$BACKEND_DB_PASSWORD_REF" \
+            --max-retries 0 --task-timeout 15m --quiet
+          gcloud run jobs execute "$BACKEND_MIGRATION_JOB" --region "$REGION" --wait --quiet
+
+          gcloud run jobs deploy "$RAG_MIGRATION_JOB" \
+            --region "$REGION" \
+            --image "$RAG_IMAGE" \
+            --service-account "$RAG_RUNTIME_SA" \
+            --command python \
+            --args=-m,alembic,upgrade,head \
+            --set-secrets "DATABASE_URL=$RAG_DB_URL_REF" \
+            --max-retries 0 --task-timeout 15m --quiet
+          gcloud run jobs execute "$RAG_MIGRATION_JOB" --region "$REGION" --wait --quiet
+      - name: Deploy and smoke test with automatic revision rollback
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          manifest="$RUNNER_TEMP/release-manifest.json"
+          rag_previous=$(gcloud run services describe "$RAG_SERVICE" --region "$REGION" --format='value(status.latestReadyRevisionName)')
+          backend_previous=$(gcloud run services describe "$BACKEND_SERVICE" --region "$REGION" --format='value(status.latestReadyRevisionName)')
+          rag_revision=""
+          backend_revision=""
+          rag_updated=false
+          backend_updated=false
+
+          write_manifest() {
+            jq -n \
+              --arg environment "${{ inputs.environment }}" \
+              --arg commit "$GITHUB_SHA" \
+              --arg backendImage "$BACKEND_IMAGE" \
+              --arg ragImage "$RAG_IMAGE" \
+              --arg backendPrevious "$backend_previous" \
+              --arg ragPrevious "$rag_previous" \
+              --arg backendRevision "$backend_revision" \
+              --arg ragRevision "$rag_revision" \
+              --arg outcome "$1" \
+              '{environment:$environment,commit:$commit,backendImage:$backendImage,ragImage:$ragImage,backendPreviousRevision:$backendPrevious,ragPreviousRevision:$ragPrevious,backendRevision:$backendRevision,ragRevision:$ragRevision,outcome:$outcome}' > "$manifest"
+          }
+          rollback() {
+            status=$?
+            trap - ERR
+            set +e
+            echo "Release failed; restoring traffic to the previous ready revisions." >&2
+            if [[ "$backend_updated" == "true" && -n "$backend_previous" ]]; then
+              gcloud run services update-traffic "$BACKEND_SERVICE" --region "$REGION" --to-revisions "$backend_previous=100" --quiet
+            fi
+            if [[ "$rag_updated" == "true" && -n "$rag_previous" ]]; then
+              gcloud run services update-traffic "$RAG_SERVICE" --region "$REGION" --to-revisions "$rag_previous=100" --quiet
+            fi
+            write_manifest failed
+            exit "$status"
+          }
+          trap rollback ERR
+
+          gcloud run services update "$RAG_SERVICE" --region "$REGION" --image "$RAG_IMAGE" --quiet
+          rag_updated=true
+          rag_revision=$(gcloud run services describe "$RAG_SERVICE" --region "$REGION" --format='value(status.latestReadyRevisionName)')
+          rag_url=$(gcloud run services describe "$RAG_SERVICE" --region "$REGION" --format='value(status.url)')
+          rag_token=$(gcloud auth print-identity-token --audiences "$rag_url")
+          curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 5 \
+            -H "Authorization: Bearer $rag_token" "$rag_url/health/live" >/dev/null
+
+          gcloud run services update "$BACKEND_SERVICE" --region "$REGION" --image "$BACKEND_IMAGE" --quiet
+          backend_updated=true
+          backend_revision=$(gcloud run services describe "$BACKEND_SERVICE" --region "$REGION" --format='value(status.latestReadyRevisionName)')
+          backend_url=$(gcloud run services describe "$BACKEND_SERVICE" --region "$REGION" --format='value(status.url)')
+          curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 5 \
+            "$backend_url/actuator/health/liveness" >/dev/null
+          curl --fail --silent --show-error --retry 8 --retry-all-errors --retry-delay 5 \
+            "$backend_url/actuator/health/readiness" >/dev/null
+
+          trap - ERR
+          write_manifest succeeded
+          echo "BACKEND_URL=$backend_url" >> "$GITHUB_ENV"
+          echo "RAG_URL=$rag_url" >> "$GITHUB_ENV"
+      - name: Upload release manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest-${{ inputs.environment }}-${{ github.sha }}
+          path: ${{ runner.temp }}/release-manifest.json
+          if-no-files-found: warn
+
+  deploy-frontend:
+    name: Deploy Cloudflare Pages
+    if: ${{ inputs.deploy_frontend }}
+    needs: deploy-gcp
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Validate Cloudflare configuration
+        env:
+          API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          PAGES_PROJECT: ${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in API_BASE_URL PAGES_PROJECT CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing Cloudflare release configuration: $name" >&2
+              exit 1
+            fi
+          done
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_API_SAME_ORIGIN_PROXY: ${{ vars.VITE_API_SAME_ORIGIN_PROXY }}
+          VITE_REALTIME_PROVIDER: ably
+        run: |
+          npm ci
+          npm run build
+      - name: Publish Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: frontend
+          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }} --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

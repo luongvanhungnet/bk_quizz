@@ -51,7 +51,8 @@ $env:DATABASE_URL = '<NEON_DIRECT_SQLALCHEMY_URL>'
 .\.venv\Scripts\python.exe -m alembic current
 ```
 
-Kết quả cuối phải là `0006_neon_postgresql (head)`. Không đưa lệnh Alembic vào
+Với mã nguồn hiện tại, kết quả cuối phải là `0007_qdrant_snapshots (head)`.
+Không đưa lệnh Alembic vào
 startup của nhiều Cloud Run instance: các instance có thể tranh migration.
 
 ## 3A. Hệ thống mới, không cần giữ SQLite cũ

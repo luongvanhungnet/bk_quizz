@@ -1,6 +1,7 @@
 package com.genquiz.bk.rag;
 
 import com.genquiz.bk.config.RagProperties;
+import com.genquiz.bk.config.RagIamProperties;
 import com.genquiz.bk.job.JobEventLevel;
 import com.genquiz.bk.job.JobEventService;
 import tools.jackson.databind.JsonNode;
@@ -31,17 +32,23 @@ public class RagClient {
     private final RestClient client;
     private final ObjectMapper mapper;
     private final JobEventService events;
+    private final RagIamProperties iamProperties;
+    private final RagIdentityTokenProvider identityTokens;
 
     public RagClient(RagProperties properties, ObjectMapper mapper) {
-        this(properties, mapper, null);
+        this(properties, new RagIamProperties(false, ""), audience -> "", mapper, null);
     }
 
     @Autowired
     public RagClient(
             RagProperties properties,
+            RagIamProperties iamProperties,
+            RagIdentityTokenProvider identityTokens,
             ObjectMapper mapper,
             JobEventService events) {
         this.properties = properties;
+        this.iamProperties = iamProperties;
+        this.identityTokens = identityTokens;
         this.mapper = mapper;
         this.events = events;
         var factory = new SimpleClientHttpRequestFactory();
@@ -49,6 +56,13 @@ public class RagClient {
         factory.setReadTimeout(properties.readTimeout());
         this.client = RestClient.builder().baseUrl(properties.baseUrl().replaceAll("/$", "") + "/api/v2")
                 .requestFactory(factory).build();
+    }
+
+    public RagClient(
+            RagProperties properties,
+            ObjectMapper mapper,
+            JobEventService events) {
+        this(properties, new RagIamProperties(false, ""), audience -> "", mapper, events);
     }
 
     public boolean enabled() { return properties.enabled(); }
@@ -93,6 +107,7 @@ public class RagClient {
         requireEnabled();
         return client.get()
                 .uri(properties.baseUrl().replaceAll("/$", "") + "/health/ready")
+                .headers(this::internalService)
                 .exchange((request, response) -> mapper.readValue(response.getBody(), RagDtos.Health.class));
     }
 
@@ -422,15 +437,23 @@ public class RagClient {
     }
 
     private void internal(org.springframework.http.HttpHeaders headers, UUID userId) {
+        cloudRunIdentity(headers);
         headers.set("X-Internal-API-Key", properties.internalApiKey());
         headers.set("X-User-Id", userId.toString());
         String trace = MDC.get("traceId"); if (trace != null) headers.set("X-Request-Id", trace);
     }
 
     private void internalService(org.springframework.http.HttpHeaders headers) {
+        cloudRunIdentity(headers);
         headers.set("X-Internal-API-Key", properties.internalApiKey());
         String trace = MDC.get("traceId");
         if (trace != null) headers.set("X-Request-Id", trace);
+    }
+
+    private void cloudRunIdentity(org.springframework.http.HttpHeaders headers) {
+        if (iamProperties.enabled()) {
+            headers.setBearerAuth(identityTokens.token(iamProperties.audience()));
+        }
     }
 
     private <T> T call(java.util.concurrent.Callable<T> operation) {

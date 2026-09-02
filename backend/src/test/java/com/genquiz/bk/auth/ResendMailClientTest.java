@@ -93,6 +93,35 @@ class ResendMailClientTest {
     }
 
     @Test
+    void classifiesInvalidApiKeyWithoutExposingProviderResponse() throws Exception {
+        server = errorServer(400, "{\"statusCode\":400,\"name\":\"validation_error\","
+                + "\"message\":\"API key is invalid\"}");
+
+        assertThatThrownBy(() -> client("http://localhost:" + server.getAddress().getPort() + "/emails")
+                .send("student@example.com", "Verify", "Text", "<p>Text</p>", "auth-email/1"))
+                .isInstanceOf(ResendDeliveryException.class)
+                .satisfies(error -> {
+                    ResendDeliveryException resendError = (ResendDeliveryException) error;
+                    assertThat(resendError.code()).isEqualTo("RESEND_AUTHENTICATION_FAILED");
+                    assertThat(resendError.getMessage()).isEqualTo(
+                            "Khóa API Resend không hợp lệ hoặc đã bị thu hồi.");
+                    assertThat(resendError.getMessage()).doesNotContain("re_test");
+                });
+    }
+
+    @Test
+    void classifiesUnverifiedSenderDomain() throws Exception {
+        server = errorServer(403, "{\"statusCode\":403,\"name\":\"validation_error\","
+                + "\"message\":\"The example.com domain is not verified\"}");
+
+        assertThatThrownBy(() -> client("http://localhost:" + server.getAddress().getPort() + "/emails")
+                .send("student@example.com", "Verify", "Text", "<p>Text</p>", "auth-email/1"))
+                .isInstanceOf(ResendDeliveryException.class)
+                .satisfies(error -> assertThat(((ResendDeliveryException) error).code())
+                        .isEqualTo("RESEND_SENDER_NOT_VERIFIED"));
+    }
+
+    @Test
     void retriesServerFailure() throws Exception {
         server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext("/emails", exchange -> {
@@ -116,16 +145,35 @@ class ResendMailClientTest {
         server.start();
         ResendMailClient shortTimeoutClient = new ResendMailClient(
                 new ResendProperties("re_test", "http://localhost:" + server.getAddress().getPort() + "/emails",
-                        Duration.ofSeconds(1), Duration.ofMillis(50)),
+                        Duration.ofSeconds(1), Duration.ofMillis(50), Duration.ofSeconds(30)),
                 new MailProperties("BKQuiz <no-reply@example.com>"), RestClient.builder());
 
         assertThatThrownBy(() -> shortTimeoutClient
                 .send("student@example.com", "Verify", "Text", "<p>Text</p>", "auth-email/1"))
-                .isInstanceOf(RetryableJobException.class);
+                .isInstanceOf(ResendConnectivityException.class)
+                .satisfies(error -> {
+                    ResendConnectivityException resendError = (ResendConnectivityException) error;
+                    assertThat(resendError.code()).isEqualTo("RESEND_CONNECTION_TIMEOUT");
+                    assertThat(resendError.retryAfter()).isEqualTo(Duration.ofSeconds(30));
+                });
     }
 
     private ResendMailClient client(String url) {
-        return new ResendMailClient(new ResendProperties("re_test", url, Duration.ofSeconds(2), Duration.ofSeconds(2)),
+        return new ResendMailClient(new ResendProperties("re_test", url, Duration.ofSeconds(2),
+                Duration.ofSeconds(2), Duration.ofSeconds(30)),
                 new MailProperties("BKQuiz <no-reply@example.com>"), RestClient.builder());
+    }
+
+    private HttpServer errorServer(int status, String json) throws Exception {
+        HttpServer result = HttpServer.create(new InetSocketAddress(0), 0);
+        result.createContext("/emails", exchange -> {
+            byte[] response = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(status, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        result.start();
+        return result;
     }
 }

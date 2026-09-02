@@ -1,1 +1,1 @@
-"""SQLite persistence for user documents."""
+"""SQLAlchemy persistence for RAG metadata on SQLite or PostgreSQL."""

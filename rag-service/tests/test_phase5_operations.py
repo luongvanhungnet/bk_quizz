@@ -55,3 +55,21 @@ def test_redis_unavailable_has_retryable_stable_error() -> None:
     assert raised.value.code == "RATE_LIMIT_STORE_UNAVAILABLE"
     assert raised.value.retryable is True
     assert raised.value.retry_after_seconds == 5
+
+
+def test_rate_limit_increment_and_expiry_are_atomic() -> None:
+    class Redis:
+        def __init__(self) -> None:
+            self.calls: list[tuple] = []
+
+        def eval(self, *arguments):
+            self.calls.append(arguments)
+            return 1
+
+    redis = Redis()
+    RedisRateLimiter(redis).check("upload", "safe-user", 5, window_seconds=60)
+
+    assert len(redis.calls) == 1
+    assert redis.calls[0][1] == 1
+    assert redis.calls[0][2].startswith("rag:rate:upload:safe-user:")
+    assert redis.calls[0][3] == 61

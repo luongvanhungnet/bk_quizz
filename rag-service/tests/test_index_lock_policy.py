@@ -191,4 +191,4 @@ def test_readiness_reports_redis_down(settings: Settings) -> None:
         response = client.get("/health/ready")
 
     assert response.status_code == 503
-    assert response.json()["checks"]["redis"] == "DOWN"
+    assert response.json()["checks"]["cacheRedis"] == "DOWN"

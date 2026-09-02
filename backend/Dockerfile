@@ -14,4 +14,4 @@ COPY --from=build /workspace/target/*.jar app.jar
 USER bkquiz
 EXPOSE 8080
 STOPSIGNAL SIGTERM
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-Dfile.encoding=UTF-8", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-Dfile.encoding=UTF-8", "-Djava.net.preferIPv4Stack=true", "-jar", "/app/app.jar"]

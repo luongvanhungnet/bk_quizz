@@ -11,7 +11,8 @@ ARG EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 RUN groupadd --system rag && useradd --system --gid rag --create-home rag
 WORKDIR /app
 COPY requirements-runtime.txt ./
-RUN pip install --no-cache-dir -r requirements-runtime.txt
+RUN python -m pip install --upgrade --no-cache-dir pip==26.2.1 \
+    && python -m pip install --no-cache-dir -r requirements-runtime.txt
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY app ./app
@@ -21,5 +22,6 @@ RUN mkdir -p /app/data/uploads/users /app/data/indexes/users /app/data/indexes/s
     && python scripts/download_onnx_embedding.py --model "${EMBEDDING_MODEL}" --output /app/models/embedding-onnx \
     && chown -R rag:rag /app
 USER rag
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+EXPOSE 8080
+STOPSIGNAL SIGTERM
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --timeout-graceful-shutdown 8"]

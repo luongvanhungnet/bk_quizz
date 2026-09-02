@@ -32,6 +32,8 @@ class VectorSnapshot:
                 str(self.manifest.get("embeddingModel", "")),
                 str(self.manifest.get("embeddingRuntime", "legacy")),
                 str(self.manifest.get("ownerId", "SYSTEM")),
+                str(self.manifest.get("vectorBackend", "faiss")),
+                str(self.manifest.get("indexVersionId", "legacy")),
             )
         )
         return hashlib.sha256(value.encode("utf-8")).hexdigest()

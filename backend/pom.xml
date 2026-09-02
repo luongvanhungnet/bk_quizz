@@ -25,6 +25,8 @@
         <aws-sdk.version>2.34.0</aws-sdk.version>
         <poi.version>5.4.1</poi.version>
         <openpdf.version>2.0.4</openpdf.version>
+        <ably.version>1.8.0</ably.version>
+        <google-auth-library.version>1.51.0</google-auth-library.version>
         <archunit.version>1.4.1</archunit.version>
         <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
@@ -120,6 +122,16 @@
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
             <artifactId>sts</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.ably</groupId>
+            <artifactId>ably-java</artifactId>
+            <version>${ably.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.auth</groupId>
+            <artifactId>google-auth-library-oauth2-http</artifactId>
+            <version>${google-auth-library.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.tika</groupId>

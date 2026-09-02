@@ -3,6 +3,14 @@ from typing import Any
 
 from app.core.exceptions import ServiceError
 
+RATE_LIMIT_INCREMENT = """
+local count = redis.call('INCR', KEYS[1])
+if count == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+return count
+"""
+
 
 class RedisRateLimiter:
     def __init__(self, redis_client: Any) -> None:
@@ -12,9 +20,9 @@ class RedisRateLimiter:
         bucket = int(time.time() // window_seconds)
         key = f"rag:rate:{scope}:{owner_key}:{bucket}"
         try:
-            count = self._redis.incr(key)
-            if count == 1:
-                self._redis.expire(key, window_seconds + 1)
+            count = int(
+                self._redis.eval(RATE_LIMIT_INCREMENT, 1, key, window_seconds + 1)
+            )
         except Exception as error:
             raise ServiceError(
                 503, "RATE_LIMIT_STORE_UNAVAILABLE", "Bộ giới hạn truy cập tạm thời không khả dụng.",

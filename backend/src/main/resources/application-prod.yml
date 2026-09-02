@@ -22,6 +22,16 @@ bkquiz:
   frontend-origins: ${FRONTEND_ORIGINS}
   jobs:
     worker-enabled: ${WORKER_ENABLED:false}
+  realtime:
+    provider: ${REALTIME_PROVIDER:ably}
+    ably-api-key: ${ABLY_API_KEY}
+    channel-prefix: ${ABLY_CHANNEL_PREFIX:bkquiz:classroom:}
+    token-ttl-seconds: ${ABLY_TOKEN_TTL_SECONDS:300}
+    publish-enabled: ${REALTIME_PUBLISH_ENABLED:true}
+  rag:
+    iam:
+      enabled: ${RAG_IAM_ENABLED:true}
+      audience: ${RAG_IAM_AUDIENCE}
   security:
     cookie-secure: ${COOKIE_SECURE:true}
   storage:

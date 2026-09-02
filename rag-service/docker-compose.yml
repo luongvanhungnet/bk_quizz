@@ -16,6 +16,11 @@ x-rag-env: &rag-env
   INDEX_LOCK_MODE: redis
   INDEX_LOCK_FALLBACK_COOLDOWN_SECONDS: 30
   DATABASE_URL: sqlite:////app/data/rag.db
+  PORT: 8000
+  VECTOR_STORE_BACKEND: qdrant
+  QDRANT_URL: http://qdrant:6333
+  QDRANT_API_KEY: ""
+  QDRANT_COLLECTION: bkquiz_chunks
   USER_UPLOAD_DIR: /app/data/uploads/users
   USER_INDEX_DIR: /app/data/indexes/users
   SYSTEM_DOCUMENTS_DIR: /app/data/system-documents
@@ -36,6 +41,13 @@ x-rag-env: &rag-env
   CITATION_MAX_CANDIDATES_PER_SOURCE: ${CITATION_MAX_CANDIDATES_PER_SOURCE:-128}
 
 services:
+  qdrant:
+    image: qdrant/qdrant:v1.19.0
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - rag-qdrant:/qdrant/storage
+
   redis:
     image: redis:7.4-alpine
     command:
@@ -63,6 +75,7 @@ services:
     command: ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]
     environment: *rag-env
     depends_on:
+      qdrant: {condition: service_started}
       redis: {condition: service_healthy}
     ports: ["8000:8000"]
     volumes:
@@ -99,3 +112,4 @@ services:
 volumes:
   rag-data:
   rag-redis:
+  rag-qdrant:

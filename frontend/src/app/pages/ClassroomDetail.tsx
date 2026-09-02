@@ -15,14 +15,16 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Client } from "@stomp/stompjs";
 import {
   bkquizApi,
   type ClassroomAttachment,
   type ClassroomMessagesPage,
 } from "../../api/bkquiz";
-import { accessTokenStore } from "../../auth/accessToken";
 import { useAuth } from "../../auth/AuthProvider";
+import {
+  resolveRealtimeProvider,
+  subscribeToClassroomRealtime,
+} from "../../realtime/classroomRealtime";
 import { Button, Card, Checkbox, Input } from "../components/ui";
 import { SharedResourceCard } from "../components/SharedResourceCard";
 
@@ -183,26 +185,21 @@ export default function ClassroomDetail() {
     [messages.data],
   );
   useEffect(() => {
-    const token = accessTokenStore.get();
-    if (!token) return;
-    const protocol = location.protocol === "https:" ? "wss" : "ws";
-    const client = new Client({
-      brokerURL: `${protocol}://${location.host}/ws`,
-      connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 1000,
-      maxReconnectDelay: 30000,
-      onConnect: () => {
-        client.subscribe(`/topic/classrooms/${classroomId}`, () => {
-          void queryClient.invalidateQueries({
-            queryKey: ["classroom-messages", classroomId],
-          });
+    return subscribeToClassroomRealtime({
+      classroomId,
+      provider: resolveRealtimeProvider(import.meta.env.VITE_REALTIME_PROVIDER),
+      onEvent: () => {
+        void queryClient.invalidateQueries({
+          queryKey: ["classroom-messages", classroomId],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["classroom-assignments", classroomId],
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["classroom-shares", classroomId],
         });
       },
     });
-    client.activate();
-    return () => {
-      void client.deactivate();
-    };
   }, [classroomId, queryClient]);
   useEffect(() => {
     if (messages.data) void bkquizApi.markClassroomRead(classroomId);

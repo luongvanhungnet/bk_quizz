@@ -1,9 +1,11 @@
 import hashlib
 import os
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
 from dotenv import dotenv_values
 from pydantic import Field, field_validator, model_validator
@@ -133,8 +135,20 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     redis_connect_timeout_seconds: float = Field(default=1, gt=0, le=30)
     redis_socket_timeout_seconds: float = Field(default=2, gt=0, le=60)
+    cache_redis_provider: Literal["redis", "upstash"] = "redis"
+    cache_redis_url: str = ""
+    cache_redis_max_connections: int = Field(default=10, ge=1, le=100)
     index_lock_mode: Literal["auto", "redis", "local"] = "auto"
     index_lock_fallback_cooldown_seconds: int = Field(default=30, ge=1, le=3600)
+    job_dispatch_backend: Literal["celery", "gcp"] = "celery"
+    gcp_project_id: str = ""
+    gcp_region: str = ""
+    pubsub_indexing_topic: str = "bkquiz-rag-indexing"
+    cloud_tasks_queue: str = "bkquiz-rag-indexing"
+    cloud_tasks_worker_url: str = ""
+    cloud_tasks_oidc_audience: str = ""
+    cloud_tasks_service_account_email: str = ""
+    cloud_tasks_dispatch_deadline_seconds: int = Field(default=900, ge=30, le=1800)
     celery_queue: str = "rag-indexing"
     celery_worker_pool: Literal["solo"] = "solo"
     celery_worker_concurrency: int = 1    
@@ -196,12 +210,26 @@ class Settings(BaseSettings):
     max_storage_mb_per_user: int = Field(default=500, ge=1, le=100000)
     user_upload_dir: Path = Path("data/uploads/users")
     user_index_dir: Path = Path("data/indexes/users")
+    document_staging_dir: Path = Path("data/tmp/rag-documents")
+    document_storage_backend: Literal["local", "r2"] = "local"
+    document_storage_endpoint: str = ""
+    document_storage_bucket: str = ""
+    document_storage_access_key: str = ""
+    document_storage_secret_key: str = ""
+    document_storage_region: str = "auto"
+    document_storage_prefix: str = "rag-documents"
     database_url: str = "sqlite:///data/rag.db"
     database_pool_size: int = Field(default=4, ge=1, le=20)
     database_max_overflow: int = Field(default=2, ge=0, le=20)
     database_pool_timeout_seconds: int = Field(default=10, ge=1, le=120)
     database_pool_recycle_seconds: int = Field(default=300, ge=30, le=3600)
     database_connect_timeout_seconds: int = Field(default=10, ge=1, le=60)
+    vector_store_backend: Literal["faiss", "qdrant"] = "faiss"
+    qdrant_url: str = "http://127.0.0.1:6333"
+    qdrant_api_key: str = ""
+    qdrant_collection: str = "bkquiz_chunks"
+    qdrant_timeout_seconds: float = Field(default=15, gt=0, le=120)
+    qdrant_upsert_batch_size: int = Field(default=128, ge=1, le=1000)
 
     @field_validator("gemini_model", "spring_boot_internal_api_key")
     @classmethod
@@ -221,6 +249,14 @@ class Settings(BaseSettings):
     def normalize_optional_url(cls, value: str | None) -> str | None:
         normalized = value.strip() if value else ""
         return normalized or None
+
+    @field_validator("redis_url", "cache_redis_url")
+    @classmethod
+    def redis_url_must_use_redis_scheme(cls, value: str) -> str:
+        normalized = value.strip()
+        if normalized and urlsplit(normalized).scheme not in {"redis", "rediss"}:
+            raise ValueError("Redis URL phải dùng scheme redis:// hoặc rediss://.")
+        return normalized
 
     @field_validator("ollama_base_url")
     @classmethod
@@ -268,8 +304,43 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL PostgreSQL phải dùng scheme postgresql+psycopg://.")
         return normalized
 
+    @field_validator("qdrant_url")
+    @classmethod
+    def qdrant_url_must_be_http(cls, value: str) -> str:
+        normalized = value.strip().rstrip("/")
+        if not normalized.startswith(("http://", "https://")):
+            raise ValueError("QDRANT_URL phải là URL HTTP hợp lệ.")
+        return normalized
+
+    @field_validator("qdrant_api_key")
+    @classmethod
+    def normalize_qdrant_secret(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator(
+        "document_storage_endpoint",
+        "document_storage_bucket",
+        "document_storage_access_key",
+        "document_storage_secret_key",
+        "document_storage_region",
+        "document_storage_prefix",
+    )
+    @classmethod
+    def normalize_document_storage_text(cls, value: str) -> str:
+        return value.strip().strip("/")
+
+    @field_validator("qdrant_collection")
+    @classmethod
+    def qdrant_collection_must_be_safe(cls, value: str) -> str:
+        normalized = value.strip()
+        if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", normalized):
+            raise ValueError("QDRANT_COLLECTION chỉ được chứa chữ, số, _ hoặc -.")
+        return normalized
+
     @model_validator(mode="after")
     def validate_rag_limits(self) -> "Settings":
+        if not self.cache_redis_url:
+            self.cache_redis_url = self.redis_url
         if self.chunk_overlap_chars >= self.chunk_size_chars:
             raise ValueError("CHUNK_OVERLAP_CHARS phải nhỏ hơn CHUNK_SIZE_CHARS.")
         if self.rag_default_top_k > self.rag_max_top_k:
@@ -283,6 +354,49 @@ class Settings(BaseSettings):
             query = {str(key).lower(): str(value).lower() for key, value in database.query.items()}
             if query.get("sslmode") not in {"require", "verify-ca", "verify-full"}:
                 raise ValueError("DATABASE_URL production phải bật sslmode=require hoặc mạnh hơn.")
+            if self.vector_store_backend != "qdrant":
+                raise ValueError("VECTOR_STORE_BACKEND production phải là qdrant.")
+            if not self.qdrant_url.startswith("https://"):
+                raise ValueError("QDRANT_URL production phải dùng HTTPS.")
+            if not self.qdrant_api_key:
+                raise ValueError("QDRANT_API_KEY production không được để trống.")
+            if self.document_storage_backend != "r2":
+                raise ValueError("DOCUMENT_STORAGE_BACKEND production phải là r2.")
+            if not self.document_storage_endpoint.startswith("https://"):
+                raise ValueError("DOCUMENT_STORAGE_ENDPOINT production phải dùng HTTPS.")
+            if not all(
+                (
+                    self.document_storage_bucket,
+                    self.document_storage_access_key,
+                    self.document_storage_secret_key,
+                )
+            ):
+                raise ValueError("Cấu hình R2 document storage production chưa đầy đủ.")
+            if self.ollama_enabled:
+                raise ValueError("OLLAMA_ENABLED phải là false trong production Cloud Run.")
+            if self.cache_redis_provider == "upstash":
+                cache_redis = urlsplit(self.cache_redis_url)
+                if cache_redis.scheme != "rediss":
+                    raise ValueError("CACHE_REDIS_URL Upstash production phải dùng rediss://.")
+                if not cache_redis.hostname or not cache_redis.hostname.endswith(".upstash.io"):
+                    raise ValueError("CACHE_REDIS_URL không phải endpoint Upstash hợp lệ.")
+                if not cache_redis.password:
+                    raise ValueError("CACHE_REDIS_URL Upstash phải chứa credential trong Secret Manager.")
+            if self.job_dispatch_backend == "gcp":
+                if not all((
+                    self.gcp_project_id,
+                    self.gcp_region,
+                    self.pubsub_indexing_topic,
+                    self.cloud_tasks_queue,
+                    self.cloud_tasks_worker_url,
+                    self.cloud_tasks_oidc_audience,
+                    self.cloud_tasks_service_account_email,
+                )):
+                    raise ValueError("Cấu hình Pub/Sub và Cloud Tasks production chưa đầy đủ.")
+                if not self.cloud_tasks_worker_url.startswith("https://"):
+                    raise ValueError("CLOUD_TASKS_WORKER_URL production phải dùng HTTPS.")
+                if not self.cloud_tasks_oidc_audience.startswith("https://"):
+                    raise ValueError("CLOUD_TASKS_OIDC_AUDIENCE production phải dùng HTTPS.")
         if self.celery_worker_heartbeat_ttl_seconds <= self.celery_worker_heartbeat_interval_seconds:
             raise ValueError("CELERY_WORKER_HEARTBEAT_TTL_SECONDS phải lớn hơn heartbeat interval.")
         if (
