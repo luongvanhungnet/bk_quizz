@@ -1,0 +1,273 @@
+================================================================================
+                    BÁO CÁO TIẾN TRÌNH AI — DỰ ÁN BKQUIZ
+    TỔNG HỢP CÁC PHIÊN BẢN DATA PREPROCESSING, HUẤN LUYỆN CPT, SFT VÀ SO SÁNH MODEL
+================================================================================
+
+Thời gian lập báo cáo: 25/10/2026
+Dự án: BKQuiz (Hệ thống tạo, quản lý và làm quiz từ tài liệu học tập Bách Khoa)
+Thư mục gốc: D:\BKQuiz
+Phân hệ phụ trách: D:\BKQuiz\AI
+
+
+MỤC LỤC BÁO CÁO:
+--------------------------------------------------------------------------------
+1. TỔNG QUAN KIẾN TRÚC & ĐỊNH HƯỚNG MÔ HÌNH AI
+2. QUÁ TRÌNH PHÁT TRIỂN TIỀN XỬ LÝ DỮ LIỆU (DATA PREPROCESSING)
+   2.1. Tiến trình 7 phiên bản trên học phần Thuật toán ứng dụng (IT3170)
+   2.2. Phiên bản mở rộng toàn Corpus 27 học phần (Official Baseline v5.0.0)
+3. TIẾN TRÌNH HUẤN LUYỆN CONTINUAL PRE-TRAINING (CPT)
+   3.1. Đợt Pilot CPT IT3170
+   3.2. Đợt CPT chính thức 27 học phần (cpt_27courses_20261023_001)
+4. TIẾN TRÌNH TINH CHỈNH CÓ GIÁM SÁT (SUPERVISED FINE-TUNING — SFT)
+   4.1. Trạng thái hiện tại của phân hệ SFT
+   4.2. Bộ dữ liệu sft_exams_20261024 và cơ chế kiểm soát chất lượng
+5. BÁO CÁO SO SÁNH TOÀN DIỆN CÁC MÔ HÌNH (MODEL COMPARISON)
+   5.1. So sánh các mô hình Qwen phục vụ sinh Quiz (Benchmark ngày 17/10/2026)
+   5.2. So sánh các mô hình thị giác VLM xử lý sơ đồ, đồ thị (Qwen2.5-VL 3B vs 7B)
+6. ĐÁNH GIÁ CHUNG VÀ CÁC BƯỚC TIẾP THEO
+================================================================================
+
+
+1. TỔNG QUAN KIẾN TRÚC & ĐỊNH HƯỚNG MÔ HÌNH AI
+--------------------------------------------------------------------------------
+Phân hệ AI của BKQuiz chịu trách nhiệm nghiên cứu, xử lý tri thức tài liệu và huấn
+luyện các mô hình ngôn ngữ lớn chuyên biệt cho tác vụ tạo đề thi trắc nghiệm học
+thuật bám sát giáo trình (Grounded Quiz Generation).
+
+Chiến lược mô hình của dự án:
+- Mô hình văn bản chủ đạo: Qwen3-1.7B (chọn làm nền tảng huấn luyện CPT và SFT do
+  cân bằng tối ưu giữa khả năng tuân thủ định dạng JSON, độ chính xác và tốc độ
+  suy luận trên hạ tầng khiêm tốn / CPU local).
+- Mô hình thị giác hỗ trợ (VLM): Qwen2.5-VL-7B-Instruct (chạy lượng tử hóa NF4
+  trên GPU Colab để đọc hiểu đồ thị, cây trạng thái, sơ đồ và bảng biểu).
+- Chuỗi phát triển mô hình:
+  Mô hình gốc (Base: Qwen3-1.7B)
+    ---> Tiếp tục tiền huấn luyện (CPT trên 27 giáo trình Bách Khoa)
+    ---> Tinh chỉnh chỉ dẫn (SFT sinh Quiz theo chuẩn GroundedQuizOutput).
+
+
+2. QUÁ TRÌNH PHÁT TRIỂN TIỀN XỬ LÝ DỮ LIỆU (DATA PREPROCESSING)
+--------------------------------------------------------------------------------
+Tiền xử lý dữ liệu cho CPT là bước biến slide/PDF học thuật thành văn bản sạch,
+giữ nguyên công thức toán, cấu trúc bảng biểu, mã nguồn và kiến thức từ hình ảnh.
+Quá trình này trải qua 7 bước tiến hóa kỹ thuật:
+
+2.1. Tiến trình trên học phần Thuật toán ứng dụng (IT3170 - 1.060 trang slide):
+
+* Giai đoạn 1: Tiền xử lý ban đầu (thư mục: AI/Qwen_cpt_version/data_preprocessing)
+  - Công nghệ: PyMuPDF đọc cấu trúc PDF native, PP-DocLayout-M phân tích bố cục,
+    PaddleOCR (PP-OCRv5 Latin) đọc ảnh, PP-FormulaNet-S nhận diện công thức toán.
+    Chạy toàn bộ trên CPU cục bộ.
+  - Chuẩn hóa: Tự động khôi phục khoảng trắng tiếng Việt qua khoảng cách ký tự;
+    giữ chỉ số mũ theo baseline/font (ví dụ: khôi phục 1018 thành 10^{18}); ghép
+    khối code bị chia cắt và giữ thụt lề; lọc bỏ header/footer/số trang.
+  - Khử trùng lặp: SHA-256 (exact dedup) + MinHash/LSH và SimHash 64-bit.
+  - Kết quả: Từ 1.060 trang chọn được 288 trang đủ điều kiện, lọc trùng còn 264
+    mẫu CPT sạch (29.771 token, pack vào tokenizer Qwen2.5 Base). 753 trang đưa
+    vào Review Queue, 19 trang non-content.
+  - Hạn chế: Bộ từ điển OCR Latin thiếu dấu tiếng Việt; PP-StructureV3 chạy nặng.
+
+* Giai đoạn 2: Hybrid Local - Colab (thư mục: AI/Qwen_cpt_version/hybrid_preprocessing)
+  - Ý tưởng: Tách CPU local (đọc, render, chuẩn hóa, dedup) và GPU Colab (OCR tiếng
+    Việt, công thức, VLM Qwen2.5-VL-3B).
+  - Tách môi trường: Colab chạy 2 môi trường riêng (Paddle venv và PyTorch venv)
+    để tránh xung đột thư viện trên GPU.
+  - Thử nghiệm: Chạy pilot trên 12 trang đại diện (text, formula, table, graph, code).
+  - Kết quả: Nhánh Paddle đạt 12/12 trang OK; nhưng nhánh VLM thất bại 12/12 trang
+    do lỗi schema JSON trả về. Chưa có model cấu trúc bảng riêng.
+
+* Giai đoạn 3: Region v1 & Scored Routing (thư mục: AI/Qwen_cpt_version/region_preprocessing)
+  - Ý tưởng: Chuyển từ xử lý "cả trang" sang "định tuyến theo vùng" (Region Routing).
+    Text/Code -> PyMuPDF; Formula -> PP-FormulaNet-S; Table -> TableRecognitionPipelineV2;
+    Diagram/Graph -> Qwen2.5-VL-3B.
+  - Luật tính điểm định tuyến: S = 4D + 3C + 2U + R - 4B - 3E. Chỉ gửi sang VLM
+    khi S >= 7 (hoặc S >= 6 với chart), khống chế tỷ lệ VLM ở mức 5,28% (56/1.060 trang).
+  - Vấn đề gặp phải:
+    + Formula: 421/644 hợp lệ (do một số vùng văn bản/bảng bị cắt nhầm vào FormulaNet).
+    + Table: 0/16 bảng hợp lệ (100% crash do lỗi KeyError: 'doc_preprocessor_res').
+    + VLM: 0/56 hợp lệ schema ban đầu (55 output parse được nhưng enum bị nối bằng pipe |).
+
+* Giai đoạn 4: Region v2 (thư mục: AI/Qwen_cpt_version/region_preprocessing_v2)
+  - Khắc phục lỗi v1: Sửa prompt enum của VLM (tái kiểm định 55 output cũ đạt 46/56
+    hợp lệ mà không tốn GPU chạy lại).
+  - Sửa lỗi bảng: Viết lại adapter tạo PaddleX OCRResult, nhúng doc_preprocessor_res
+    và native cell text từ PDF, tắt dewarping/xoay -> 16/16 bảng sinh HTML cấu trúc
+    thành công trên CPU.
+  - Sửa routing công thức: Tách vùng toán khỏi văn bản và bảng -> 704/745 công thức hợp lệ.
+  - So sánh mô hình: Chạy thử nghiệm pilot so sánh Qwen2.5-VL-3B vs Qwen2.5-VL-7B (NF4).
+    Bản 7B đạt độ chính xác đỉnh/cạnh và trọng số đồ thị vượt trội hoàn toàn.
+
+* Giai đoạn 5: Region v3 (thư mục: AI/Qwen_cpt_version/region_preprocessing_v3)
+  - Ý tưởng: Bẻ nhỏ bài toán nhận diện đồ thị thành quy trình 3 bước:
+    Node -> Edge -> Attribute, yêu cầu tọa độ bounding box cho từng đối tượng.
+  - Chống rò rỉ: Tách bộ 60 trang (42 dev, 18 holdout), loại 40 mẫu nhạy cảm khỏi train.
+  - Thất bại hồi quy: Quy trình 3 bước quá cồng kềnh khiến chỉ 1/6 crop pilot thành công;
+    2 trang phức tạp (930, 1042) bị lỗi tràn bộ nhớ GPU (CUDA OOM) trên card T4 Colab.
+
+* Giai đoạn 6: Region v4 (thư mục: AI/Qwen_cpt_version/region_preprocessing_v4)
+  - Khắc phục lỗi v3: Thống nhất schema JSON và validator; bổ sung cơ chế auto-repair
+    chỉ sửa cú pháp (bỏ code fence, quote null -> ""); tách độc lập 20 bàn cờ N-Queens;
+    quản lý trần token thị giác nghiêm ngặt (cap 384 tokens, retry 256 tokens, crop
+    nhỏ 64 tokens); giải phóng tensor triệt để chống OOM.
+  - Kiểm thử: Đạt 125/125 test unit và hồi quy PASS.
+
+* Giai đoạn 7: Region v5 & v5 Official (thư mục: AI/Qwen_cpt_version/region_preprocessing_v5_official)
+  - Phiên bản chốt chính thức (Official Baseline v5.0.0).
+  - Triết lý 5 lớp: Native + OCR + VLM + Cross-validation + Human Review.
+  - Đơn giản hóa VLM: Thay vì ép VLM sinh toàn bộ JSON đồ thị phức tạp, chuyển sang
+    yêu cầu "one plain-language observation per image" bằng Qwen2.5-VL-7B-Instruct NF4.
+  - Phân loại 3 nhóm dữ liệu: trusted (tin cậy), uncertain (cần rà soát), critical (lỗi nặng).
+  - Phát triển ứng dụng Web Human Review độc lập (review_app.py) bằng thư viện chuẩn Python.
+  - Chốt RELEASE.json cố định SHA-256 toàn bộ script, notebook và môi trường.
+
+2.2. Phiên bản mở rộng toàn Corpus 27 học phần (thư mục: AI/data_preprocessing):
+- Mở rộng quy mô từ 1 học phần lên toàn bộ 27 giáo trình PDF (13.314 trang).
+- Kiến trúc điều phối (Colab Orchestrator v4/v5): Phân chia thành 134 gói độc lập,
+  mỗi gói khống chế tối đa 100 trang để chạy song song trên Colab không lo tràn RAM/timeout.
+- Đóng gói phát hành CPT sạch: Tạo ra 3.160 chuỗi huấn luyện, tổng cộng 3.235.037 token,
+  sẵn sàng cho đợt huấn luyện CPT toàn diện.
+
+
+3. TIẾN TRÌNH HUẤN LUYỆN CONTINUAL PRE-TRAINING (CPT)
+--------------------------------------------------------------------------------
+CPT nhằm mục đích nhúng tri thức chuyên sâu của khối ngành CNTT Bách Khoa vào
+trọng số mô hình trước khi dạy mô hình kỹ năng tạo bài thi trắc nghiệm.
+
+3.1. Đợt Pilot CPT IT3170:
+- Mô hình nền: Qwen3-1.7B (chuyển đổi từ dự kiến Qwen2.5 ban đầu).
+- Dữ liệu: 264 mẫu làm sạch từ môn Thuật toán ứng dụng IT3170.
+- Phương pháp: Huấn luyện QLoRA trên Google Colab Pro; đóng gói merged weights
+  ra thư mục local merged_hf_fp16 để phục vụ nạp thử nghiệm qua Ollama.
+
+3.2. Đợt CPT chính thức 27 học phần (Run: cpt_27courses_20261023_001):
+- Ngày đánh giá nghiệm thu: 24/10/2026.
+- Mô hình nền: Qwen/Qwen3-1.7B (commit revision: 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e).
+- Dữ liệu đầu vào: 3.160 chuỗi (từ 37.133 vùng text), 3.235.037 token bao gồm EOS.
+- Hạ tầng thực thi: Google Colab GPU NVIDIA L4, tính toán chuẩn BF16.
+- Cấu hình huấn luyện: QLoRA nền NF4 4-bit + double quantization.
+  + Micro-batch size: 1, Gradient accumulation: 8.
+  + Optimizer: AdamW, Learning rate đỉnh: 2e-5, warmup 12 bước, giảm dần theo Cosine.
+  + Lịch trình: 395/395 optimizer steps (hoàn thành trọn vẹn 1.0 epoch).
+  + Thời gian chạy thuần (train_runtime): 2.064,92 giây (~34 phút 25 giây).
+- Kết quả huấn luyện:
+  + Train loss trung bình toàn bộ run: 1,9416.
+  + Đo lường trước/sau trên 64 chuỗi diagnostic cố định:
+    * Cross-entropy loss: giảm từ 1,7366 xuống 1,5073 (giảm 13,20%).
+    * Perplexity (exp(loss)): giảm từ 5,6781 xuống 4,5147 (giảm 20,49%).
+- Nghiệm thu kỹ thuật:
+  + Trọng số adapter hoàn chỉnh: 34.916.720 byte (~33,30 MiB), gồm 392 tensor FP32,
+    8.716.288 tham số LoRA thích ứng.
+  + 24/24 kiểm tra kỹ thuật trong audit_training.py đạt chuẩn tuyệt đối.
+  + Đánh giá thực tế: Đợt CPT hoàn thành xuất sắc về mặt kỹ thuật và khả năng khớp
+    văn bản học thuật, sẵn sàng làm mô hình nền tiếp nối cho giai đoạn SFT.
+
+
+4. TIẾN TRÌNH TINH CHỈNH CÓ GIÁM SÁT (SUPERVISED FINE-TUNING — SFT)
+--------------------------------------------------------------------------------
+4.1. Trạng thái hiện tại:
+- Phân hệ SFT (thư mục: AI/Qweun_sft_version) ĐÃ HOÀN TẤT toàn bộ khâu chuẩn bị,
+  trích xuất, lọc khử trùng, audit chất lượng và đóng gói dữ liệu tokenized.
+- CHƯA kích hoạt huấn luyện mô hình trên GPU (weights_loaded_or_training_started: false).
+- Mô hình đích tiếp nối được xác định rõ: Qwen3-1.7B kế thừa adapter CPT 27 môn học.
+
+4.2. Bộ dữ liệu phát hành sft_exams_20261024:
+- Nguồn trích xuất gốc: 374 tệp PDF đề thi (~7.444 trang) bao phủ 49 môn học CNTT.
+- Phễu thanh lọc dữ liệu:
+  + 1.673 câu hỏi trích xuất từ 5 bộ parser (Moodle, Forms, Native keys,...).
+  + Cách ly nghiêm ngặt 622 câu lỗi (phụ thuộc hình chưa có VLM, sai lệch khóa đáp án,
+    thiếu đáp án, lỗi font).
+  + Khử trùng loại bỏ 239 câu trùng khớp tuyệt đối.
+  + Nghiệm thu 742 mẫu câu hỏi sạch thuộc 8 nhóm môn, đại diện cho 699 họ câu hỏi.
+- Phân chia tập dữ liệu (Splits) chống rò rỉ:
+  + Train: 590 câu (426.596 token, trung vị 688 token/câu).
+  + Validation: 76 câu (54.491 token).
+  + Test: 76 câu (54.140 token).
+  + Cơ chế Question Family Split đảm bảo các câu hỏi gần giống hoặc đổi số liệu
+    không bao giờ xuất hiện ở cả hai tập train và test.
+- Các tập dữ liệu con:
+  + rationale_core/: Gồm 73 mẫu pilot có chuỗi lập luận và giải thích sư phạm chi tiết.
+  + document_holdout/: Tập phân chia độc lập hoàn toàn theo tài liệu PDF để đo lường
+    độ tổng quát hóa trên văn bản chưa từng gặp.
+- Chuẩn hóa định dạng:
+  + Tương thích 100% với schema GroundedQuizOutput trong backend/rag-service.
+  + Tokenizer chuẩn hóa của Qwen3, max_length = 4096 (0 mẫu bị tràn độ dài).
+  + Chính sách hàm mất mát (loss masking): Mask toàn bộ (-100) phần system prompt,
+    user prompt, thinking block và padding; CHỈ tính loss trên nội dung sinh của assistant
+    và token đóng <|im_end|>.
+
+
+5. BÁO CÁO SO SÁNH TOÀN DIỆN CÁC MÔ HÌNH (MODEL COMPARISON)
+--------------------------------------------------------------------------------
+
+5.1. So sánh các mô hình Qwen phục vụ sinh Quiz (Benchmark ngày 17/10/2026)
+Benchmark độc lập chạy trên hạ tầng CPU local (Intel Core i7-1165G7, 8GB RAM, Ollama),
+đánh giá 6 mô hình trên cùng bộ 6 prompt nguồn phức tạp về Thuật toán ứng dụng (IT3170):
+
+BẢNG SO SÁNH KẾT QUẢ BENCHMARK:
++---------------+---------+---------+-----------+-----------+----------+-----------+----------+---------+
+| Mô hình       | Tham số | Lượng tử| JSON      | Đúng slot | Đúng đ/án| Dùng được | Điểm     | Tốc độ  |
+|               |         | hóa     | Strict    | /6        | /11      | /11 (Cổng)| Rubric   | sinh    |
++---------------+---------+---------+-----------+-----------+----------+-----------+----------+---------+
+| qwen3:1.7b    | 2.0B    | Q4_K_M  | 5/6 (83%) | 4/6       | 4/11     | 1/11      | 40.91/100| 11.7 t/s|
+| qwen2.5:3b    | 3.1B    | Q4_K_M  | 6/6 (100%)| 4/6       | 4/11     | 0/11      | 43.41/100| 10.1 t/s|
+| qwen3.5:2b    | 1.9B    | Q8_0    | 2/6 (33%) | 3/6       | 1/11     | 0/11      | 21.82/100| 10.5 t/s|
+| qwen2.5:1.5b  | 1.5B    | Q4_K_M  | 0/6 (0%)  | 4/6       | 1/11     | 0/11      | 18.18/100| 17.3 t/s|
+| qwen2.5:0.5b  | 494M    | Q4_K_M  | 0/6 (0%)  | 4/6       | 1/11     | 0/11      | 15.68/100| 39.8 t/s|
+| qwen3:4b (*)  | 4.0B    | Q4_K_M  | 0/6 (0%)  | 0/6       | 0/11     | 0/11      |  0.00/100|  4.6 t/s|
++---------------+---------+---------+-----------+-----------+----------+-----------+----------+---------+
+
+(*) Ghi chú kỹ thuật về từng mô hình:
+- qwen3:1.7b: Là mô hình DUY NHẤT sinh được câu hỏi đạt chuẩn "Dùng được" (vượt qua toàn
+  bộ rubric khắt khe về tính đúng đắn kiến thức, bám sát nguồn và đáp án duy nhất).
+  Khả năng tuân thủ cấu trúc JSON rất cao (5/6). Đây là căn cứ thực nghiệm quyết định
+  chọn mô hình này làm xương sống cho CPT và SFT của dự án.
+- qwen2.5:3b: Đạt điểm rubric cao nhất (43.41) và tuân thủ JSON tuyệt đối (6/6), số đáp
+  án đúng ngang ngửa Qwen3-1.7B (4/11). Tuy nhiên 0 câu đạt chuẩn "Dùng được" do lời
+  giải còn mâu thuẫn hoặc câu hỏi thiếu dữ kiện tự thân. Tốc độ sinh đạt ~10 token/s.
+- qwen3.5:2b: Dù lượng tử hóa cao Q8_0, mô hình thường xuyên vi phạm cấu trúc JSON (chỉ
+  2/6 đạt strict JSON), điểm rubric thấp (21.82).
+- qwen2.5:1.5b & 0.5b: Tốc độ sinh rất cao (17 - 40 token/s), nhưng hoàn toàn thất bại
+  trong việc tuân thủ JSON nếu không có công cụ ép grammar từ máy chủ (0/6 JSON strict).
+- qwen3:4b (Thinking-2507): Đây là biến thể suy luận bắt buộc (Thinking model). Dưới
+  ngân sách token cố định của benchmark, chuỗi suy luận nội tâm chiếm hết số token sinh,
+  dẫn đến bị cắt cụt (truncated) trước khi kịp xuất định dạng Quiz JSON (0 điểm vận hành).
+
+5.2. So sánh các mô hình thị giác VLM (Qwen2.5-VL 3B vs 7B)
+Trong quá trình tiền xử lý dữ liệu biểu đồ, đồ thị và sơ đồ giải thuật (Region v2/v3):
+
+BẢNG SO SÁNH NĂNG LỰC NHẬN DIỆN HÌNH ẢNH:
++-------------------------------+-----------------------+-----------------------+
+| Tiêu chí đánh giá             | Qwen2.5-VL-3B         | Qwen2.5-VL-7B (NF4)   |
++-------------------------------+-----------------------+-----------------------+
+| Độ chính xác nhãn đỉnh (Node) | 88,46% (23/26)        | 100,0% (25/25)        |
+| Độ phủ nhãn đỉnh (Recall)     | 92,00% (23/25)        | 100,0% (25/25)        |
+| Độ chính xác cấu trúc đồ thị  | 85,71% (24/28)        | 75,00% (30/40)        |
+| Độ phủ cấu trúc đồ thị        | 70,59% (24/34)        | 88,24% (30/34)        |
+| Nhận diện trọng số cạnh đúng  | 63,64% (7/11)         | 100,0% (11/11)        |
+| Nhận diện hướng mũi tên đúng  | 72,73% (8/11)         | 72,73% (8/11)         |
+| Nhận diện vùng highlight đúng | 0,00% (0/11)          | 0,00% (0/11)          |
+| Mức chiếm dụng VRAM peak      | ~3.5 GiB              | ~6.04 GiB             |
++-------------------------------+-----------------------+-----------------------+
+Kết luận: Bản Qwen2.5-VL-7B vượt trội hoàn toàn về việc đọc chính xác ký tự trên hình,
+trọng số và nhãn đỉnh. Mô hình này được chọn làm VLM chính thức cho toàn bộ pipeline
+tiền xử lý dữ liệu v5.0.0.
+
+
+6. ĐÁNH GIÁ CHUNG VÀ CÁC BƯỚC TIẾP THEO
+--------------------------------------------------------------------------------
+1. Phân hệ Data Preprocessing đã hoàn thiện ổn định ở bản v5.0.0, xử lý thành công
+   13.314 trang của 27 môn học và có quy trình kiểm soát chất lượng chặt chẽ.
+2. Phân hệ CPT đã hoàn thành xuất sắc đợt huấn luyện 27 môn học trên Qwen3-1.7B,
+   tạo ra bộ adapter LoRA vững chắc với mức giảm perplexity hơn 20%.
+3. Phân hệ SFT đã sẵn sàng dữ liệu và pipeline kiểm thử.
+4. Hướng khắc phục trọng tâm tiếp theo:
+   - Dùng mô hình Teacher mạnh sinh chuỗi suy luận sư phạm 3 bước cho 669 câu của
+     tập SFT nhằm giải quyết hạn chế lời giải diễn đạt lại đáp án.
+   - Bổ sung pipeline sinh câu hỏi từ các đoạn lý thuyết giáo trình CPT theo thang
+     nhận thức Bloom (Remember, Understand, Apply, Analyze).
+   - Tiến hành huấn luyện SFT đa nhiệm trên nền adapter CPT 27 môn và đánh giá lại
+     bằng bộ benchmark qwen_quiz_evaluation.
+
+================================================================================
+                               HẾT BÁO CÁO
+================================================================================

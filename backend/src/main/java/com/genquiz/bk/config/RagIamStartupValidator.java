@@ -32,13 +32,13 @@ public class RagIamStartupValidator implements ApplicationRunner {
         }
         if (!iam.enabled()) {
             throw new IllegalStateException(
-                    "RAG_IAM_ENABLED phải được bật khi RAG chạy trong production.");
+                    "RAG_IAM_ENABLED must be enabled when RAG runs in production.");
         }
         URI audience;
         try {
             audience = URI.create(iam.audience());
         } catch (IllegalArgumentException exception) {
-            throw new IllegalStateException("RAG_IAM_AUDIENCE không hợp lệ.", exception);
+            throw new IllegalStateException("RAG_IAM_AUDIENCE is invalid.", exception);
         }
         if (!"https".equalsIgnoreCase(audience.getScheme())
                 || audience.getHost() == null
@@ -46,7 +46,7 @@ public class RagIamStartupValidator implements ApplicationRunner {
                 || audience.getQuery() != null
                 || audience.getFragment() != null) {
             throw new IllegalStateException(
-                    "RAG_IAM_AUDIENCE phải là origin HTTPS của Cloud Run RAG.");
+                    "RAG_IAM_AUDIENCE must be the HTTPS origin of the RAG Cloud Run service.");
         }
     }
 }

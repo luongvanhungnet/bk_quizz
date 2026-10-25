@@ -1,0 +1,19 @@
+{
+  "id": "p0269_r00242",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "23c123829668414fdeb05c4e183c6821f30863b66970691308543f0a852de52a",
+  "raw_pixel_sha256": "f3f69195ca734931716680d73b7953eb07ff77d1fe0e8fe1d9f55fb0235d7014",
+  "prediction": {
+    "html": "<html><body><table><tr><td>iMem</td><td>j</td><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr><tr><td>i</td><td></td><td>Y[j]</td><td>b</td><td>d</td><td>c</td><td>a</td><td>b</td></tr><tr><td>0</td><td>X[i]</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><td>1</td><td>a</td><td>0↘</td><td>0</td><td>0</td><td>0</td><td>1</td><td>1</td></tr><tr><td>2</td><td>b</td><td>0</td><td>1→</td><td>1↘</td><td>1</td><td>1</td><td>2</td></tr><tr><td>3</td><td>c</td><td>0</td><td>1</td><td>1</td><td>2→</td><td>2↘</td><td>2</td></tr><tr><td>4</td><td>b</td><td>0</td><td>1</td><td>1</td><td>2</td><td>2</td><td>3</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "0f0346ef89a294a3a88619731d90fd4ba5e40d39e3eb4f91ec45a79d1342d322",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "007a5dbad0bcbd6fd08d3e3be09b18599d5689c1c1220c3932fc986eb361a05f",
+  "cache_hit": true
+}

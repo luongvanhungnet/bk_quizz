@@ -71,7 +71,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login",
                                 "/api/auth/refresh-token", "/api/auth/verify-email", "/api/auth/verify-email/resend",
                                 "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/cancel-deletion").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(csrfFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

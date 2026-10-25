@@ -1,0 +1,31 @@
+test_mixed_text_keeps_native_and_crops_math_only (test_v2.RoutingTests.test_mixed_text_keeps_native_and_crops_math_only) ... ok
+test_paragraph_not_sent_as_formula (test_v2.RoutingTests.test_paragraph_not_sent_as_formula) ... ok
+test_table_geometry (test_v2.RoutingTests.test_table_geometry) ... ok
+test_table_overlap_prevents_formula_route (test_v2.RoutingTests.test_table_overlap_prevents_formula_route) ... ok
+test_weight_and_direction_errors_are_measured (test_v2.RoutingTests.test_weight_and_direction_errors_are_measured) ... ok
+test_all_prompt_enums_match_validator (test_v2.SchemaTests.test_all_prompt_enums_match_validator) ... ok
+test_bad_json_never_repaired_by_inventing_content (test_v2.SchemaTests.test_bad_json_never_repaired_by_inventing_content) ... ok
+test_empty_graph_is_schema_valid_but_incomplete (test_v2.SchemaTests.test_empty_graph_is_schema_valid_but_incomplete) ... ok
+test_formula_repetition_and_corruption_rejected (test_v2.SchemaTests.test_formula_repetition_and_corruption_rejected) ... ok
+test_formula_symbols_and_valid_environments_preserved (test_v2.SchemaTests.test_formula_symbols_and_valid_environments_preserved) ... ok
+test_migration_does_not_fix_dangling_edges (test_v2.SchemaTests.test_migration_does_not_fix_dangling_edges) ... ok
+test_migration_is_explicit_unknown_and_never_verified (test_v2.SchemaTests.test_migration_is_explicit_unknown_and_never_verified) ... ok
+test_prompt_example_is_valid_and_has_no_pipe_enum (test_v2.SchemaTests.test_prompt_example_is_valid_and_has_no_pipe_enum) ... ok
+test_weight_bool_rejected (test_v2.SchemaTests.test_weight_bool_rejected) ... ok
+test_page_1042_duplicates_do_not_count_as_complete_labels (test_v2.SourceRegressionTests.test_page_1042_duplicates_do_not_count_as_complete_labels) ... ok
+test_page_129_is_not_scored_by_an_invented_state_tree (test_v2.SourceRegressionTests.test_page_129_is_not_scored_by_an_invented_state_tree) ... ok
+test_page_494_missing_edges_and_wrong_weight_remain_visible (test_v2.SourceRegressionTests.test_page_494_missing_edges_and_wrong_weight_remain_visible) ... ok
+test_page_812_annotation_is_not_an_extra_vertex (test_v2.SourceRegressionTests.test_page_812_annotation_is_not_an_extra_vertex) ... ok
+test_page_930_null_direction_is_not_correct_arrow (test_v2.SourceRegressionTests.test_page_930_null_direction_is_not_correct_arrow) ... ok
+test_revalidate_all_55_parsed_outputs_without_inference (test_v2.SourceRegressionTests.test_revalidate_all_55_parsed_outputs_without_inference) ... ok
+test_batch_table_gate_runs_before_paddle_import (test_v2.WorkerTests.test_batch_table_gate_runs_before_paddle_import) ... ok
+test_cache_rejects_model_change (test_v2.WorkerTests.test_cache_rejects_model_change) ... ok
+test_finish_schema_success_does_not_verify (test_v2.WorkerTests.test_finish_schema_success_does_not_verify) ... ok
+test_large_bbox_overhang_requires_review (test_v2.WorkerTests.test_large_bbox_overhang_requires_review) ... ok
+test_nonfinite_bbox_rejected (test_v2.WorkerTests.test_nonfinite_bbox_rejected) ... ok
+test_small_bbox_overhang_is_clipped_without_mutation (test_v2.WorkerTests.test_small_bbox_overhang_is_clipped_without_mutation) ... ok
+
+----------------------------------------------------------------------
+Ran 26 tests in 0.212s
+
+OK

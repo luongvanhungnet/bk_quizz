@@ -1,0 +1,33 @@
+{
+  "reference_rows": 0,
+  "evaluated": 0,
+  "skipped_unverified_reference": 0,
+  "missing_predictions": 0,
+  "CER": null,
+  "WER": null,
+  "Label_Accuracy": null,
+  "Layout_IoU": null,
+  "Image_Label_Alignment": null,
+  "Formula_Exact_Match": null,
+  "Coverage": null,
+  "dimensions": {
+    "A": null,
+    "G": null,
+    "C": null,
+    "L": null,
+    "D": null
+  },
+  "Q": null,
+  "Q_scale": "0..1; multiply by 100 for percentage points",
+  "denominators": {
+    "characters": 0,
+    "words": 0,
+    "labels": 0,
+    "formulas": 0,
+    "layouts": 0,
+    "groundedness": 0,
+    "components": 0,
+    "structures": 0
+  },
+  "normalization": "NFC and whitespace collapse only; mathematical symbols retained"
+}

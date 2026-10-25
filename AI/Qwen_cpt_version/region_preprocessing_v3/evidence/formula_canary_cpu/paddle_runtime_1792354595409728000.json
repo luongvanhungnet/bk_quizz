@@ -1,0 +1,9 @@
+{
+  "device": "cpu",
+  "seconds": 7.753944000010961,
+  "versions": {
+    "paddleocr": "3.7.0",
+    "paddlex": "3.7.2",
+    "paddlepaddle": "3.2.2"
+  }
+}

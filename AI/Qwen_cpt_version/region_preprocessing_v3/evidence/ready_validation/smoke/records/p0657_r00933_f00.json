@@ -1,0 +1,43 @@
+{
+  "status": "ok",
+  "cache_hit": true,
+  "device": "gpu:0",
+  "raw": {
+    "input_path": "/content/it3170_v2_7B_d682e3b25b0d/crops/p0657_r00933_f00.png",
+    "page_index": null,
+    "rec_formula": "P)\\ \\ \\ /{\\mathrm{~/~}}\\Theta(m)\\ mathrm i i m."
+  },
+  "prediction": {
+    "latex": "P)\\ \\ \\ /{\\mathrm{~/~}}\\Theta(m)\\ mathrm i i m.",
+    "semantic_description": null
+  },
+  "elapsed_seconds": 0.06759567500012054,
+  "id": "p0657_r00933_f00",
+  "engine": "formula",
+  "cache_key": "47f2d3549fee02a73e5685287ee541339e0e929ebb19e83f5cafdd1ce7a86c8b",
+  "raw_pixel_sha256": "19e100dce05f0ba672ca267c36f2d5dd4d1145476e5a976dcbd4841dba9e87f1",
+  "semantic_verified": false,
+  "structural_errors": [],
+  "reused_inference": true,
+  "source_cache_key": "436e0f7f6e16b91ebfe0a0f2fafcbf422353b0cd5c8d69c94aac3860451a003e",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "d521ae2efb352645ffea1a9f6a95d32fc05bd03bfe4405b990edd9a1346dd9b7",
+  "destination": "review_queue",
+  "source": {
+    "page": 657,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "460aaf8ecf2c0d090c1262b1fc8c01cd857149459f0910d3ca621f2a7ad109c5",
+    "input_file_sha256": "d521ae2efb352645ffea1a9f6a95d32fc05bd03bfe4405b990edd9a1346dd9b7"
+  },
+  "quality": {
+    "flags": [
+      "unmatched_delimiter_requires_context"
+    ],
+    "metrics": {},
+    "evidence_gate_pass": false,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

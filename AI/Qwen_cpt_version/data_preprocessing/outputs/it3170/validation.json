@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "errors": [],
+  "source_pages": 1060,
+  "training_samples": 264,
+  "tokenization": {
+    "tokens": 29771,
+    "sequences": 15,
+    "source_samples": 264
+  },
+  "checks": [
+    "source SHA-256",
+    "all-page coverage",
+    "render SHA-256",
+    "upstream page traceability",
+    "recognition result source binding and completion",
+    "quality quarantine",
+    "exact duplicates",
+    "PII email scan",
+    "document-level split isolation",
+    "token-preserving packing and source spans",
+    "causal LM labels and attention masks"
+  ]
+}

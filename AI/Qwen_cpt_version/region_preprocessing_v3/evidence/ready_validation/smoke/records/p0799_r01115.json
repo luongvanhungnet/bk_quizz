@@ -1,0 +1,44 @@
+{
+  "id": "p0799_r01115",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "bb27e4ae4e886baab08cd2583183f60e45ed24b0417988a2b6922cdfad4e928d",
+  "raw_pixel_sha256": "2481000e47fc537194b52f6448f6381b671c01adcf162ccdba18ec780b12da93",
+  "prediction": {
+    "html": "<html><body><table><tr><td>KNIGHT void TRY(int k){// current cell (Xi[k-1],Xj[k-1]) for(int q = 0; q < 8; q++){ if(check(Xi[k-1] + di[q], Xj[k-1] + dj[q])){ Xi[k] = Xi[k-1] + di[q]; Xj[k] = Xj[k-1] + dj[q]; mark[Xi[k]][Xj[k]] = true;// update if(k == N*N) solution(); else TRY(k+1); mark[Xi[k]][Xj[k]] = false;// recover</td></tr><tr><td>} } } 30</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "c7b5701728efd10498bbcb7b073f0316e17cc1d4b3de64a99821641e36256d63",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "evidence_sha256": "b5f4c641bf26f7cae5b86e0624da3231c7b598d1c7209f5c5f11c23be707fb48",
+  "cache_hit": true,
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "1e376343c667fd589fae2fa736f559897f7c258a95f71a38751f52d1f6930aed",
+  "destination": "review_queue",
+  "source": {
+    "page": 799,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "007f09946f87add32105db198359aa57059275dde10d7cc29cfebe8064552bb9",
+    "input_file_sha256": "1e376343c667fd589fae2fa736f559897f7c258a95f71a38751f52d1f6930aed"
+  },
+  "structural_errors": [],
+  "quality": {
+    "flags": [],
+    "metrics": {
+      "native_token_coverage": 1.0,
+      "rows": 2,
+      "column_counts": [
+        1,
+        1
+      ]
+    },
+    "evidence_gate_pass": true,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

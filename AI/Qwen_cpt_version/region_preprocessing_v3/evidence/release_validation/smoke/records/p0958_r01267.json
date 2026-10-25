@@ -1,0 +1,47 @@
+{
+  "id": "p0958_r01267",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "88166c270e53e71f80362071e982e099140b7ef46d429a09b3564f1594a41e5c",
+  "raw_pixel_sha256": "8f1cdb7a34d9aff936aaffc8c674753f2c077077cd1e4820ad944a168b06aed3",
+  "prediction": {
+    "html": "<html><body><table><tr><td>EXERCISE LONGEST PATH ON A TREE #include <bits/stdc++.h> #include <vector> #include <iostream> using namespace std; #define MAX_N 100001 int N; vector<int> A[MAX_N];// A[v][i] is the i^th adjacent node to v vector<int> c[MAX_N];// c[v][i] is the weight of the i^th adjacent edge to v int d[MAX_N];// d[v] is the distance from the source node to v in BFS int p[MAX_N];// p[v] is the parent of v in BFS 60</td></tr><tr><td>60</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "0f83a743714bfb12e2f0f26d86963546347f6a1ca796801346a53eaf2baac187",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "evidence_sha256": "e668095fc268322669b3f84ee328919b355830a1ff56bbcedd5ba0e9fa4536d1",
+  "cache_hit": true,
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "deb49f83b2acd671a825f2a232dc652da618f6f838c472f411a1fad297509a11",
+  "destination": "review_queue",
+  "source": {
+    "page": 958,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "726c66a0a55e861466226ed2b7ec5f44a54dafeb1c1cd4b0cceaf0feb3448fba",
+    "input_file_sha256": "deb49f83b2acd671a825f2a232dc652da618f6f838c472f411a1fad297509a11"
+  },
+  "structural_errors": [],
+  "quality": {
+    "flags": [
+      "native_table_text_not_fully_covered",
+      "table_numeric_inventory_mismatch"
+    ],
+    "metrics": {
+      "native_token_coverage": 0.9166666666666666,
+      "rows": 2,
+      "column_counts": [
+        1,
+        1
+      ]
+    },
+    "evidence_gate_pass": false,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

@@ -61,7 +61,9 @@ export function RequireAdmin() {
   if (status === "loading") return <LoadingSession />;
   if (status === "anonymous") return <AccessDenied returnTo={returnTo} />;
 
-  if (user?.role !== "ADMIN") {
+  const hasAdminAccess = user?.role === "ADMIN" || Boolean(user?.permissions?.some((permission) =>
+    ["analytics:read", "user:read", "risk:read", "audit:read", "admin:read"].includes(permission)));
+  if (!hasAdminAccess) {
     return (
       <AccessDenied
         authenticated

@@ -1,0 +1,41 @@
+{
+  "status": "ok",
+  "cache_hit": true,
+  "raw": {
+    "input_path": "AI\\Qwen_cpt_version\\region_preprocessing_v3\\runs\\it3170_v3_candidate\\crops\\p0033_r00013_f01_v3_boundary.png",
+    "page_index": null,
+    "rec_formula": "\\mathcal{O}(n\\log n)"
+  },
+  "prediction": {
+    "latex": "\\mathcal{O}(n\\log n)",
+    "semantic_description": null
+  },
+  "elapsed_seconds": 7.7513204000133555,
+  "id": "p0033_r00013_f01_v3_boundary",
+  "engine": "formula",
+  "cache_key": "d30dc93132fb73c69f29bb4d315537a5765ff303ae6db1fd82680289c275b814",
+  "input_file_sha256": "1fe803dece1fef837cfd74be4be91d2fddd85afc0dc635e07a3236789df9d60c",
+  "raw_pixel_sha256": "3f3070bd12d635ebf0ddd2837ef558664c7916f946d46ff597f4eb65dface983",
+  "semantic_verified": false,
+  "destination": "review_queue",
+  "source": {
+    "page": 33,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "647c1359b7c9110540a72a292db8f60a211398788d406edcebb929fe39a2bf0d",
+    "input_file_sha256": "1fe803dece1fef837cfd74be4be91d2fddd85afc0dc635e07a3236789df9d60c"
+  },
+  "structural_errors": [],
+  "quality": {
+    "flags": [],
+    "metrics": {},
+    "evidence_gate_pass": true,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  },
+  "reused_inference": true,
+  "source_cache_key": "823ea611cf4507cc895cc6769673345318ba0b2a2232a37438b0289429eb4e5f",
+  "source_manifest_sha256": "93fbaa8bf48b8767a3376a1c069a2acdb9ccf9cff3d329d276fafd519c149773",
+  "source_evidence_sha256": "1d070ac6b06b4d398de3370d51fefbf474406044a6b8bbfa42dc70eab81265d1",
+  "source_device": "cpu"
+}

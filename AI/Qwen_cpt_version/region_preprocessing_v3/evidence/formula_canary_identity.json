@@ -1,0 +1,7 @@
+{
+  "source_manifest_sha256": "93fbaa8bf48b8767a3376a1c069a2acdb9ccf9cff3d329d276fafd519c149773",
+  "record_sha256": "1d070ac6b06b4d398de3370d51fefbf474406044a6b8bbfa42dc70eab81265d1",
+  "formula_model": "PP-FormulaNet-S",
+  "device": "cpu",
+  "semantic_verified": false
+}

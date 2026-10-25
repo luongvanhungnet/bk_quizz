@@ -16,6 +16,8 @@ import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -29,6 +31,11 @@ public class JwtService {
     }
 
     public String issueAccessToken(User user) {
+        Set<String> roles = user.getRole() == Role.ADMIN ? Set.of("USER", "ADMIN") : Set.of("USER");
+        return issueAccessToken(user, new AuthorizationService.AuthorizationSnapshot(roles, Set.of()));
+    }
+
+    public String issueAccessToken(User user, AuthorizationService.AuthorizationSnapshot authorization) {
         Instant now = Instant.now();
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .subject(user.getId().toString())
@@ -40,6 +47,8 @@ public class JwtService {
                 .claim("type", "access")
                 .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
+                .claim("roles", authorization.roles().stream().sorted().toList())
+                .claim("permissions", authorization.permissions().stream().sorted().toList())
                 .claim("emailVerified", user.isEmailVerified())
                 .build();
         SignedJWT jwt = new SignedJWT(new JWSHeader(JWSAlgorithm.HS256), claims);
@@ -64,7 +73,9 @@ public class JwtService {
             }
             return new AccessClaims(UUID.fromString(claims.getSubject()),
                     Role.valueOf(claims.getStringClaim("role")),
-                    claims.getStringClaim("email"));
+                    claims.getStringClaim("email"),
+                    stringSet(claims.getStringListClaim("roles")),
+                    stringSet(claims.getStringListClaim("permissions")));
         } catch (ParseException | JOSEException | IllegalArgumentException exception) {
             throw new JwtValidationException();
         }
@@ -72,8 +83,12 @@ public class JwtService {
 
     public long accessTtlSeconds() { return properties.security().accessTtl().toSeconds(); }
 
-    public record AccessClaims(UUID userId, Role role, String email) {}
+    private Set<String> stringSet(List<String> values) {
+        return values == null ? Set.of() : Set.copyOf(values);
+    }
+
+    public record AccessClaims(UUID userId, Role role, String email,
+                               Set<String> roles, Set<String> permissions) {}
 
     public static final class JwtValidationException extends RuntimeException {}
 }
-

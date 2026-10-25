@@ -1,0 +1,19 @@
+{
+  "id": "p0799_r01115",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "c7b5701728efd10498bbcb7b073f0316e17cc1d4b3de64a99821641e36256d63",
+  "raw_pixel_sha256": "2481000e47fc537194b52f6448f6381b671c01adcf162ccdba18ec780b12da93",
+  "prediction": {
+    "html": "<html><body><table><tr><td>KNIGHT void TRY(int k){// current cell (Xi[k-1],Xj[k-1]) for(int q = 0; q < 8; q++){ if(check(Xi[k-1] + di[q], Xj[k-1] + dj[q])){ Xi[k] = Xi[k-1] + di[q]; Xj[k] = Xj[k-1] + dj[q]; mark[Xi[k]][Xj[k]] = true;// update if(k == N*N) solution(); else TRY(k+1); mark[Xi[k]][Xj[k]] = false;// recover</td></tr><tr><td>} } } 30</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "155e8618755a6e6076167e87606488bdcf56a831deab21beb797043d11b5cf76",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "b5f4c641bf26f7cae5b86e0624da3231c7b598d1c7209f5c5f11c23be707fb48",
+  "cache_hit": true
+}

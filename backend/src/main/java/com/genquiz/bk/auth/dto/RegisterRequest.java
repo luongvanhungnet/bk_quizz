@@ -4,7 +4,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+@JsonIgnoreProperties(value = {"role", "roles", "permissions"}, allowGetters = false)
 public record RegisterRequest(
         @NotBlank(message = "Tên hiển thị là bắt buộc.")
         @Size(min = 3, max = 50, message = "Tên hiển thị phải có từ 3 đến 50 ký tự.")

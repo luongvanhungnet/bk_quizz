@@ -1,0 +1,25 @@
+{
+  "schema": "v5-orchestrator-3-drive",
+  "runtime_zip": "colab_orchestrator_v3_runtime.zip",
+  "runtime_zip_sha256": "f2bb928c19c1c977f53294192d56abbcb723880433e96f10611b18b3a1241935",
+  "files": {
+    "client.py": "495aafb09ca38e9abff8c2e46e2251c3ed0309912bf80ea9b6f33733c2e42dbb",
+    "common.py": "e03ccfabfaa2d9b2d7c7c40a7d579d3c3dfdbe15978fd28ec172bbcc13a04c94",
+    "daemon.py": "90e87b7d3ff14f1e1e48bd523687ffa1b1595cfb5ddf8aa836310139a6d3a178",
+    "drive_inputs.py": "fb2c1a3e660b19f578c738a147684a47743c219607c9f8c726196be721205a10",
+    "env_setup.py": "aa7f0b1ccf97afa53571542d38d4f4e1f200b01b772bb41e2028447e28186866",
+    "import_returns.py": "69ec8a5dcb318aac2594ed7569633f981861b07eddd82e64bbda056a5246a685",
+    "layout_merge.py": "d45fa52215b87a324a46fb5316e2e45f682a91a6cb0f85913bfbcf669415b29b",
+    "migrate_previous.py": "61d883d8518592f23baf37567c81173b18182eea2d6ada191d54bed24ec7a63f",
+    "native_batches.py": "91e4a52e2a508b345a0723102f30476cad8377903fd94b37c3707e413c34efd4",
+    "orchestrator.py": "b3261f15baa46c9a97704692f44b88654dc2fde2bc0e86e0bd45e02821d6c051",
+    "page_batches.py": "2bb6e9fdf9a29752dd60b7684815d85cfc01fa1672d7872caa834180bce4d767",
+    "sequential.py": "c4cb017d343571794fcae6ac09e4d3b6907ced4b76a8faf4231b48adf96ebf07",
+    "summarize_telemetry.py": "0e7202d6f32f5df73dae7fb8ad0d77f9b7169454405435f8bccacf321f0d52e8",
+    "telemetry.py": "304d491f2361155d2ec44c54b4c99937541c7fcbd0f7e60bf6c2cd6b50bff8e7",
+    "warm_worker.py": "704261bc3ce427fe307b8779dd3a79ed75eedd2d816966423eeb17e43b20c5cd"
+  },
+  "core_release": "5.0.0",
+  "input_schema": "v5-orchestrator-2-sequential",
+  "gpu_benchmark_executed": false
+}

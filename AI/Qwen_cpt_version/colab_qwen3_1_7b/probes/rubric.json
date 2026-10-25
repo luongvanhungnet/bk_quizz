@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "unit": "one requested supported quiz slot",
+  "dimensions": {
+    "correctness": {
+      "max": 4,
+      "weight": 35,
+      "meaning": "4 exact correct marked answer, 2 partly right/ambiguous, 0 wrong or absent"
+    },
+    "single_answer": {
+      "max": 2,
+      "weight": 15,
+      "meaning": "2 exactly one semantically correct option, 1 ambiguity, 0 multiple/none"
+    },
+    "grounding": {
+      "max": 3,
+      "weight": 15,
+      "meaning": "3 faithful to supplied facts/conditions, 2 minor omission, 1 unsupported premise, 0 fabricated/contradicted"
+    },
+    "explanation": {
+      "max": 3,
+      "weight": 15,
+      "meaning": "3 valid reasoning trace, 2 right but incomplete, 1 only repeats answer or has minor error, 0 wrong/missing"
+    },
+    "distractors": {
+      "max": 2,
+      "weight": 10,
+      "meaning": "2 distinct plausible mistakes, 1 weak/easy clues, 0 duplicates/absurd/all wrong format"
+    },
+    "clarity": {
+      "max": 2,
+      "weight": 5,
+      "meaning": "2 self-contained clear Vietnamese, 1 readable but depends on source/misses detail, 0 unusable"
+    },
+    "adherence": {
+      "max": 2,
+      "weight": 5,
+      "meaning": "2 correct slot/task/difficulty, 1 minor deviation, 0 wrong task"
+    }
+  },
+  "usable_gate": "strict_schema && correctness==4 && single_answer==2 && grounding>=2 && explanation>=2 && clarity>=1 && adherence==2",
+  "missing_questions": "score 0 in expected-slot denominator, never omit failed/missing slots from primary score",
+  "unsupported_slot": "score rejection separately; never give points for hallucinated runtime quiz",
+  "rater": "Codex qualitative review, identities hidden in shuffled review packet; not an independent human expert or external judge model",
+  "objective_metrics": [
+    "request success",
+    "strict JSON and schema",
+    "question count",
+    "slot coverage",
+    "exact evidence quote",
+    "rejection behavior",
+    "finish_reason",
+    "latency",
+    "tokens/s"
+  ],
+  "limits": [
+    "6 prompts, 1 deterministic pass, 11 supported slots/model; no confidence intervals or significance claims.",
+    "Source-grounded synthetic algorithm quiz generation; not a general model leaderboard or end-to-end RAG evaluation."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "p1005_r01336",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "f013b313cfd8af343e48ccd7f97e63e6d85cd426433ec3f25e453ec751351929",
+  "raw_pixel_sha256": "bacaced7c36748cfa588f94ea30f71b317986d32fd677507e547385be76a8745",
+  "prediction": {
+    "html": "<html><body><table><tr><td>stdin</td><td>stdout</td></tr><tr><td>4 5 1 2</td><td>8</td></tr><tr><td>1 3 1 4</td><td>2 3 3 4</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "875ae43ce800b7ea432a763c74dfb1f653c01824122ea955b0d56d867dd514ae",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "41be727e93c8de7826a910ee979f9c73fbc81a1fd830ebcb9115270373f4f49e",
+  "cache_hit": true
+}

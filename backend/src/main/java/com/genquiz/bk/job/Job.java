@@ -10,6 +10,8 @@ import jakarta.persistence.Version;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import java.math.BigDecimal;
+import com.genquiz.bk.abuse.AiAdmissionContext;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -85,6 +87,23 @@ public class Job {
 
     @Column(name = "completed_at")
     private Instant completedAt;
+
+    @Column(name = "ai_ip_hash", length = 64)
+    private String aiIpHash;
+    @Column(name = "ai_device_hash", length = 64)
+    private String aiDeviceHash;
+    @Column(name = "ai_lease_id")
+    private UUID aiLeaseId;
+    @Column(name = "ai_endpoint", length = 120)
+    private String aiEndpoint;
+    @Column(name = "ai_model", length = 120)
+    private String aiModel;
+    @Column(name = "ai_estimated_cost", precision = 14, scale = 6)
+    private BigDecimal aiEstimatedCost;
+    @Column(name = "ai_actual_cost", precision = 14, scale = 6)
+    private BigDecimal aiActualCost;
+    @Column(name = "ai_concurrency_reserved", nullable = false)
+    private boolean aiConcurrencyReserved;
 
     @Version
     @Column(nullable = false)
@@ -244,6 +263,23 @@ public class Job {
     public Instant getCompletedAt() { return completedAt; }
     public int getProgress() { return progress; }
     public String getStep() { return step; }
+    public String getAiIpHash() { return aiIpHash; }
+    public String getAiDeviceHash() { return aiDeviceHash; }
+    public String getAiLeaseId() { return aiLeaseId == null ? null : aiLeaseId.toString(); }
+    public String getAiEndpoint() { return aiEndpoint; }
+    public String getAiModel() { return aiModel; }
+    public BigDecimal getAiEstimatedCost() { return aiEstimatedCost == null ? BigDecimal.ZERO : aiEstimatedCost; }
+    public BigDecimal getAiActualCost() { return aiActualCost == null ? BigDecimal.ZERO : aiActualCost; }
+    public boolean isAiConcurrencyReserved() { return aiConcurrencyReserved; }
+    public void attachAiAdmission(AiAdmissionContext value) {
+        if (value == null) return;
+        aiLeaseId = UUID.fromString(value.leaseId());
+        aiIpHash = value.ipHash(); aiDeviceHash = value.deviceHash(); aiEndpoint = value.endpoint();
+        aiModel = value.model(); aiEstimatedCost = value.estimatedCost();
+        aiConcurrencyReserved = value.concurrencyReserved();
+    }
+    public void clearAiAdmission() { aiConcurrencyReserved = false; aiLeaseId = null; }
+    public void recordAiActualCost(BigDecimal value) { aiActualCost = value == null ? BigDecimal.ZERO : value.max(BigDecimal.ZERO); }
     public void checkpoint(String value, Instant now) {
         checkpointPayload = value;
         updatedAt = now;

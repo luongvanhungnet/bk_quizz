@@ -1,0 +1,63 @@
+{
+  "facts": {
+    "linear_absent": 8,
+    "binary_iterations": 5,
+    "recursive_sum": 15,
+    "triangular_loop": 10,
+    "shortest_path": 4,
+    "mst_weight": 6,
+    "knapsack_value": 7,
+    "lcs_length": 4,
+    "integer_width": 64,
+    "negative_edges": "Bellman-Ford",
+    "table_case2": 41,
+    "unsupported_runtime": null
+  },
+  "certificates": {
+    "binary_mid_values": [
+      8,
+      12,
+      14,
+      15,
+      16
+    ],
+    "shortest_path": [
+      4,
+      [
+        "A",
+        "B",
+        "C",
+        "D"
+      ]
+    ],
+    "minimum_spanning_tree": [
+      6,
+      [
+        [
+          "A",
+          "B",
+          1
+        ],
+        [
+          "B",
+          "C",
+          2
+        ],
+        [
+          "C",
+          "D",
+          1
+        ],
+        [
+          "A",
+          "E",
+          2
+        ]
+      ]
+    ],
+    "LCS_witness": "BCBA",
+    "integer_sum": 2000000000000000000,
+    "knapsack_subset": "items 1 and 2: weight 5, value 7"
+  },
+  "provenance": "Trusted deterministic Python solvers authored before generation; never execute generated model code."
+}

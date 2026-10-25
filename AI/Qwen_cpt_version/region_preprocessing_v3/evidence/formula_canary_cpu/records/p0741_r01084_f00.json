@@ -1,0 +1,41 @@
+{
+  "status": "ok",
+  "cache_hit": true,
+  "device": "gpu:0",
+  "raw": {
+    "input_path": "/content/it3170_v2_7B_d682e3b25b0d/crops/p0741_r01084_f00.png",
+    "page_index": null,
+    "rec_formula": "S\\subseteq V\\ mathsf\\ s{o a\\ \\mathsf{c h o}}"
+  },
+  "prediction": {
+    "latex": "S\\subseteq V\\ mathsf\\ s{o a\\ \\mathsf{c h o}}",
+    "semantic_description": null
+  },
+  "elapsed_seconds": 0.0556353230001605,
+  "id": "p0741_r01084_f00",
+  "engine": "formula",
+  "cache_key": "d7961fc7d8498ad8b73333b284ecd34f5dff0545642aac718d19f8088d82bf84",
+  "raw_pixel_sha256": "c21c5f997095b452e70f899f7720e2103cc7575975ec4b6326223a0e73c0f261",
+  "semantic_verified": false,
+  "structural_errors": [],
+  "reused_inference": true,
+  "source_cache_key": "914c4e3b3a7e7c0f4a568287268a7b81f3e6197ca88bd64fbad6a49d47b54a22",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "7eced5a97909a674837e5dad474c6d4e38f5d395948d412ea38cf25173f1d55c",
+  "destination": "review_queue",
+  "source": {
+    "page": 741,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "072c074a1289befc59daadd083f5f076844df2968dc29e63f3f3221b8cc5ab9b",
+    "input_file_sha256": "7eced5a97909a674837e5dad474c6d4e38f5d395948d412ea38cf25173f1d55c"
+  },
+  "quality": {
+    "flags": [],
+    "metrics": {},
+    "evidence_gate_pass": true,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

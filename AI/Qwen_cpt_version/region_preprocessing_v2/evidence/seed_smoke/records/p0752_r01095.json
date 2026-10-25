@@ -1,0 +1,19 @@
+{
+  "id": "p0752_r01095",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "fb9a4ca4da21ca9cc7cef6b5b422aeb4600b109aef13f157135e752cf5315753",
+  "raw_pixel_sha256": "30422ac207d95bf1af8786b7fb1527f0f00e274e9ce0892b96c912d9a9c2595c",
+  "prediction": {
+    "html": "<html><body><table><tbody><tr><td>Thuật toán metaheuristic hoạt các tham số trong mô hình</td></tr><tr><td>Là các mô hình phát triển thuật toán cấp cao dùng để đưa ra các chiến lược điều khiển và điểu chỉnh các thuật toán heuristic bằng cách thay đổi linh hoạt các tham số trong mô hình Lời giải bài toán thường sẽ được cải tiến so với các lời giải thuật toán</td></tr><tr><td>heuristic đơn giản khi chọn được các bộ tham số của mô hình đủ tốt Thường phải chạy thí nghiệm nhiều lần để tìm ra được bộ tham số thích hợp Thời gian chạy và bộ nhớ sử dụng thường rất lớn và ít khả năng ứng dụng vào các bài toán thực tế đòi hỏi xử lý thời gian thực hoặc dữ liệu lớn</td></tr><tr><td>Một số mô hình điển hình: Thuật toán di truyền/tiến hóa (genetic/evolutionary algorithms), tìm kiếm tabu (tabu search), mô phỏng tôi luyện thép (simulated annealing), tìm kiếm vùng lân cận linh hoạt (variable neighborhood search), tìm kiếm vùng lân cận không gian lớn (large neighborhood search), thuật toán đàn kiến (ant colony optimization), . . .</td></tr></tbody></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "48d5eb72a4d32897a03923b7146fe9aedbdbd92953d92809df2ae3a661bea746",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "c92979b9d23f4513dea00a81eaf8080eef20cea5c1150d08d9140b422bbdbd61",
+  "cache_hit": true
+}

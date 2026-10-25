@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import com.genquiz.bk.analytics.AnalyticsAggregationService;
 import tools.jackson.databind.ObjectMapper;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -28,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "bkquiz.jobs.worker-enabled=false",
+        "bkquiz.admin-bootstrap.enabled=false",
         "bkquiz.rate-limit.enabled=false",
         "bkquiz.storage.clamav-enabled=false",
         "spring.ai.model.chat=none"
@@ -50,6 +52,9 @@ class BkApplicationTests {
 
     @Autowired
     ApplicationContext applicationContext;
+
+    @Autowired
+    AnalyticsAggregationService analyticsAggregation;
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -148,6 +153,95 @@ class BkApplicationTests {
     }
 
     @Test
+    void migrationSeedsAdministrativeRolePermissions() {
+        assertThat(jdbc.queryForList("""
+                select permission_code from role_permissions where role_code = 'ADMIN'
+                """, String.class)).contains("analytics:read", "user:read", "audit:read", "admin:read")
+                .doesNotContain("admin:grant", "admin:revoke", "system:config");
+        assertThat(jdbc.queryForList("""
+                select permission_code from role_permissions where role_code = 'OWNER'
+                """, String.class)).contains("admin:grant", "admin:revoke", "system:config");
+    }
+
+    @Test
+    void migrationAddsProductAnalyticsAndRecordsRegistration() throws Exception {
+        assertThat(tableExists("product_events")).isTrue();
+        assertThat(tableExists("daily_platform_metrics")).isTrue();
+        assertThat(tableExists("daily_user_metrics")).isTrue();
+        assertThat(tableExists("daily_ai_metrics")).isTrue();
+        assertThat(tableExists("daily_security_metrics")).isTrue();
+        String email="analytics-"+UUID.randomUUID()+"@example.com";
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(registerBody(email)))
+                .andExpect(status().isCreated());
+        UUID id=jdbc.queryForObject("select id from users where email=?",UUID.class,email);
+        assertThat(jdbc.queryForObject("select count(*) from product_events where user_id=? and event_type='USER_REGISTERED'",Integer.class,id)).isEqualTo(1);
+    }
+
+    @Test
+    void analystAuthorityCanReadBusinessAnalytics() throws Exception {
+        String email="analyst-"+UUID.randomUUID()+"@example.com";
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(registerBody(email)))
+                .andExpect(status().isCreated());
+        UUID id=jdbc.queryForObject("select id from users where email=?",UUID.class,email);
+        jdbc.update("insert into user_roles(user_id,role_code,granted_by) values(?,'ANALYST',?)",id,id);
+        String login=mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"%s\",\"password\":\"StrongPass123\"}".formatted(email)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String token=objectMapper.readTree(login).path("data").path("accessToken").stringValue();
+        mockMvc.perform(get("/api/admin/analytics/overview")
+                        .header("Authorization","Bearer "+token)
+                        .param("dateFrom","2026-01-01").param("dateTo","2026-01-30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.dau").isNumber())
+                .andExpect(jsonPath("$.data.subscriptionConversion.available").value(false));
+    }
+
+    @Test
+    void adminCanInvestigateUserWithUuidAuditTargets() throws Exception {
+        String adminEmail = "investigation-admin-" + UUID.randomUUID() + "@example.com";
+        String targetEmail = "investigation-target-" + UUID.randomUUID() + "@example.com";
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(adminEmail)))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(targetEmail)))
+                .andExpect(status().isCreated());
+
+        UUID adminId = jdbc.queryForObject("select id from users where email = ?", UUID.class, adminEmail);
+        UUID targetId = jdbc.queryForObject("select id from users where email = ?", UUID.class, targetEmail);
+        jdbc.update("insert into user_roles(user_id, role_code, granted_by) values (?, 'ADMIN', ?)", adminId, adminId);
+        jdbc.update("""
+                insert into audit_logs(id, actor_user_id, action, target_type, target_id, outcome, metadata, created_at)
+                values (?, ?, 'USER_REVIEWED', 'USER', ?, 'SUCCESS', '{}'::jsonb, current_timestamp)
+                """, UUID.randomUUID(), adminId, targetId);
+
+        String login = mockMvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"%s\",\"password\":\"StrongPass123\"}".formatted(adminEmail)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String token = objectMapper.readTree(login).path("data").path("accessToken").stringValue();
+
+        mockMvc.perform(get("/api/admin/users/{id}/investigation", targetId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.account.id").value(targetId.toString()))
+                .andExpect(jsonPath("$.data.recentAuditEvents[0].target_id").value(targetId.toString()));
+    }
+
+    @Test
+    void aggregationCalculatesDistinctDailyActiveUsersIdempotently() throws Exception {
+        String email="daily-active-"+UUID.randomUUID()+"@example.com";
+        mockMvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON).content(registerBody(email)))
+                .andExpect(status().isCreated());
+        UUID userId=jdbc.queryForObject("select id from users where email=?",UUID.class,email);
+        jdbc.update("insert into product_events(event_type,user_id,occurred_at) values('QUESTION_ANSWERED',?,?::timestamptz)",userId,"2020-01-02T12:00:00Z");
+        jdbc.update("insert into product_events(event_type,user_id,occurred_at) values('QUIZ_COMPLETED',?,?::timestamptz)",userId,"2020-01-02T13:00:00Z");
+        analyticsAggregation.recompute(java.time.LocalDate.of(2020,1,2),java.time.LocalDate.of(2020,1,2));
+        analyticsAggregation.recompute(java.time.LocalDate.of(2020,1,2),java.time.LocalDate.of(2020,1,2));
+        assertThat(jdbc.queryForObject("select active_users from daily_platform_metrics where metric_date='2020-01-02'",Long.class)).isEqualTo(1L);
+        assertThat(jdbc.queryForObject("select count(*) from daily_user_metrics where metric_date='2020-01-02' and user_id=?",Integer.class,userId)).isEqualTo(1);
+    }
+
+    @Test
     void registrationAllowsTeacherButNeverAdmin() throws Exception {
         String teacherEmail = "teacher-" + UUID.randomUUID() + "@example.com";
         mockMvc.perform(post("/api/auth/register")
@@ -159,6 +253,10 @@ class BkApplicationTests {
                 .andExpect(jsonPath("$.data.user.role").value("TEACHER"));
         assertThat(jdbc.queryForObject("select role from users where email = ?", String.class, teacherEmail))
                 .isEqualTo("TEACHER");
+        UUID teacherId = jdbc.queryForObject("select id from users where email = ?", UUID.class, teacherEmail);
+        assertThat(jdbc.queryForObject("""
+                select count(*) from user_roles where user_id = ? and role_code = 'USER'
+                """, Integer.class, teacherId)).isEqualTo(1);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -166,6 +264,122 @@ class BkApplicationTests {
                                 {"username":"Invalid Admin","email":"admin-%s@example.com","password":"StrongPass123","accountType":"ADMIN"}
                                 """.formatted(UUID.randomUUID())))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void maliciousRegistrationRoleIsIgnoredAndCreatesOnlyBaselineUser() throws Exception {
+        String email = "malicious-role-" + UUID.randomUUID() + "@example.com";
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"username":"Normal User","email":"%s","password":"StrongPass123",
+                                 "accountType":"STUDENT","role":"ADMIN","roles":["OWNER"]}
+                                """.formatted(email)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.user.role").value("STUDENT"));
+
+        UUID userId = jdbc.queryForObject("select id from users where email = ?", UUID.class, email);
+        assertThat(jdbc.queryForList(
+                "select role_code from user_roles where user_id = ? order by role_code", String.class, userId))
+                .containsExactly("USER");
+    }
+
+    @Test
+    void userCannotAccessAdministrativeApi() throws Exception {
+        String email = "rbac-user-" + UUID.randomUUID() + "@example.com";
+        String registration = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(registerBody(email)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String token = objectMapper.readTree(registration).get("data").get("accessToken").stringValue();
+
+        mockMvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void onlyAdministratorWithRiskReadCanInspectExplainableRisk() throws Exception {
+        String userEmail = "risk-user-" + UUID.randomUUID() + "@example.com";
+        String adminEmail = "risk-admin-" + UUID.randomUUID() + "@example.com";
+        String userRegistration = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(registerBody(userEmail)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String adminRegistration = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(registerBody(adminEmail)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        UUID userId = jdbc.queryForObject("select id from users where email=?", UUID.class, userEmail);
+        UUID adminId = jdbc.queryForObject("select id from users where email=?", UUID.class, adminEmail);
+        jdbc.update("insert into user_roles(user_id, role_code, granted_by) values (?, 'ADMIN', ?)", adminId, adminId);
+        String userToken = objectMapper.readTree(userRegistration).get("data").get("accessToken").stringValue();
+        String adminToken = objectMapper.readTree(adminRegistration).get("data").get("accessToken").stringValue();
+
+        mockMvc.perform(get("/api/admin/users/{id}/risk", userId)
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/users/{id}/risk", userId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.trustScore").isNumber())
+                .andExpect(jsonPath("$.data.riskScore").isNumber())
+                .andExpect(jsonPath("$.data.serviceLevel").value("CAUTION"))
+                .andExpect(jsonPath("$.data.signals").isArray());
+    }
+
+    @Test
+    void ownerCanGrantAdminAndPrivilegeChangeIsAudited() throws Exception {
+        String ownerEmail = "rbac-owner-" + UUID.randomUUID() + "@example.com";
+        String targetEmail = "rbac-target-" + UUID.randomUUID() + "@example.com";
+        String ownerRegistration = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(registerBody(ownerEmail)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(registerBody(targetEmail)))
+                .andExpect(status().isCreated());
+        UUID ownerId = jdbc.queryForObject("select id from users where email = ?", UUID.class, ownerEmail);
+        UUID targetId = jdbc.queryForObject("select id from users where email = ?", UUID.class, targetEmail);
+        jdbc.update("update users set email_verified_at = current_timestamp where id in (?, ?)", ownerId, targetId);
+        jdbc.update("insert into user_roles(user_id, role_code, granted_by) values (?, 'OWNER', ?) ", ownerId, ownerId);
+        String ownerToken = objectMapper.readTree(ownerRegistration).get("data").get("accessToken").stringValue();
+
+        mockMvc.perform(post("/api/admin/users/{id}/roles/ADMIN", targetId)
+                        .header("Authorization", "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roles").isArray());
+
+        assertThat(jdbc.queryForObject("""
+                select count(*) from user_roles where user_id = ? and role_code = 'ADMIN'
+                """, Integer.class, targetId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("""
+                select count(*) from audit_logs
+                where target_id = ? and action = 'ROLE_GRANTED'
+                """, Integer.class, targetId)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("""
+                select count(*) from outbox_events
+                where aggregate_id = ? and event_type = 'ROLE_GRANTED'
+                """, Integer.class, targetId)).isEqualTo(1);
+    }
+
+    @Test
+    void adminCannotGrantAdminOrOwner() throws Exception {
+        String adminEmail = "rbac-admin-" + UUID.randomUUID() + "@example.com";
+        String targetEmail = "rbac-admin-target-" + UUID.randomUUID() + "@example.com";
+        String adminRegistration = mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(registerBody(adminEmail)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON).content(registerBody(targetEmail)))
+                .andExpect(status().isCreated());
+        UUID adminId = jdbc.queryForObject("select id from users where email = ?", UUID.class, adminEmail);
+        UUID targetId = jdbc.queryForObject("select id from users where email = ?", UUID.class, targetEmail);
+        jdbc.update("insert into user_roles(user_id, role_code, granted_by) values (?, 'ADMIN', ?)", adminId, adminId);
+        String adminToken = objectMapper.readTree(adminRegistration).get("data").get("accessToken").stringValue();
+
+        mockMvc.perform(post("/api/admin/users/{id}/roles/ADMIN", targetId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/admin/users/{id}/roles/OWNER", targetId)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
     }
 
     @Test

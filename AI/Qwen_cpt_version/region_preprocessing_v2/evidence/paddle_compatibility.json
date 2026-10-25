@@ -1,0 +1,13 @@
+{
+  "versions": {
+    "paddleocr": "3.7.0",
+    "paddlex": "3.7.2",
+    "paddlepaddle": "3.2.2"
+  },
+  "device": "cpu",
+  "python": "3.11.0 (main, Oct 24 2022, 18:26:48) [MSC v.1933 64 bit (AMD64)]",
+  "files": {
+    "D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\table_recognition\\pipeline_v2.py": "9285995eb1cb7f79547a7abca8abe74ae8b29471925fab2b0ef383c9082779c3",
+    "D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\table_recognition\\table_recognition_post_processing_v2.py": "d4b9ccacb7b9f246f97699b6a87c3a56dc681f078136259dae0358035e41a400"
+  }
+}

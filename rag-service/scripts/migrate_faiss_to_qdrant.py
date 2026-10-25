@@ -73,7 +73,7 @@ def migrate(*, settings: Settings, replace: bool, dry_run: bool) -> dict[str, in
                 continue
             if _already_migrated(database, namespace) and not replace:
                 raise SystemExit(
-                    f"Namespace {namespace} đã có active Qdrant snapshot; dùng --replace nếu thực sự muốn thay."
+                    f"Namespace {namespace} already has an active Qdrant snapshot; use --replace to overwrite it."
                 )
             values = _vectors(snapshot)
             imported[namespace] = len(snapshot.chunks)
@@ -107,9 +107,9 @@ def main() -> None:
     args = parser.parse_args()
     settings = Settings()
     if settings.vector_store_backend != "qdrant":
-        raise SystemExit("Đặt VECTOR_STORE_BACKEND=qdrant trước khi chạy migration.")
+        raise SystemExit("Set VECTOR_STORE_BACKEND=qdrant before running the migration.")
     result = migrate(settings=settings, replace=args.replace, dry_run=args.dry_run)
-    action = "Kiểm tra" if args.dry_run else "Đã chuyển"
+    action = "Validated" if args.dry_run else "Migrated"
     print(f"{action}: " + ", ".join(f"{key}={value}" for key, value in result.items()))
 
 

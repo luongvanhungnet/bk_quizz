@@ -1,0 +1,130 @@
+{
+  "schema": "v5-orchestrator-1",
+  "client_date": "2026-10-21",
+  "input_archives_verified": 14,
+  "source_jobs": 148,
+  "original_source_pdfs": 27,
+  "source_pdfs_stored_once": true,
+  "source_pages": 13314,
+  "bytes": 895897467,
+  "total_MiB": 854.39,
+  "minimum_file_MiB": 2.15,
+  "maximum_file_MiB": 382.61,
+  "all_member_hashes_valid": true,
+  "notebook_runtime_pins_match_all_inputs": true,
+  "runtime_identical_across_inputs": true,
+  "human_review_databases_in_uploads": 0,
+  "cached_vlm_successes": 7,
+  "completed_jobs_seeded": [
+    "it3170_c6c829f14bf2_p00001-00100"
+  ],
+  "seed_runs": [
+    {
+      "document_id": "it3170_c6c829f14bf2",
+      "records_sha256": "9b7da5f26054dfcaab9e5537fdb785dc9259a4a6d372a341bbe973a529a09d65",
+      "manifest_sha256": "a064b75e9ff3bc156fb343ebdcbfa95c48700c01b4cff7ca032d9ba703b631c2",
+      "reviews_included": false
+    }
+  ],
+  "files": [
+    {
+      "bundle": "upload_01",
+      "bytes": 23199111,
+      "MiB": 22.12,
+      "jobs": 10,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_02",
+      "bytes": 39784247,
+      "MiB": 37.94,
+      "jobs": 11,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_03",
+      "bytes": 12006723,
+      "MiB": 11.45,
+      "jobs": 10,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_04",
+      "bytes": 401190450,
+      "MiB": 382.61,
+      "jobs": 11,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_05",
+      "bytes": 2256360,
+      "MiB": 2.15,
+      "jobs": 10,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_06",
+      "bytes": 67710471,
+      "MiB": 64.57,
+      "jobs": 11,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_07",
+      "bytes": 15496758,
+      "MiB": 14.78,
+      "jobs": 11,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_08",
+      "bytes": 18704880,
+      "MiB": 17.84,
+      "jobs": 10,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_09",
+      "bytes": 71874781,
+      "MiB": 68.55,
+      "jobs": 11,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_10",
+      "bytes": 23809885,
+      "MiB": 22.71,
+      "jobs": 10,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_11",
+      "bytes": 120227264,
+      "MiB": 114.66,
+      "jobs": 11,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_12",
+      "bytes": 16607681,
+      "MiB": 15.84,
+      "jobs": 10,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_13",
+      "bytes": 53294529,
+      "MiB": 50.83,
+      "jobs": 11,
+      "all_member_hashes_valid": true
+    },
+    {
+      "bundle": "upload_14",
+      "bytes": 29734327,
+      "MiB": 28.36,
+      "jobs": 11,
+      "all_member_hashes_valid": true
+    }
+  ],
+  "gpu_run_executed": false
+}

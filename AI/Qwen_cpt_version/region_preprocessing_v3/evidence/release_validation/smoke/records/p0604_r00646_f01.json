@@ -1,0 +1,43 @@
+{
+  "status": "invalid_structure",
+  "cache_hit": true,
+  "device": "gpu:0",
+  "raw": {
+    "input_path": "/content/it3170_v2_7B_d682e3b25b0d/crops/p0604_r00646_f01.png",
+    "page_index": null,
+    "rec_formula": "\\mathbf\\{i f}\\ j=\\overset{\\cdot}{=}0\\ \\mathbf{t h e n}"
+  },
+  "prediction": {
+    "latex": "\\mathbf\\{i f}\\ j=\\overset{\\cdot}{=}0\\ \\mathbf{t h e n}",
+    "semantic_description": null
+  },
+  "elapsed_seconds": 0.06686955500003933,
+  "id": "p0604_r00646_f01",
+  "engine": "formula",
+  "cache_key": "0d64ac9981bc91d93a8a0635bfbcec4e818116f1f0ca09f1e62e4c24c0bce354",
+  "raw_pixel_sha256": "3e9552e547a2653311af3bf54045e84778adebaebd2320e58b18de3d24c7cee7",
+  "semantic_verified": false,
+  "structural_errors": [
+    "unbalanced_latex_braces"
+  ],
+  "reused_inference": true,
+  "source_cache_key": "064e7116cce0b4ba754261ae3d1aadf0f07c79a10fc555d6d9b1171b7b12bb63",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "85b502dc99fc8c6cd0f59b281f06072e295be63b84744e01a93e101a8160af1f",
+  "destination": "review_queue",
+  "source": {
+    "page": 604,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "e19a5d6d70c6f5af73f4560a42e21cf5c63cd640a2205f6814d31c0106f777b4",
+    "input_file_sha256": "85b502dc99fc8c6cd0f59b281f06072e295be63b84744e01a93e101a8160af1f"
+  },
+  "quality": {
+    "flags": [
+      "structural_validation_failed"
+    ],
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "evidence_gate_pass": false
+  }
+}

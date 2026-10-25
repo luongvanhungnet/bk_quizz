@@ -1,0 +1,333 @@
+[
+  {
+    "page": 129,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "8146b4989db9db84da10830df209dca79d2812ece4df714d14e3393c85ece02f",
+    "input_file_sha256": "40c1909125fc656b7420fbe24386546beb910d2fda13a4586b7e0c37c8e9da2b",
+    "reviewer": "Codex_visual_inspection",
+    "scope": "diagnostic_gold_not_CPT_annotation",
+    "nodes": [],
+    "edges": [],
+    "manual_only": true,
+    "rubric": [
+      "Read actual 4x4 board states and parent-child branches.",
+      "Do not turn Backtracking/Forward Checking captions into graph nodes.",
+      "Record orange queen squares and dark removed-domain squares only if readable.",
+      "Check branch completeness against source; explain unreadable states."
+    ]
+  },
+  {
+    "page": 494,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "2d4cfa2a7dfc91736e9e05b8bcad8d68d7c921dd6851d22ab893a0219401ca75",
+    "input_file_sha256": "50776d31d04ee8b2584fb68468fa79e824721ffcea938cfe753a304f91e30175",
+    "reviewer": "Codex_visual_inspection",
+    "scope": "diagnostic_gold_not_CPT_annotation",
+    "nodes": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+      "f",
+      "g"
+    ],
+    "edges": [
+      {
+        "source": "a",
+        "target": "b",
+        "weight": 7,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "a",
+        "target": "d",
+        "weight": 5,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "b",
+        "target": "c",
+        "weight": 8,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "b",
+        "target": "d",
+        "weight": 9,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "b",
+        "target": "e",
+        "weight": 7,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "c",
+        "target": "e",
+        "weight": 5,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "d",
+        "target": "e",
+        "weight": 15,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "d",
+        "target": "f",
+        "weight": 6,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "e",
+        "target": "f",
+        "weight": 8,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "e",
+        "target": "g",
+        "weight": 9,
+        "directed": null,
+        "highlighted": false
+      },
+      {
+        "source": "f",
+        "target": "g",
+        "weight": 11,
+        "directed": null,
+        "highlighted": false
+      }
+    ]
+  },
+  {
+    "page": 812,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "a50090705a1e42fdd0c5b9eb00bbcb0af52b1bc880131442daf052b4880d1b65",
+    "input_file_sha256": "374793b2ffeda60ee8d7e4824d1e1ae19c248452a084085863eef3c1d081b957",
+    "reviewer": "Codex_visual_inspection",
+    "scope": "diagnostic_gold_not_CPT_annotation",
+    "nodes": [
+      "0",
+      "1"
+    ],
+    "edges": [
+      {
+        "source": "0",
+        "target": "1",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      }
+    ],
+    "rubric": [
+      "K=2 and (y[1],y[2]) are annotations, not extra graph nodes."
+    ]
+  },
+  {
+    "page": 930,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "732a3b7ec912b924aa05c08c4d073765409674a46f37e3bdfc392362c8fa86d4",
+    "input_file_sha256": "fa89c7f10554bd843f9f91f25aa2ca0f76e585c94d090316c863c3f39d377834",
+    "reviewer": "Codex_visual_inspection",
+    "scope": "diagnostic_gold_not_CPT_annotation",
+    "nodes": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7"
+    ],
+    "edges": [
+      {
+        "source": "1",
+        "target": "6",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "1",
+        "target": "3",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "6",
+        "target": "2",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "6",
+        "target": "3",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "6",
+        "target": "4",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "2",
+        "target": "5",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "2",
+        "target": "4",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "3",
+        "target": "4",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "3",
+        "target": "7",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "4",
+        "target": "5",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      },
+      {
+        "source": "4",
+        "target": "7",
+        "weight": null,
+        "directed": true,
+        "highlighted": null
+      }
+    ]
+  },
+  {
+    "page": 1042,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "30a3ba20dbc33c6c0079fd65ffda42f8d52f6dbf3b7c84e20970cb259b7cd2a3",
+    "input_file_sha256": "ba52092f094ad7ce515fd1a90fa3cde681843263686d8c1f9fd6210d126c0e1f",
+    "reviewer": "Codex_visual_inspection",
+    "scope": "diagnostic_gold_not_CPT_annotation",
+    "nodes": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9"
+    ],
+    "edges": [
+      {
+        "source": "1",
+        "target": "6",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "1",
+        "target": "3",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "3",
+        "target": "6",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "6",
+        "target": "4",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "3",
+        "target": "2",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "2",
+        "target": "8",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "8",
+        "target": "5",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "5",
+        "target": "9",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "2",
+        "target": "9",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "8",
+        "target": "7",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      },
+      {
+        "source": "9",
+        "target": "7",
+        "weight": null,
+        "directed": null,
+        "highlighted": null
+      }
+    ]
+  }
+]

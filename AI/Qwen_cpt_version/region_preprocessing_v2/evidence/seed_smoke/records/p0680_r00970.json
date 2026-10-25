@@ -1,0 +1,19 @@
+{
+  "id": "p0680_r00970",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "610a760b6178a0944f65f1ee2c53fda32178a2afb1cc818820479de5231a495e",
+  "raw_pixel_sha256": "8129de1e46c35a7b1027ad1ee3730268afafa57d913ab179a690d81ebe2dbd49",
+  "prediction": {
+    "html": "<html><body><table><tr><td>k</td><td>ck</td><td></td><td></td></tr><tr><td>1</td><td>1</td><td>P ≤ 4</td><td>-</td></tr><tr><td>2</td><td>5</td><td>N ≤ 1</td><td>4</td></tr><tr><td>3</td><td>10</td><td>N + D ≤ 2</td><td>4+5=9</td></tr><tr><td>4</td><td>25</td><td>Q ≤ 3</td><td>20+4=24</td></tr><tr><td>5</td><td>100</td><td>không giới hạn</td><td>75+24=99</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "6ffc936e0c3b574a04d55a5631cd00747935355d52f1c4a6f05dbe8d68442500",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "5a918a8c9a3979171ecd7bbd741b56d94541980c1103f64cde4291870b249e55",
+  "cache_hit": true
+}

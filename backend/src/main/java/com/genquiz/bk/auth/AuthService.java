@@ -8,6 +8,12 @@ import com.genquiz.bk.auth.dto.ResetPasswordRequest;
 import com.genquiz.bk.common.error.ApiException;
 import com.genquiz.bk.config.AppProperties;
 import com.genquiz.bk.security.JwtService;
+import com.genquiz.bk.security.AuthorizationService;
+import com.genquiz.bk.admin.AuditService;
+import com.genquiz.bk.security.SecurityOutboxService;
+import com.genquiz.bk.abuse.AccountReputationService;
+import com.genquiz.bk.abuse.RiskEventType;
+import com.genquiz.bk.abuse.RiskSeverity;
 import com.genquiz.bk.user.User;
 import com.genquiz.bk.user.UserPreferences;
 import com.genquiz.bk.user.UserPreferencesRepository;
@@ -23,6 +29,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.Map;
 
 @Service
 public class AuthService {
@@ -39,13 +46,22 @@ public class AuthService {
     private final JwtService jwt;
     private final AppProperties properties;
     private final AuthMailQueue mailQueue;
+    private final AuthorizationService authorization;
+    private final AuditService audit;
+    private final SecurityOutboxService outbox;
+    private AccountReputationService reputation;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setReputation(AccountReputationService reputation) { this.reputation = reputation; }
 
     public AuthService(UserRepository users, UserPreferencesRepository preferences,
                        RefreshSessionRepository sessions,
                        EmailVerificationTokenRepository verificationTokens,
                        PasswordResetTokenRepository resetTokens,
                        PasswordEncoder passwordEncoder, TokenHashService tokenHashes,
-                       JwtService jwt, AppProperties properties, AuthMailQueue mailQueue) {
+                       JwtService jwt, AppProperties properties, AuthMailQueue mailQueue,
+                       AuthorizationService authorization, AuditService audit,
+                       SecurityOutboxService outbox) {
         this.users = users;
         this.preferences = preferences;
         this.sessions = sessions;
@@ -56,6 +72,9 @@ public class AuthService {
         this.jwt = jwt;
         this.properties = properties;
         this.mailQueue = mailQueue;
+        this.authorization = authorization;
+        this.audit = audit;
+        this.outbox = outbox;
     }
 
     @Transactional
@@ -66,8 +85,11 @@ public class AuthService {
         }
         User user = new User(request.username().trim(), email, passwordEncoder.encode(request.password()));
         user.setRole(request.accountType() == RegisterRequest.AccountType.TEACHER ? Role.TEACHER : Role.STUDENT);
-        user = users.save(user);
+        // Flush before the JDBC-backed RBAC insert so the user_roles FK is visible.
+        user = users.saveAndFlush(user);
+        authorization.assignBaselineUser(user.getId());
         preferences.save(new UserPreferences(user));
+        audit.record(user.getId(), "USER_REGISTERED", "USER", user.getId().toString(), Map.of());
         issueVerificationEmail(user);
         return newSession(user, UUID.randomUUID(), client);
     }
@@ -75,14 +97,32 @@ public class AuthService {
     @Transactional
     public IssuedSession login(LoginRequest request, ClientMetadata client) {
         User user = users.findByEmailIgnoreCaseAndDeletedAtIsNull(normalizeEmail(request.email()))
-                .orElseThrow(AuthService::invalidCredentials);
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) throw invalidCredentials();
+                .orElse(null);
+        if (user == null) {
+            audit.recordIndependent(null, "LOGIN_FAILED", "USER", null, Map.of("reason", "INVALID_CREDENTIALS"));
+            throw invalidCredentials();
+        }
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            audit.recordIndependent(null, "LOGIN_FAILED", "USER", user.getId().toString(),
+                    Map.of("reason", "INVALID_CREDENTIALS"));
+            if (reputation != null) reputation.recordIndependent(user.getId(), RiskEventType.LOGIN_BRUTE_FORCE,
+                    RiskSeverity.LOW, 0.03, Map.of("reason", "INVALID_CREDENTIALS"));
+            throw invalidCredentials();
+        }
         if (!user.isActive()) {
+            audit.recordIndependent(null, "LOGIN_FAILED", "USER", user.getId().toString(),
+                    Map.of("reason", "ACCOUNT_INACTIVE"));
             String code = user.getDeletionRequestedAt() != null ? "ACCOUNT_PENDING_DELETION" : "ACCOUNT_INACTIVE";
             String message = user.getDeletionRequestedAt() != null
                     ? "Tài khoản đang chờ xóa. Hãy dùng liên kết trong email để hủy yêu cầu."
                     : "Tài khoản đã bị khóa.";
             throw new ApiException(HttpStatus.FORBIDDEN, code, message);
+        }
+        audit.record(user.getId(), "LOGIN_SUCCESS", "USER", user.getId().toString(), Map.of());
+        if (reputation != null) reputation.recordSuccessfulSession(user.getId());
+        AuthorizationService.AuthorizationSnapshot authorizationSnapshot = authorization.snapshot(user.getId());
+        if (authorizationSnapshot.permissions().contains("admin:read")) {
+            audit.record(user.getId(), "ADMIN_LOGIN", "USER", user.getId().toString(), Map.of());
         }
         return newSession(user, UUID.randomUUID(), client);
     }
@@ -97,6 +137,8 @@ public class AuthService {
         Instant now = Instant.now();
         if (current.getRevokedAt() != null || current.getReplacedById() != null) {
             sessions.revokeFamily(current.getFamilyId(), now);
+            if (reputation != null) reputation.recordIndependent(current.getUser().getId(),
+                    RiskEventType.TOKEN_REUSE, RiskSeverity.HIGH, 0.25, Map.of());
             throw new ApiException(HttpStatus.UNAUTHORIZED, "REFRESH_TOKEN_REUSED",
                     "Phiên đăng nhập đã bị thu hồi do phát hiện token cũ được sử dụng lại.");
         }
@@ -179,6 +221,11 @@ public class AuthService {
         token.getUser().setPasswordHash(passwordEncoder.encode(request.password()));
         token.use();
         sessions.revokeAllForUser(token.getUser().getId(), Instant.now());
+        audit.record(token.getUser().getId(), "PASSWORD_CHANGED", "USER",
+                token.getUser().getId().toString(), Map.of("method", "RESET_TOKEN"));
+        outbox.append(token.getUser().getId(), "PASSWORD_CHANGED",
+                "password-changed/" + token.getId(),
+                Map.of("userId", token.getUser().getId().toString()));
     }
 
     private void issueVerificationEmail(User user) {
@@ -196,7 +243,9 @@ public class AuthService {
                 Instant.now().plus(properties.security().refreshTtl()), client.userAgent(),
                 client.ip() == null ? null : tokenHashes.hash(client.ip())));
         String rawRefresh = session.getId() + "." + secret;
-        AuthPayload payload = new AuthPayload(jwt.issueAccessToken(user), jwt.accessTtlSeconds(), UserDto.from(user));
+        AuthorizationService.AuthorizationSnapshot access = authorization.snapshot(user.getId());
+        AuthPayload payload = new AuthPayload(jwt.issueAccessToken(user, access),
+                jwt.accessTtlSeconds(), UserDto.from(user));
         return new IssuedSession(session.getId(), rawRefresh, payload);
     }
 

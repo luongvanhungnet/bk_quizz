@@ -18,6 +18,9 @@ BKQuiz là monorepo gồm frontend React/Vite và backend Spring Boot/PostgreSQL
 
 ## Chạy bằng Docker
 
+Hướng dẫn đầy đủ cho ba cách chạy (từng service, Docker Compose và Google
+Cloud Run) nằm tại [`docs/deploy/11-cach-chay-du-an.md`](docs/deploy/11-cach-chay-du-an.md).
+
 1. Sao chép `.env.example` thành `.env` và thay toàn bộ secret mặc định.
 2. Chạy `docker compose up --build`.
 3. API: `http://localhost:8080/api`, Swagger: `http://localhost:8080/api/docs`.
@@ -78,7 +81,13 @@ npm run build
 
 ## Bootstrap admin
 
-Khởi động backend một lần với `ADMIN_BOOTSTRAP_ENABLED=true` cùng `ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_USERNAME` và `ADMIN_BOOTSTRAP_PASSWORD`. Lệnh idempotent: tài khoản hiện có sẽ được xác minh và nâng thành `ADMIN`. Tắt cờ ngay sau lần chạy.
+BKQuiz không tạo hoặc lưu sẵn tài khoản/mật khẩu quản trị. Đăng ký một tài khoản
+bình thường, xác minh email và bảo đảm tài khoản đang hoạt động. Sau đó khởi
+động backend đúng một lần với `ADMIN_BOOTSTRAP_ENABLED=true` và
+`ADMIN_BOOTSTRAP_USER_ID=<uuid-cua-tai-khoan>`. Bootstrap chỉ nâng tài khoản có
+sẵn thành `OWNER`, không nhận email hoặc password và không thể chạy lại sau khi
+đã hoàn tất. Tắt `ADMIN_BOOTSTRAP_ENABLED` ngay sau revision bootstrap. Xem quy
+trình đầy đủ tại [`docs/admin-security-architecture.md`](docs/admin-security-architecture.md).
 
 ## Bảo mật
 

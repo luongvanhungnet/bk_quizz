@@ -1,0 +1,19 @@
+{
+  "id": "p0689_r00988",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "cf351f88aaf2a779773d6febc884efe10d299ce4e8197198f6b933700b51f820",
+  "raw_pixel_sha256": "700771916dddeb79e56a529d0323520a8766f82c3edd01731fddf9f5fdbbdbfd",
+  "prediction": {
+    "html": "<html><body><table><tr><td>Đồ vật</td><td>1</td><td>2</td></tr><tr><td>Giá trị Ci</td><td>10</td><td>10b − 1</td></tr><tr><td>Trọng lượng Wi</td><td>1</td><td>b</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "b250e5ee424a53d8c0b0ee5bc49b9d4c24b71c124222020e01b6bf423f160d66",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "1fc475a44fd5ea2d36ae5b23b2a5e528bdc9947ca33ff86f50bbb43098da21f6",
+  "cache_hit": true
+}

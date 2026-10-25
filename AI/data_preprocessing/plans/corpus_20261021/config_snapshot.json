@@ -1,0 +1,37 @@
+{
+  "pipeline": "v5",
+  "release": "5.0.0",
+  "source_root": "D:/bk_quizz_data/slide_processed/pdf",
+  "upstream_manifest": "D:/bk_quizz_data/slide_processed/_audit/manifest.json",
+  "upstream_page_map": "D:/bk_quizz_data/slide_processed/_audit/page_map.json",
+  "work_root": "D:/BKQuiz/AI/data_preprocessing/workspaces/corpus_20261021",
+  "reuse_runs": [
+    "D:/BKQuiz/AI/Qwen_cpt_version/region_preprocessing_v5/runs/it3170_v5_20261020"
+  ],
+  "pages_per_packet": 100,
+  "maximum_packet_bytes": 536870912,
+  "minimum_free_disk_bytes": 26843545600,
+  "sample_pdf_pages": true,
+  "vlm_target_fraction": 0.05,
+  "vlm_maximum_fraction": 0.08,
+  "course_splits": {},
+  "combined_cpt_requires_global_duplicate_and_split_audit": true,
+  "excluded_roots": [
+    {
+      "path": "D:/bk_quizz_data/slide",
+      "reason": "Original PDF/ZIP sources already represented by canonical course PDFs; avoid ingesting twice"
+    },
+    {
+      "path": "D:/bk_quizz_data/đề thi",
+      "reason": "Exam corpus has not been normalized into this slide pipeline"
+    },
+    {
+      "path": "D:/bk_quizz_data/slide_processed/khong_phai_slide",
+      "reason": "Explicit non-slide exclusions retained from upstream processing"
+    },
+    {
+      "path": "D:/bk_quizz_data/slide_processed/_work",
+      "reason": "Intermediate extracted archives and previews are not independent documents"
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "id": "p0749_r01093",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "60f4bf1d328f80b8f67fcf52dcf11bc0b8a0be0852417ae49ee9503a14e8acbc",
+  "raw_pixel_sha256": "c368d8617718a5970ccdb5c17fa98ce9a81866ccac362f2006358a3317496ccd",
+  "prediction": {
+    "html": "<html><body><table><tr><td>Nhanh chóng đưa ra được một lời giải chấp nhận được (feasible solution)</td></tr><tr><td>Hay được dùng để tạo một lời giải khởi đầu cho các thuật toán heuristic/metaheuristic phức tạp</td></tr><tr><td>Tính ứng dụng vào các bài toán thực tế cao, nhất là các bài toán đòi hỏi thời gian thực (real-time) với độ tốt của lời giải là chấp nhận được Về khoa học lý thuyết, thường được sử dụng trong lĩnh vực thuật toán xấp xỉ</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "ad1d87e2363166b2ab61131c7578490359eac3e21d1cf4ec1e1dd35f01bccc47",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "evidence_sha256": "eee1e312be6170699308077db6f66a8fce2eb89183bdb770d48ee3aefa7e4e12",
+  "cache_hit": true,
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "1c3eb3e747b4c079ee30438fc834cd12d92b348f0e97ecaf6ae7f9b477e54d25",
+  "destination": "review_queue",
+  "source": {
+    "page": 749,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "0b6bbae8987f6a66ab61e00316dc1dba6f5a252d5f3e2ebeb52efa3b9faf0858",
+    "input_file_sha256": "1c3eb3e747b4c079ee30438fc834cd12d92b348f0e97ecaf6ae7f9b477e54d25"
+  },
+  "structural_errors": [],
+  "quality": {
+    "flags": [],
+    "metrics": {
+      "native_token_coverage": 1.0,
+      "rows": 3,
+      "column_counts": [
+        1,
+        1,
+        1
+      ]
+    },
+    "evidence_gate_pass": true,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

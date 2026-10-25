@@ -1,0 +1,24 @@
+{
+  "results_file": "results_ce03bb412bf5.json",
+  "requests": 818,
+  "statuses": {
+    "not_run": 58,
+    "ok": 719,
+    "invalid_structure": 41
+  },
+  "by_engine": {
+    "formula": {
+      "ok": 703,
+      "not_run": 1,
+      "invalid_structure": 41
+    },
+    "table": {
+      "ok": 16
+    },
+    "vlm": {
+      "not_run": 57
+    }
+  },
+  "new_verified_CPT_samples": 0,
+  "review_only": true
+}

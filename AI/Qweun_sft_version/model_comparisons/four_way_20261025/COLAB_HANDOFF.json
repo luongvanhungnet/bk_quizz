@@ -1,0 +1,10 @@
+{
+  "archive": "D:\\BKQuiz\\AI\\Qweun_sft_version\\model_comparisons\\four_way_20261025\\bkquiz_four_way_input.zip",
+  "archive_sha256": "dc4dfe59d228e4490682d41248e00a46ed03b8db9a4e7f59acac6476ac4e2a5b",
+  "drive_folder": "BKQuiz_CPT/MODEL_COMPARISON_4WAYS_20261025",
+  "gpu_comparison_executed": false,
+  "notebook": "D:\\BKQuiz\\AI\\Qweun_sft_version\\model_comparisons\\four_way_20261025\\BKQuiz_Compare_Base_CPT_SFT_CPTSFT.ipynb",
+  "notebook_sha256": "34421e4adac99c53da6f2e91486fd841deb84a446b9322e8fbc90c6eb6fc14ff",
+  "sft_only_training_executed": false,
+  "size_bytes": 69899209
+}

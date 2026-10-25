@@ -1,0 +1,116 @@
+{
+  "date_client": "2026-10-20",
+  "run": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\runs\\it3170_v5_20261020",
+  "records": 2245,
+  "schema_valid_records": 2245,
+  "records_sha256": "36629346d79bc886f78463636f35a90aebe4bf00316da3e7209b972bbc38a42b",
+  "review_stats": {
+    "total": 2245,
+    "buckets": {
+      "uncertain": 2204,
+      "critical": 41
+    },
+    "decisions": {
+      "pending": 2245
+    },
+    "pending": 2245,
+    "reviewed": 0,
+    "human_verified": 0,
+    "eligible_for_training": 0,
+    "high_risk": 1749,
+    "stale_reviews": 0
+  },
+  "packet": {
+    "path": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\cloud_packets\\it3170_v5_pilot_11pages",
+    "manifest_sha256": "24f2f2d02890d1dcb39abd727e73358f8d6f1d27c5cf8d5ac3a683c636537c69",
+    "zip_sha256": "33fdc55a187f226987c853ebc1e31ea79851050e2d249755f50eb6c00560db12",
+    "zip_bytes": 5010754,
+    "requests": 23,
+    "by_kind": {
+      "text": 11,
+      "formula": 5,
+      "table": 1,
+      "diagram": 6
+    },
+    "vlm_images": 6,
+    "pages": [
+      20,
+      33,
+      35,
+      49,
+      129,
+      300,
+      494,
+      812,
+      869,
+      930,
+      1042
+    ],
+    "crc_valid": true,
+    "code_and_image_hashes_valid": true
+  },
+  "all_scope_vlm_default": {
+    "regions": 56,
+    "pages": 56,
+    "page_percent": 5.283018867924529,
+    "all_visuals_opt_in_required": true
+  },
+  "human_metrics_available": false,
+  "Q": null,
+  "empty_cpt_check": {
+    "samples": 0,
+    "training_ready": false,
+    "human_approved_only": true,
+    "machine_trusted_auto_exported": 0,
+    "holdout_excluded": true,
+    "tokenizer": null,
+    "all_pdf_knowledge_complete": false,
+    "records_snapshot_sha256": "36629346d79bc886f78463636f35a90aebe4bf00316da3e7209b972bbc38a42b"
+  },
+  "notebook_cells_compile": true,
+  "new_qwen_gpu_inference_executed": false,
+  "docling_or_mineru_model_executed_locally": false,
+  "tests": {
+    "count": 139,
+    "passed": 139,
+    "log": "evidence/tests_release.txt"
+  },
+  "local_versions": {
+    "pymupdf": "1.28.2",
+    "Pillow": "13.0.0",
+    "pydantic": "2.14.1",
+    "ImageHash": "4.3.2",
+    "python-pptx": "1.0.2",
+    "paddleocr": "3.7.0",
+    "paddlex": "3.7.2",
+    "paddlepaddle": "3.2.2",
+    "docling": null,
+    "mineru": null
+  },
+  "v3_manifest_sha256": "aa4973c0f29fe834579fd5f92625e10538cad733218e88c692552a4a0e3d1c73",
+  "code_sha256": {
+    "adapters.py": "35b25026ac35285613b8f2aca7ed45c5983ad50645dd63e647f9708ef593abc2",
+    "audit_release.py": "96e628d9b6bf3ae62d530e5e935afb952cc447e20c6b916e9cb0f45dd70c8d36",
+    "build_notebook.py": "7328ecdb88504a8f0518cf10715361e038362eaa396efd4b23070099a8e655fd",
+    "cli.py": "d1a49efe957d8f69145bf70091bb95b292679b993883d479876de5dd9212365f",
+    "cross_validation.py": "e071f4e7e23febde5179edbe1a3a0d1e3a7a04f935037e434655b6dd0dcb8ce9",
+    "evaluate_run.py": "6259d302c68a0c5719ed9ef3b435439efe5823c91638ef7141c7fdefe1885637",
+    "io_utils.py": "ab3f10952b52d3dcc36806a141a43f4c2a92fd38b14dcc737160693219c53d91",
+    "label_studio.py": "df811cfb1c70991b752915da32ec3c44e15daf3f1d7037aed835efeb7f7c7d9d",
+    "metrics.py": "b31cf1a4c4eb09793066510880fc6ad257f6b1e9712517b3926d80afb913bb28",
+    "models.py": "0871a03a12bb41bb9617161a0001af29b07e66ff6166958c50f3996cb82f277b",
+    "package_cloud.py": "ddf3ecaa7840bf3bd82e4abf22083fb05ae02f1448d63526a8ad841d2cadcf5a",
+    "paddle_worker.py": "460890774fc38b26038a9365e694fd1545204b0b0bd9036aacf132d605b08e0f",
+    "parser_worker.py": "6989896cb6ae34a493f4e2e8c67b8224d8cbeeb789cbfda9cfe39fd35caa22fd",
+    "prepare.py": "058df587188670b120b10202e8d77ac1f0f3494ae00d174ed991133eab652eeb",
+    "review_app.py": "5058f22bf9a362d57bea7046636234594bf527b9f7405974d1562a6a3084c3bc",
+    "review_store.py": "ed09afce44f3c61ce7f79ad8e6cd7ba181a6313f29af17a4c71a13d16b7f2a19",
+    "test_adapters.py": "48960f6917711717add35e71801b76c1675459bd0277bbb104b536bd2a71a0fb",
+    "test_core.py": "aca1830a24e2c1ec9469b9ac6289a5554bee7070de70204f0715ee7ad689bf87",
+    "test_notebook.py": "d9d3ff9b0be3016da14975a4410c6ccc62682d6e4e33a478eccf0903be5fc549",
+    "test_review_app.py": "c71faea7ddda519ec1ad76cc6acec123526c330bf3a8381301db71ff3fe34f91",
+    "test_workflow.py": "6853f6c0029f38eb8816c89093257ec754f861a94b7f0816e859b82c42b92752",
+    "vlm_worker.py": "c409b92feb0f52e508aec3c9f62bf74aa80dbd94a6eed1e6f5ed2be592f1e3ef",
+    "workflow.py": "07097e3514e2e4a8587be20bf5596366634aa8e2ad6be15c1181df23fe6b400e"
+  }
+}

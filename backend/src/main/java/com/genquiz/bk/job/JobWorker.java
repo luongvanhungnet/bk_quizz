@@ -62,7 +62,7 @@ public class JobWorker {
         try {
             presence.heartbeat(workerId);
         } catch (RuntimeException exception) {
-            log.error("Không thể cập nhật heartbeat cho job worker {}.", workerId, exception);
+            log.error("Unable to update heartbeat for job worker {}.", workerId, exception);
         }
     }
 
@@ -74,7 +74,7 @@ public class JobWorker {
     @Scheduled(fixedDelayString = "30s")
     public void reclaimStale() {
         int count = jobs.reclaimStale(properties.jobs().leaseDuration());
-        if (count > 0) log.warn("Đã thu hồi {} job bị mất heartbeat.", count);
+        if (count > 0) log.warn("Recovered {} jobs with a missing heartbeat.", count);
     }
 
     private void process(Job job) {
@@ -91,13 +91,13 @@ public class JobWorker {
     private void processWithTrace(Job job) {
         JobHandler handler = handlers.get(job.getType());
         try {
-            if (handler == null) throw new IllegalStateException("Chưa có handler cho loại job " + job.getType());
+        if (handler == null) throw new IllegalStateException("No handler is registered for job type " + job.getType());
             jobs.succeed(job.getId(), handler.handle(job));
         } catch (JobDeferredException deferred) {
             jobs.defer(job.getId(), deferred.delay());
-            log.debug("Job {} đang chờ tác vụ upstream hoàn tất.", job.getId());
+            log.debug("Job {} is waiting for the upstream operation to complete.", job.getId());
         } catch (Exception exception) {
-            log.error("Job {} loại {} thất bại ở lần {}.", job.getId(), job.getType(), job.getAttempts(), exception);
+            log.error("Job {} of type {} failed on attempt {}.", job.getId(), job.getType(), job.getAttempts(), exception);
             if (exception instanceof RagServiceException rag && rag.upstreamRequestId() != null) {
                 log.error("RAG upstream requestId={} cho job {}.", rag.upstreamRequestId(), job.getId());
             }

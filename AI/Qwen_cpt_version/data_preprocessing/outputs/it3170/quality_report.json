@@ -1,0 +1,71 @@
+{
+  "document": "D:\\bk_quizz_data\\slide_processed\\pdf\\IT3170-Thuật toán ứng dụng.pdf",
+  "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+  "pages_total": 1060,
+  "status_counts": {
+    "excluded_non_content": 19,
+    "needs_review": 753,
+    "accepted": 288
+  },
+  "flag_counts": {
+    "visual_requires_interpretation": 605,
+    "formula_prediction_requires_verification": 143,
+    "math_requires_verification": 337,
+    "table_requires_verification": 16,
+    "sparse_page_needs_visual_review": 57,
+    "no_text_pending_OCR_or_vision": 1,
+    "corrupt_glyphs": 47
+  },
+  "accepted_before_dedup": 288,
+  "cpt_samples": 264,
+  "cpt_characters": 89773,
+  "exact_duplicates_removed": 24,
+  "near_duplicate_pairs": 62,
+  "ppstructure_pages": 86,
+  "paddle_component_pages": 1060,
+  "reviewed_source_pages": 26,
+  "formula_records": 1038,
+  "table_records": 18,
+  "visual_pending": 605,
+  "rejected_annotations": [],
+  "metrics": {
+    "CER": {
+      "value": null,
+      "status": "not_measured",
+      "reason": "Needs manually transcribed ground-truth text."
+    },
+    "WER": {
+      "value": null,
+      "status": "not_measured",
+      "reason": "Needs manually transcribed ground-truth text."
+    },
+    "Formula Accuracy": {
+      "value": null,
+      "status": "not_measured",
+      "reason": "Needs independently verified formula inventory."
+    },
+    "Diagram Fact Precision": {
+      "value": null,
+      "status": "not_measured",
+      "reason": "Needs independently labeled facts and a fact inventory."
+    },
+    "Information Coverage": {
+      "value": null,
+      "status": "not_measured",
+      "reason": "Needs a reference inventory of important information."
+    },
+    "Duplicate Rate": {
+      "value": 0.08333333333333333,
+      "scope": "exact eligible page text; near duplicates reported separately"
+    },
+    "Source Traceability": {
+      "value": 1.0,
+      "scope": "all normalized pages with upstream page mapping"
+    }
+  },
+  "limitations": [
+    "Native geometric layout is heuristic; formulas and visuals require verification.",
+    "PII detection covers emails and labeled phones/identifiers; it is not exhaustive.",
+    "Single-course training-only pilot cannot estimate generalization."
+  ]
+}

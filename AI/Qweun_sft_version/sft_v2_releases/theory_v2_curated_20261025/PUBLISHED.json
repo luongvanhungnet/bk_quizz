@@ -1,0 +1,72 @@
+{
+  "release_id": "theory_v2_curated_20261025",
+  "published_at_utc": "2026-10-25 16:27:53 UTC",
+  "folder_url": "https://drive.google.com/drive/folders/14pm7CSufL0zmtCFhA4MXAQyNyxUu_2Dz",
+  "receipt": "DRIVE_UPLOAD_RECEIPT.json",
+  "artifacts": [
+    {
+      "name": "bkquiz_schema_diagnostics_input.zip",
+      "sha256": "fcae29f98069630a72ba0cd6c0cdf6c088e7dd93177894b7bd82bd86fb11a194",
+      "size_bytes": 100501058,
+      "drive_id": "1KzSVRwyZCXXu3FU7YpY1uDldPKe2r67j",
+      "url": "https://drive.google.com/file/d/1KzSVRwyZCXXu3FU7YpY1uDldPKe2r67j/view?usp=drivesdk"
+    },
+    {
+      "name": "bkquiz_sft_v2_train_input.zip",
+      "sha256": "ca3729cbc95d8758ec47c65c7c883dec7f3f9a511c9333fa3005828730a9a09c",
+      "size_bytes": 4691653,
+      "drive_id": "1ewdzJbYL5jRlhqwnCGMWwS37glpH66Qs",
+      "url": "https://drive.google.com/file/d/1ewdzJbYL5jRlhqwnCGMWwS37glpH66Qs/view?usp=drivesdk"
+    },
+    {
+      "name": "bkquiz_sft_v2_test100_input.zip",
+      "sha256": "10510ec4800e9c168873e2b8bbdfe9b06439e708c07c59c633e8a2c88bf19669",
+      "size_bytes": 4148841,
+      "drive_id": "1rRkiy-lmllrmPS0LKH_BmG3pWwXQjhNG",
+      "url": "https://drive.google.com/file/d/1rRkiy-lmllrmPS0LKH_BmG3pWwXQjhNG/view?usp=drivesdk"
+    },
+    {
+      "name": "01_Diagnose_Schema_4Models.ipynb",
+      "sha256": "e87dc63dfc441eda25429e053e50ca6ab026d621e353052285cc970a3ad734e6",
+      "size_bytes": 12099,
+      "drive_id": "1gTFK-IHJcsh9_oy0VTDl1Z777V5lEJgc",
+      "url": "https://colab.research.google.com/drive/1gTFK-IHJcsh9_oy0VTDl1Z777V5lEJgc"
+    },
+    {
+      "name": "02_Train_Base_SFTv2_RAG.ipynb",
+      "sha256": "4f32f6e35b9ffff2e0ddbca3b2193782a0c9babf3b57975218ecd50a9dfd406e",
+      "size_bytes": 13170,
+      "drive_id": "1DSMZygCNNtwS0tgPd6yOiIsrbEP0eJxp",
+      "url": "https://colab.research.google.com/drive/1DSMZygCNNtwS0tgPd6yOiIsrbEP0eJxp"
+    },
+    {
+      "name": "03_Independent_Test_100.ipynb",
+      "sha256": "60092bf727940a1b70f9089aa3ec0b31cb53c34b7ab09708914766f279ab3c7a",
+      "size_bytes": 12740,
+      "drive_id": "1-j8DEfiUcGRFiSVYGKbbvbl0exqfzyVU",
+      "url": "https://colab.research.google.com/drive/1-j8DEfiUcGRFiSVYGKbbvbl0exqfzyVU"
+    },
+    {
+      "name": "START_HERE.md",
+      "sha256": "7b985dd9cb5bf7d762cdd12addcb61c40cb33dafc87e2f3f1b140a1962e9aec6",
+      "size_bytes": 5802,
+      "drive_id": "11DbpgfQv2xSU9aM0dfawUpOeoZy6cn95",
+      "url": "https://drive.google.com/file/d/11DbpgfQv2xSU9aM0dfawUpOeoZy6cn95/view?usp=drivesdk"
+    },
+    {
+      "name": "LOCAL_VALIDATION.json",
+      "sha256": "83edf9bdb64c24dee5309ea519d14ae7e9d16b90c0e9df0c996d3162fab92b3b",
+      "size_bytes": 1291,
+      "drive_id": "1N-CiQbhMeSw9RD4Pw5nWU8vjPxsxB4be",
+      "url": "https://drive.google.com/file/d/1N-CiQbhMeSw9RD4Pw5nWU8vjPxsxB4be/view?usp=drivesdk"
+    }
+  ],
+  "training_counts": {
+    "train": 270,
+    "validation": 30,
+    "test": 100
+  },
+  "gpu_executed_by_codex": false,
+  "expert_semantically_verified": false,
+  "scope": "controlled concept-discrimination pilot"
+}

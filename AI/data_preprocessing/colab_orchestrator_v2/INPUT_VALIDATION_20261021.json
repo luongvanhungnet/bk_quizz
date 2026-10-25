@@ -1,0 +1,39 @@
+{
+  "schema": "v5-orchestrator-2-sequential",
+  "client_date": "2026-10-21",
+  "verified_inputs": 14,
+  "source_jobs": 148,
+  "source_pages": 13314,
+  "source_pdfs": 27,
+  "all_payload_hashes_valid": true,
+  "runtime_matches_notebook": true,
+  "no_future_input_dependencies": true,
+  "whole_document_layout_routing_preserved": true,
+  "cache_assets_byte_identical_to_v1": 4490,
+  "cached_source_records_identical": 2245,
+  "cached_source_pages": 1060,
+  "vlm_cache_successes": 7,
+  "completed_jobs_seeded": [
+    "it3170_c6c829f14bf2_p00001-00100"
+  ],
+  "size_before": {
+    "total_bytes": 895897467,
+    "mean_bytes": 63992676.21428572,
+    "min_bytes": 2256360,
+    "max_bytes": 401190450,
+    "population_variance_bytes2": 9661115004138904.0,
+    "population_std_bytes": 98290971.1221682,
+    "coefficient_of_variation": 1.535972191458774
+  },
+  "size_after": {
+    "total_bytes": 896239610,
+    "mean_bytes": 64017115,
+    "min_bytes": 58476888,
+    "max_bytes": 104181268,
+    "population_variance_bytes2": 125681107556876.14,
+    "population_std_bytes": 11210758.562955325,
+    "coefficient_of_variation": 0.1751212712874569
+  },
+  "variance_reduction_percent": 98.69910349371648,
+  "gpu_benchmark_executed": false
+}

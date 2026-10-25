@@ -1,0 +1,22 @@
+{
+  "id": "p0046_r00023",
+  "page": 46,
+  "semantic_verified": false,
+  "legacy_reproduction": {
+    "status": "error",
+    "error_type": "KeyError",
+    "error_message": "'doc_preprocessor_res'",
+    "traceback": "Traceback (most recent call last):\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v2\\table_integration_test.py\", line 47, in run\n    next(iter(table.predict(str(image),overall_ocr_res=legacy,use_ocr_model=False,\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddleocr\\_pipelines\\table_recognition_v2.py\", line 143, in predict\n    return list(\n           ^^^^^\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\_parallel.py\", line 161, in predict\n    yield from self._pipeline.predict(\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\table_recognition\\pipeline_v2.py\", line 1280, in predict\n    single_table_rec_res = self.predict_single_table_recognition_res(\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\table_recognition\\pipeline_v2.py\", line 1084, in predict_single_table_recognition_res\n    single_table_recognition_res = get_table_recognition_res(\n                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\table_recognition\\table_recognition_post_processing_v2.py\", line 444, in get_table_recognition_res\n    img_shape = overall_ocr_res[\"doc_preprocessor_res\"][\"output_img\"].shape[0:2]\n                ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: 'doc_preprocessor_res'\n"
+  },
+  "fixed": {
+    "status": "ok",
+    "prediction": {
+      "html": "<html><body><table><tr><td>Ví dụ dữ liệu vào</td><td>Ví dụ kết quả ra</td></tr><tr><td>3 -1000 2000 3000 -4000 3000 -2500 1500 100 -1500 -1200 -1800 -1900</td><td>-5000 -2500 -3700</td></tr></table></body></html>",
+      "text_source": "native_pdf",
+      "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+    },
+    "structural_errors": [],
+    "semantic_verified": false,
+    "elapsed_seconds_this_attempt": 4.777700799997547
+  }
+}

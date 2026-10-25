@@ -1,7 +1,7 @@
 $EnvFile = Join-Path $PSScriptRoot ".env.local"
 
 if (-not (Test-Path $EnvFile)) {
-    throw "Không tìm thấy file: $EnvFile"
+    throw "Environment file was not found: $EnvFile"
 }
 
 Get-Content $EnvFile |
@@ -57,7 +57,7 @@ if (-not $env:JAVA_TOOL_OPTIONS) {
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 
-Write-Host "Đã nạp biến môi trường từ $EnvFile"
+Write-Host "Loaded environment variables from $EnvFile"
 Write-Host "PORT=$env:PORT"
 Write-Host "DATABASE_URL=$env:DATABASE_URL"
 Write-Host "DATABASE_USERNAME=$env:DATABASE_USERNAME"

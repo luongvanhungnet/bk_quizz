@@ -1,0 +1,19 @@
+{
+  "id": "p0679_r00967",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "d586251332557b23c5b6e40223c9e8dad3a0c8c824d4d6775b7db37625da091e",
+  "raw_pixel_sha256": "d69cd515570079337b11a9bebd81b46e28309e10660d9a467dd7012b9d60c2fc",
+  "prediction": {
+    "html": "<html><body><table><tr><td>k</td><td>ck</td><td>Tất cả lời giải tối ưu phải thoả mãn</td><td>Giá trị tối đa với các mệnh giá 1, 2, . . . , k − 1 trong bất kỳ OPT</td></tr><tr><td>1</td><td>1</td><td>P ≤ 4</td><td>-</td></tr><tr><td>2</td><td>5</td><td>N ≤ 1</td><td>4</td></tr><tr><td>3</td><td>10</td><td>N + D ≤ 2</td><td>4+5=9</td></tr><tr><td>4</td><td>25</td><td>Q ≤ 3</td><td>20+4=24</td></tr><tr><td>5</td><td>100</td><td>không giới hạn</td><td>75+24=99</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "3671e14f7f282e007ce7199fe512af4a270b5ec403d788f6be40d54ada30b16e",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "829d580c297ee76f5dafcf5a65846f20b0693beca076327348ba01467d37d572",
+  "cache_hit": true
+}

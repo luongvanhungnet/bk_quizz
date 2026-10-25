@@ -10,10 +10,10 @@ $EnvFile = Join-Path $Root ".env"
 $Python = Join-Path $Root ".venv\Scripts\python.exe"
 
 if (-not (Test-Path -LiteralPath $Python)) {
-    throw "Không tìm thấy Python virtual environment tại $Python"
+    throw "Python virtual environment was not found at $Python"
 }
 if (-not (Test-Path -LiteralPath $EnvFile)) {
-    throw "Không tìm thấy $EnvFile. Hãy sao chép .env.example thành .env."
+    throw "$EnvFile was not found. Copy .env.example to .env first."
 }
 
 $PreviousValues = @{}
@@ -41,7 +41,7 @@ function Assert-RedisAvailable {
     try {
         $Connect = $Client.BeginConnect($Uri.Host, $Uri.Port, $null, $null)
         if (-not $Connect.AsyncWaitHandle.WaitOne(1500) -or -not $Client.Connected) {
-            throw "Redis chưa hoạt động tại $($Uri.Host):$($Uri.Port)."
+            throw "Redis is not available at $($Uri.Host):$($Uri.Port)."
         }
         $Client.EndConnect($Connect)
     }
@@ -50,7 +50,7 @@ function Assert-RedisAvailable {
 
 try {
     Set-Location -LiteralPath $Root
-    Write-Host "Đã nạp cấu hình từ $EnvFile cho tiến trình $Service."
+    Write-Host "Loaded configuration from $EnvFile for the $Service process."
     Write-Host "RAG root: $Root"
     Write-Host "Python: $Python"
     switch ($Service) {

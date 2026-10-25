@@ -1,0 +1,42 @@
+test_coordinate_roundtrip (test_v4.GeometryTests.test_coordinate_roundtrip) ... ok
+test_endpoint_mismatch (test_v4.GeometryTests.test_endpoint_mismatch) ... ok
+test_resize_budget_and_grid (test_v4.GeometryTests.test_resize_budget_and_grid) ... ok
+test_tiny_board_has_enough_visual_patches (test_v4.GeometryTests.test_tiny_board_has_enough_visual_patches) ... ok
+test_native_candidates_preserve_missing_v3_edge (test_v4.RealSourceRegression.test_native_candidates_preserve_missing_v3_edge) ... ok
+test_native_shapes_exclude_page812_captions (test_v4.RealSourceRegression.test_native_shapes_exclude_page812_captions) ... ok
+test_v3_raw_failures_are_preserved_as_regressions (test_v4.RealSourceRegression.test_v3_raw_failures_are_preserved_as_regressions) ... ok
+test_audit_overwrite_rejected (test_v4.RuntimeTests.test_audit_overwrite_rejected) ... ok
+test_changed_upstream_changes_cache_eligibility (test_v4.RuntimeTests.test_changed_upstream_changes_cache_eligibility) ... ok
+test_cpt_export_rejects_holdout (test_v4.RuntimeTests.test_cpt_export_rejects_holdout) ... ok
+test_empty_gold_is_not_scored (test_v4.RuntimeTests.test_empty_gold_is_not_scored) ... ok
+test_full_run_requires_pilot (test_v4.RuntimeTests.test_full_run_requires_pilot) ... ok
+test_invalid_output_is_not_success_cache (test_v4.RuntimeTests.test_invalid_output_is_not_success_cache) ... ok
+test_oom_retry_uses_lower_visual_cap (test_v4.RuntimeTests.test_oom_retry_uses_lower_visual_cap) ... ok
+test_pending_annotation_is_not_gold (test_v4.RuntimeTests.test_pending_annotation_is_not_gold) ... ok
+test_transform_part_of_task_identity (test_v4.RuntimeTests.test_transform_part_of_task_identity) ... ok
+test_truncated_response_is_not_cached (test_v4.RuntimeTests.test_truncated_response_is_not_cached) ... ok
+test_valid_cache_skips_model (test_v4.RuntimeTests.test_valid_cache_skips_model) ... ok
+test_all_examples_match_same_schema (test_v4.SchemaTests.test_all_examples_match_same_schema) ... ok
+test_arrow_endpoint_rejected (test_v4.SchemaTests.test_arrow_endpoint_rejected) ... ok
+test_bad_box_not_accepted (test_v4.SchemaTests.test_bad_box_not_accepted) ... ok
+test_board_out_of_range (test_v4.SchemaTests.test_board_out_of_range) ... ok
+test_board_queen_removed_overlap (test_v4.SchemaTests.test_board_queen_removed_overlap) ... ok
+test_bool_not_number_in_bbox (test_v4.SchemaTests.test_bool_not_number_in_bbox) ... ok
+test_dangling_fallback_edge_rejected (test_v4.SchemaTests.test_dangling_fallback_edge_rejected) ... ok
+test_duplicate_keys_rejected (test_v4.SchemaTests.test_duplicate_keys_rejected) ... ok
+test_generated_prompt_contains_exact_contract (test_v4.SchemaTests.test_generated_prompt_contains_exact_contract) ... ok
+test_historical_tree_relation_shape_is_rejected (test_v4.SchemaTests.test_historical_tree_relation_shape_is_rejected) ... ok
+test_incomplete_markdown_rejected (test_v4.SchemaTests.test_incomplete_markdown_rejected) ... ok
+test_missing_attribute_rejected (test_v4.SchemaTests.test_missing_attribute_rejected) ... ok
+test_nan_rejected (test_v4.SchemaTests.test_nan_rejected) ... ok
+test_no_relation_or_vertex_invention_during_parse (test_v4.SchemaTests.test_no_relation_or_vertex_invention_during_parse) ... ok
+test_null_quote_repair_does_not_create_facts (test_v4.SchemaTests.test_null_quote_repair_does_not_create_facts) ... ok
+test_only_single_object_array_is_repaired (test_v4.SchemaTests.test_only_single_object_array_is_repaired) ... ok
+test_tree_example_is_nonempty_and_correct (test_v4.SchemaTests.test_tree_example_is_nonempty_and_correct) ... ok
+test_tree_references_are_checked (test_v4.SchemaTests.test_tree_references_are_checked) ... ok
+test_unknown_inventory_id_rejected (test_v4.SchemaTests.test_unknown_inventory_id_rejected) ... ok
+
+----------------------------------------------------------------------
+Ran 37 tests in 0.418s
+
+OK

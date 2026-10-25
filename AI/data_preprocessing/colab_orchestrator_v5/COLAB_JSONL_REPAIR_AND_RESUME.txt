@@ -1,0 +1,183 @@
+# Chạy sau khi cell lỗi đã dừng. Dùng lại venv, input, BASE và kết quả đã lưu.
+import os
+from pathlib import Path
+import client
+required = ['BASE', 'WORK', 'ENVS', 'INDEX', 'PROFILE', 'DOC_HF_HOME', 'KEEP_MODEL_RESIDENT']
+assert all(name in globals() for name in required), 'Chạy các cell cấu hình trước.'
+
+def apply_hotfix(runtime, base, adapter_source):
+    import hashlib
+    import json
+    import os
+    from pathlib import Path
+    import time
+
+    runtime, base = Path(runtime).resolve(), Path(base).resolve()
+    if not (runtime/'client.py').is_file() or not (runtime/'unit_queue.py').is_file():
+        raise RuntimeError('Không tìm thấy runtime 134 gói; chạy các cell cấu hình trước.')
+    # Exact anchors only. Unexpected local edits are retained and reported.
+    replacements = {
+        'common.py': [("def rows(path):\n    with Path(path).open(encoding='utf-8-sig') as f:\n        return [json.loads(line) for line in f if line.strip()]",
+                       "def rows(path):\n    from jsonl_adapter import read_jsonl\n    return read_jsonl(path)")],
+        'unit_store.py': [
+            ('from common import atomic_json,copy_verified,digest,load,safe',
+             'from common import atomic_json,copy_verified,digest,load,safe\nfrom jsonl_adapter import loads_jsonl'),
+            ("def json_rows(name):return [json.loads(line) for line in read_logical(name).splitlines() if line.strip()]",
+             "def json_rows(name):return loads_jsonl(read_logical(name),str(path)+'!'+name)")],
+        'unit_queue.py': [('        io_utils.file_sha=digest\n',
+                           '        io_utils.file_sha=digest\n        from jsonl_adapter import install as install_jsonl\n        install_jsonl()\n')],
+        'stage_worker.py': [('    io_utils.file_sha=digest\n',
+                             '    io_utils.file_sha=digest\n    from jsonl_adapter import install as install_jsonl\n    install_jsonl()\n')],
+        'warm_worker.py': [('    io_utils.file_sha = digest  # Streaming hash adapter; frozen files remain unchanged.\n',
+                            '    io_utils.file_sha = digest  # Streaming hash adapter; frozen files remain unchanged.\n    from jsonl_adapter import install as install_jsonl\n    install_jsonl()\n')],
+        'runtime_profile.py': [('    io_utils.file_sha=digest\n',
+                                '    io_utils.file_sha=digest\n    from jsonl_adapter import install as install_jsonl\n    install_jsonl()\n')],
+        'import_units.py': [('    verify_release(ENGINE);sys.path.insert(0,str(ENGINE))\n',
+                             '    verify_release(ENGINE);sys.path.insert(0,str(ENGINE))\n    from jsonl_adapter import install as install_jsonl\n    install_jsonl()\n')],
+    }
+    pending = {}
+    for name, pairs in replacements.items():
+        path = runtime/name
+        text = path.read_text(encoding='utf-8-sig')
+        for old, new in pairs:
+            if new in text:
+                continue
+            if text.count(old) != 1:
+                raise RuntimeError('Runtime đã đổi tại '+name+'; chưa sửa file nào. Dùng notebook/runtime JSONL Fix mới.')
+            text = text.replace(old, new, 1)
+        compile(text, str(path), 'exec')
+        pending[path] = text.encode('utf-8')
+    compile(adapter_source, 'jsonl_adapter.py', 'exec')
+    pending[runtime/'jsonl_adapter.py'] = adapter_source.encode('utf-8')
+    # Validate the actual helper source before making any changes.
+    namespace = {'__name__':'jsonl_hotfix_self_test'}
+    exec(compile(adapter_source, 'jsonl_adapter.py', 'exec'), namespace)
+    assert namespace['loads_jsonl']('{"text":"x\u2028y\u0085z\u2029; ≤ 2"}\n') == [{'text':'x\u2028y\u0085z\u2029; ≤ 2'}]
+    stamp = str(time.time_ns())
+    backup = base/'runtime_hotfixes'/('jsonl_20261023_'+stamp)
+    backup.mkdir(parents=True, exist_ok=False)
+    originals = {p:p.read_bytes() if p.exists() else None for p in pending}
+    before = {}
+    # Back up the whole runtime, including any user edits to native_batches.py.
+    for path in runtime.glob('*.py'):
+        data = path.read_bytes(); target = backup/path.name; target.write_bytes(data)
+        wanted = hashlib.sha256(data).hexdigest()
+        if hashlib.sha256(target.read_bytes()).hexdigest() != wanted:
+            raise RuntimeError('Sao lưu runtime không khớp hash; chưa sửa file nào.')
+        before[path.name] = wanted
+    try:
+        for path, data in pending.items():
+            temporary = path.with_name(path.name+'.jsonl_fix.next')
+            temporary.write_bytes(data); os.replace(temporary, path)
+        result = {'revision':'v6-jsonl-unicode-l4-20261023', 'backup':str(backup), 'runtime':str(runtime),
+                  'before':before, 'patched':{p.name:hashlib.sha256(data).hexdigest() for p,data in pending.items()},
+                  'source_core_modified':False, 'records_modified':False, 'receipts_modified':False,
+                  'native_batches_modified':False, 'unix':time.time()}
+        (backup/'hotfix_manifest.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
+    except BaseException:
+        for path, data in originals.items():
+            if data is None:
+                if path.exists():path.unlink()
+            else:path.write_bytes(data)
+        raise
+    return result
+
+ADAPTER_SOURCE = '"""Strict physical-LF JSONL framing; Unicode separators are record content.\n\nAdapt the frozen core in memory. Never edit its source or discard broken rows.\n"""\nimport json\nfrom pathlib import Path\nimport sys\nfrom types import ModuleType\n\n\nclass JSONLDecodeError(json.JSONDecodeError):\n    def __init__(self, error, source, physical_line):\n        self.source = str(source)\n        self.physical_line = physical_line\n        super().__init__(\n            f\'{self.source}: physical JSONL line {physical_line}, column {error.colno}: {error.msg}\',\n            error.doc, error.pos,\n        )\n\n\ndef _parse(lines, source):\n    result = []\n    for number, line in enumerate(lines, 1):\n        if not line.strip():\n            continue\n        try:\n            result.append(json.loads(line))\n        except json.JSONDecodeError as error:\n            raise JSONLDecodeError(error, source, number) from error\n    return result\n\n\ndef loads_jsonl(data, source=\'<JSONL>\'):\n    """Decode an in-memory member without str.splitlines()\' Unicode boundaries."""\n    if isinstance(data, bytes):\n        data = data.decode(\'utf-8-sig\')\n    elif data.startswith(\'\\ufeff\'):\n        data = data[1:]\n    return _parse(data.split(\'\\n\'), source)\n\n\ndef read_jsonl(path):\n    # newline=\'\\n\' also accepts CRLF through JSON whitespace. U+0085/U+2028/\n    # U+2029 inside strings remain unchanged. Invalid/truncated JSON still fails.\n    with Path(path).open(encoding=\'utf-8-sig\', newline=\'\\n\') as stream:\n        return _parse(stream, path)\n\n\ndef install():\n    """Cover fresh imports and already-bound `from io_utils import jsonl` aliases."""\n    import io_utils\n    previous = io_utils.jsonl\n    if previous is read_jsonl:\n        return\n    for module in list(sys.modules.values()):\n        if isinstance(module, ModuleType):\n            namespace = vars(module)\n            if namespace.get(\'jsonl\') is previous:\n                namespace[\'jsonl\'] = read_jsonl\n    io_utils.jsonl = read_jsonl\n'
+# Đóng riêng controller/model worker; không xóa môi trường hoặc kết quả Drive.
+if globals().get('SESSION') is not None:
+    SESSION.close()
+globals().pop('SESSION', None)
+HOTFIX = apply_hotfix(Path(client.__file__).resolve().parent, BASE, ADAPTER_SOURCE)
+os.environ['BKQUIZ_RUNTIME_REVISION'] = HOTFIX['revision']
+# Chặn cell nạp runtime cũ ghi đè bản vá trong kernel này.
+_UNIT_RUNTIME_SHA = 'hotfix:' + HOTFIX['revision']
+print('ĐÃ VÁ JSONL:', HOTFIX['revision'])
+print('Sao lưu runtime trước vá:', HOTFIX['backup'])
+print('Giữ nguyên venv, native_batches.py, PDF, bản ghi và ZIP/receipt trên Drive.')
+print('Đang quét lại ZIP và tiếp tục các gói còn thiếu; gói lỗi được thử lại một lần trong lượt này.')
+print('Nếu gói 61 từng bị auto-skip: đặt RETRY_FAILED=True trong cell xử lý để thử lại.')
+print('Không chạy lại cell 2 của notebook cũ; khi đổi VM hãy dùng notebook JSONL Fix mới.')
+
+MAX_UNITS = globals().get('MAX_UNITS', None)
+from pathlib import Path
+import json
+import time
+import traceback
+from client import Session
+from common import atomic_json
+
+# Gói lỗi vẫn là pending, không được tính là hoàn thành.
+EXCLUDED_UNITS = {'unit_0025'}  # Đổi thành set() nếu muốn thử lại cả gói 25.
+RETRY_FAILED = True  # True: thử lại các gói lỗi đã ghi ở lượt chạy trước.
+FAILURE_FILE = BASE / 'auto_skipped_units.json'
+
+if FAILURE_FILE.exists():
+    SKIP_LOG = json.loads(FAILURE_FILE.read_text(encoding='utf-8-sig'))
+    if SKIP_LOG.get('plan_sha256') != INDEX['plan_sha256']:
+        raise RuntimeError('Danh sách lỗi thuộc kế hoạch khác; kiểm tra BASE trước khi chạy.')
+else:
+    SKIP_LOG = {'plan_sha256': INDEX['plan_sha256'], 'failed': {}, 'history': []}
+
+if globals().get('SESSION') is not None and SESSION.process.poll() is None:
+    assert getattr(SESSION, 'runtime_revision', None) in {'v6-bounded-regions-l4-20261022', 'v6-jsonl-unicode-l4-20261023'}, 'Đóng SESSION cũ trước khi nạp bản mới'
+    assert SESSION.base == BASE and SESSION.work == WORK and SESSION.keep_model == KEEP_MODEL_RESIDENT, 'Cấu hình đổi: đóng SESSION trước'
+    assert SESSION.runtime_profile == PROFILE and SESSION.docling_hf_home == str(DOC_HF_HOME), 'Profile/cache đổi: đóng SESSION trước'
+else:
+    SESSION = Session(ENVS['controller'], BASE, keep_model=KEEP_MODEL_RESIDENT, batch_pages=20, work=WORK)
+
+STATE = SESSION.scan()
+print('Đã lưu hợp lệ:', STATE['completed_units'], '/', STATE['total_units'], '; trang:', STATE['completed_pages'])
+BY_ID = {e['unit_id']: e for e in INDEX['bundles']}
+ATTEMPTED = set()
+processed = 0
+
+while True:
+    STATE = SESSION.status()
+    blocked = EXCLUDED_UNITS | (set(SKIP_LOG['failed']) if not RETRY_FAILED else set())
+    eligible = [u for u in STATE['pending_units'] if u not in blocked and u not in ATTEMPTED]
+    if not eligible or (MAX_UNITS is not None and processed >= MAX_UNITS):
+        break
+
+    unit_id = eligible[0]
+    selected = BY_ID[unit_id]
+    if not Path(selected['path']).is_file():
+        print('Gói kế tiếp chưa có trên Drive:', selected['filename'])
+        break
+
+    print('START', unit_id, '—', selected['pages'], 'trang', flush=True)
+    ATTEMPTED.add(unit_id)
+    processed += 1  # MAX_UNITS tính số gói đã thử, bao gồm gói lỗi.
+    try:
+        RESULT = SESSION.process_unit(unit_id)
+    except Exception as exc:
+        error = {'unit_id': unit_id, 'unix': time.time(), 'error': str(exc), 'traceback': traceback.format_exc()}
+        SKIP_LOG['failed'][unit_id] = error
+        SKIP_LOG['history'].append({**error, 'event': 'failed'})
+        atomic_json(FAILURE_FILE, SKIP_LOG)
+        print('BỎ QUA GÓI LỖI:', unit_id, (str(exc).splitlines() or [repr(exc)])[-1][:300], flush=True)
+        print('Chi tiết:', FAILURE_FILE, flush=True)
+
+        # Lỗi cú pháp/module ảnh hưởng toàn bộ runtime; bỏ qua mọi gói không sửa được lỗi này.
+        fatal = ('IndentationError', 'SyntaxError', 'ModuleNotFoundError', 'No module named', 'header too large')
+        if SESSION.process.poll() is not None or any(word in str(exc) for word in fatal):
+            print('Dừng: controller đã thoát hoặc runtime/model bị lỗi chung. Giữ nguyên mọi kết quả đã lưu.', flush=True)
+            raise
+        continue
+
+    print('ĐÃ LƯU DRIVE:', RESULT['archive'], '; SHA256:', RESULT['archive_sha256'], flush=True)
+    if unit_id in SKIP_LOG['failed']:
+        SKIP_LOG['failed'].pop(unit_id)
+        SKIP_LOG['history'].append({'unit_id': unit_id, 'unix': time.time(), 'event': 'resolved'})
+        atomic_json(FAILURE_FILE, SKIP_LOG)
+    STATE = SESSION.status()
+    print('Tiến độ:', STATE['completed_units'], '/', STATE['total_units'], flush=True)
+
+STATE = SESSION.status()
+print('Đã lưu hợp lệ:', STATE['completed_units'], '/', STATE['total_units'], flush=True)
+if not STATE['pending_units']:
+    print('Hoàn tất toàn bộ gói.'); SESSION.close()
+else:
+    print('Chưa hoàn thành:', STATE['pending_units'], flush=True)
+    print('Gói lỗi đã ghi:', sorted(set(STATE['pending_units']) & set(SKIP_LOG['failed'])), flush=True)
+    print('Gói tạm loại trừ:', sorted(set(STATE['pending_units']) & EXCLUDED_UNITS), flush=True)
+    print('Gói lỗi vẫn là pending; bật RETRY_FAILED=True sau khi sửa để thử lại.', flush=True)

@@ -1,0 +1,19 @@
+{
+  "id": "p0958_r01267",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "0f83a743714bfb12e2f0f26d86963546347f6a1ca796801346a53eaf2baac187",
+  "raw_pixel_sha256": "8f1cdb7a34d9aff936aaffc8c674753f2c077077cd1e4820ad944a168b06aed3",
+  "prediction": {
+    "html": "<html><body><table><tr><td>EXERCISE LONGEST PATH ON A TREE #include <bits/stdc++.h> #include <vector> #include <iostream> using namespace std; #define MAX_N 100001 int N; vector<int> A[MAX_N];// A[v][i] is the i^th adjacent node to v vector<int> c[MAX_N];// c[v][i] is the weight of the i^th adjacent edge to v int d[MAX_N];// d[v] is the distance from the source node to v in BFS int p[MAX_N];// p[v] is the parent of v in BFS 60</td></tr><tr><td>60</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "9e473351e2662e95eb14ccff4cf253c600e75628d4be2367112b161a92faa4a7",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "e668095fc268322669b3f84ee328919b355830a1ff56bbcedd5ba0e9fa4536d1",
+  "cache_hit": true
+}

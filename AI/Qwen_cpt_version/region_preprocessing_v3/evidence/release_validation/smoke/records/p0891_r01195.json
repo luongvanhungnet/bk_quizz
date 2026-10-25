@@ -1,0 +1,43 @@
+{
+  "status": "ok",
+  "cache_hit": true,
+  "gpu": "Tesla T4",
+  "raw": {
+    "input_path": "/content/it3170_regions/crops/p0891_r01195.png",
+    "page_index": null,
+    "rec_formula": "(bar i==\\ x x(a_{i}+S(j)\\mid L_{1}\\leq\\bar{i-j}\\leq"
+  },
+  "prediction": {
+    "latex": "(bar i==\\ x x(a_{i}+S(j)\\mid L_{1}\\leq\\bar{i-j}\\leq",
+    "semantic_description": null
+  },
+  "elapsed_seconds": 0.07947602200010806,
+  "id": "p0891_r01195",
+  "engine": "formula",
+  "cache_key": "8f8cb4b29e2e1186ca8481e4949a797ada0b7241e3b4ffcbb1eb129ecfab1a99",
+  "raw_pixel_sha256": "085bfff70d8135dff68295d22103c5a57e0447d78828e2e072186fd863fa1e4c",
+  "semantic_verified": false,
+  "structural_errors": [],
+  "reused_inference": true,
+  "source_cache_key": "a7f5d4ac7244313651ccdbace0ced9fa0b0894b5bfdff9131049756c5102720a",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "64797b3877f936faf004e22a22e9287571b3932bf6c4ddc627c340bb01bdd326",
+  "destination": "review_queue",
+  "source": {
+    "page": 891,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "05a5a5fb15881e01e6689e809e93b24be357109e49bf5edbc6cbd453b1e90289",
+    "input_file_sha256": "64797b3877f936faf004e22a22e9287571b3932bf6c4ddc627c340bb01bdd326"
+  },
+  "quality": {
+    "flags": [
+      "unmatched_delimiter_requires_context"
+    ],
+    "metrics": {},
+    "evidence_gate_pass": false,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

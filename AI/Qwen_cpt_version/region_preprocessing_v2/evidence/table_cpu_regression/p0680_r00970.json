@@ -1,0 +1,22 @@
+{
+  "id": "p0680_r00970",
+  "page": 680,
+  "semantic_verified": false,
+  "legacy_reproduction": {
+    "status": "error",
+    "error_type": "KeyError",
+    "error_message": "'doc_preprocessor_res'",
+    "traceback": "Traceback (most recent call last):\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v2\\table_integration_test.py\", line 47, in run\n    next(iter(table.predict(str(image),overall_ocr_res=legacy,use_ocr_model=False,\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddleocr\\_pipelines\\table_recognition_v2.py\", line 143, in predict\n    return list(\n           ^^^^^\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\_parallel.py\", line 161, in predict\n    yield from self._pipeline.predict(\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\table_recognition\\pipeline_v2.py\", line 1280, in predict\n    single_table_rec_res = self.predict_single_table_recognition_res(\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\table_recognition\\pipeline_v2.py\", line 1084, in predict_single_table_recognition_res\n    single_table_recognition_res = get_table_recognition_res(\n                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\BKQuiz\\AI\\Qwen_cpt_version\\data_preprocessing\\.venv\\Lib\\site-packages\\paddlex\\inference\\pipelines\\table_recognition\\table_recognition_post_processing_v2.py\", line 444, in get_table_recognition_res\n    img_shape = overall_ocr_res[\"doc_preprocessor_res\"][\"output_img\"].shape[0:2]\n                ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^\nKeyError: 'doc_preprocessor_res'\n"
+  },
+  "fixed": {
+    "status": "ok",
+    "prediction": {
+      "html": "<html><body><table><tr><td>k</td><td>ck</td><td></td><td></td></tr><tr><td>1</td><td>1</td><td>P ≤ 4</td><td>-</td></tr><tr><td>2</td><td>5</td><td>N ≤ 1</td><td>4</td></tr><tr><td>3</td><td>10</td><td>N + D ≤ 2</td><td>4+5=9</td></tr><tr><td>4</td><td>25</td><td>Q ≤ 3</td><td>20+4=24</td></tr><tr><td>5</td><td>100</td><td>không giới hạn</td><td>75+24=99</td></tr></table></body></html>",
+      "text_source": "native_pdf",
+      "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+    },
+    "structural_errors": [],
+    "semantic_verified": false,
+    "elapsed_seconds_this_attempt": 5.950392500002636
+  }
+}

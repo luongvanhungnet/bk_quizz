@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "unit_tests": {
+    "local_review_export_notebook": 17,
+    "runtime_data": 7
+  },
+  "original_courses_unchanged": 27,
+  "original_review_events_unchanged": 1684,
+  "samples": 33956,
+  "characters": 10169185,
+  "acceptance": {
+    "review_approve": 839,
+    "owner_default_pass": 33117
+  },
+  "tokens_including_eos": 3020530,
+  "packed_sequences": 2950,
+  "token_stream_sha256": "ea524d194b44ccedb49dbb50acf3e9ff7c5a492cd1fb5b5e00c7385e4e63d16f",
+  "every_source_span_accounted_for": true,
+  "padding_and_causal_labels_checked": true,
+  "model_revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+  "transformers_version": "4.57.6",
+  "automatic_human_review_events_created": 0,
+  "actual_gpu_training_executed": false
+}

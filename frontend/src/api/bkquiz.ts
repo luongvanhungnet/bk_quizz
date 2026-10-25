@@ -1000,6 +1000,11 @@ export interface AdminFile { id: string; ownerId: string | null; purpose: string
 export interface AuditLog { id: string; actorUserId: string | null; action: string; targetType: string; targetId: string; detailsJson: string; createdAt: string; }
 export interface AdminContent { id: string; owner_id: string; title: string; moderation_status: string; moderation_reason?: string | null; ai_validation_status?: AiValidationStatus; ai_validation_warning_count?: number; created_at: string; }
 export interface AdminJob { id: string; type: string; status: string; subjectUserId: string; resourceId?: string | null; attempts: number; maxAttempts: number; errorCode?: string | null; errorMessage?: string | null; createdAt: string; }
+export interface AnalyticsPoint { date: string; value: number; }
+export interface AnalyticsOverview { dau:number; wau:number; mau:number; newUsers:number; activatedUsers:number; quizGenerations:number; quizzesCompleted:number; aiGenerations:number; aiCost:number; aiCostPerActiveUser:number; aiCostPerQuiz:number; quotaExhaustionRate:number; blockedAiRequests:number; highRiskUsers:number; activeUsersSeries:AnalyticsPoint[]; registrationsSeries:AnalyticsPoint[]; subscriptionConversion:{available:boolean;reason?:string}; }
+export interface AiAnalytics { dailyCost:Array<{date:string;value:number}>; dailyRequests:AnalyticsPoint[]; byModel:Array<{provider:string;model:string;requests:number;successes:number;failures:number;inputTokens:number;outputTokens:number;estimatedCost:number;actualCost:number}>; highestCostUsers:Array<{userId:string;username:string;email:string;requests:number;cost:number}>; totalCost:number; failureRate:number; quotaRejectionRate:number; topOnePercentCostShare:number; }
+export interface SecurityAnalytics { blockedRequests:number; rateLimitViolations:number; failedLogins:number; suspiciousRegistrations:number; restrictedAccounts:number; blockedAccounts:number; highRiskUsers:number; preventedAiCost:number; events:Array<{eventType:string;count:number;preventedCost:number}>; serviceLevels:Array<{value:string;count:number}>; riskBands:Array<{value:string;count:number}>; }
+export interface UserInvestigation { account:{id:string;username:string;email:string;accountType:string;active:boolean;emailVerified:boolean;createdAt:string}; roles:string[]; trustScore:number;riskScore:number;serviceLevel:string;dailyQuota:number|null;dailyCostBudget:number|null;aiRequestsToday:number;aiCostToday:number;recentAuditEvents:Array<Record<string,unknown>>;recentRiskEvents:Array<Record<string,unknown>>;recentProductActivity:Array<Record<string,unknown>>; }
 export const adminApi = {
   summary: () => apiClient.request<AdminSummary>("/admin/summary"),
   users: (search = "", page = 1) => requestPage<UserDto>(pageQuery("/admin/users", { search, page, limit: 20 })),
@@ -1014,6 +1019,14 @@ export const adminApi = {
   jobs: (page = 1) => requestPage<AdminJob>(pageQuery("/admin/jobs", { page, limit: 20 })),
   retryJob: (id: string) => apiClient.request<AdminJob>(`/admin/jobs/${id}/retry`, { method: "POST" }),
   cancelJob: (id: string) => apiClient.request<AdminJob>(`/admin/jobs/${id}/cancel`, { method: "POST" }),
+  analyticsOverview: (dateFrom?: string,dateTo?: string) => apiClient.request<AnalyticsOverview>(pageQuery("/admin/analytics/overview",{dateFrom,dateTo})),
+  analyticsAi: (dateFrom?: string,dateTo?: string) => apiClient.request<AiAnalytics>(pageQuery("/admin/analytics/ai",{dateFrom,dateTo,topLimit:20})),
+  analyticsSecurity: (dateFrom?: string,dateTo?: string) => apiClient.request<SecurityAnalytics>(pageQuery("/admin/analytics/security",{dateFrom,dateTo})),
+  investigation: (id:string) => apiClient.request<UserInvestigation>(`/admin/users/${id}/investigation`),
+  ban: (id:string) => apiClient.request<UserDto>(`/admin/users/${id}/ban`,{method:"POST"}),
+  restore: (id:string) => apiClient.request<UserDto>(`/admin/users/${id}/restore`,{method:"POST"}),
+  quota: (id:string,dailyQuota:number|null,dailyCostBudget:number|null) => apiClient.request<void>(`/admin/users/${id}/quota`,{method:"PATCH",...json({dailyQuota,dailyCostBudget})}),
+  auditEvents: (filters:{dateFrom?:string;dateTo?:string;eventType?:string;actorId?:string;targetType?:string;targetId?:string;page?:number}) => requestPage<AuditLog>(pageQuery("/admin/audit-events",{...filters,page:filters.page??1,limit:20})),
 };
 
 export type { PaginatedResult };

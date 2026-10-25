@@ -18,7 +18,7 @@ SAMPLES = [
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    parser = argparse.ArgumentParser(description="Chuẩn bị embedding ONNX int8 cho BKQuiz RAG.")
+    parser = argparse.ArgumentParser(description="Prepare the int8 ONNX embedding model for BKQuiz RAG.")
     parser.add_argument("--model", required=True)
     parser.add_argument("--output", default="data/models/embedding-onnx")
     parser.add_argument("--max-cosine-drift", type=float, default=0.01)
@@ -50,9 +50,9 @@ def main() -> int:
     print(f"ONNX model: {output}")
     print(f"Max cosine drift: {cosine_drift:.6f}")
     if cosine_drift > args.max_cosine_drift:
-        print("FAILED: cosine drift vượt ngưỡng; runtime sẽ tiếp tục dùng Torch.")
+        print("FAILED: cosine drift exceeded the threshold; runtime will continue using Torch.")
         return 2
-    print("OK: đặt EMBEDDING_BACKEND=onnx và EMBEDDING_PRECISION=int8.")
+    print("OK: set EMBEDDING_BACKEND=onnx and EMBEDDING_PRECISION=int8.")
     return 0
 
 

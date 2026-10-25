@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -29,6 +30,7 @@ class JwtServiceTest {
         assertThat(claims.userId()).isEqualTo(user.getId());
         assertThat(claims.role()).isEqualTo(Role.STUDENT);
         assertThat(claims.email()).isEqualTo("student@example.com");
+        assertThat(claims.roles()).containsExactly("USER");
     }
 
     @Test
@@ -41,5 +43,18 @@ class JwtServiceTest {
         String tampered = parts[0] + "." + parts[1] + "." + replacement + parts[2].substring(1);
         assertThatThrownBy(() -> service.verifyAccessToken(tampered))
                 .isInstanceOf(JwtService.JwtValidationException.class);
+    }
+
+    @Test
+    void accessTokenCarriesServerIssuedRbacSnapshot() {
+        User user = new User("Owner", "owner@example.com", "hashed-password-value-value");
+        JwtService service = new JwtService(properties);
+        var snapshot = new AuthorizationService.AuthorizationSnapshot(
+                Set.of("USER", "OWNER"), Set.of("admin:grant", "admin:revoke"));
+
+        JwtService.AccessClaims claims = service.verifyAccessToken(service.issueAccessToken(user, snapshot));
+
+        assertThat(claims.roles()).containsExactlyInAnyOrder("USER", "OWNER");
+        assertThat(claims.permissions()).containsExactlyInAnyOrder("admin:grant", "admin:revoke");
     }
 }

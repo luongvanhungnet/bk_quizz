@@ -1,0 +1,52 @@
+{
+  "runtime_revision": "v6-jsonl-unicode-l4-20261023",
+  "runtime_zip_sha256": "d18024d176c3c5a566e13372345764cf5bf39e464028511ccf6afa673896ff83",
+  "runtime_files_verified": 25,
+  "notebook_code_cells_compiled": 6,
+  "notebook_outputs_empty": true,
+  "frozen_core_files_verified": 48,
+  "input_index_sha256": "5be5d3351ed51f5a1ddb0e882750f7c857ec2905a338d9ed18c469a0a017b68b",
+  "input_ZIPs_regenerated": false,
+  "previous_runtime_unchanged": true,
+  "test_suite": {
+    "tests": 52,
+    "failures": 0,
+    "errors": 0,
+    "successful": true,
+    "seconds": 189.73399999999674,
+    "actual_GPU_inference": false,
+    "actual_Colab_executed": false,
+    "actual_IT4025_native_pages": 100,
+    "unit_semantics": "Only complete hash-verified Drive ZIPs count as completed"
+  },
+  "actual_source_regression": {
+    "source_sha256": "ff432ad5e84a1ed80617cd3219fccbfdef056b3f4c59651f72f1b0c9d9d234b9",
+    "unit": "unit_0061",
+    "first_page": 264,
+    "last_page": 363,
+    "pages": 100,
+    "records": 304,
+    "sorted_native_pages_with_U2028": 6,
+    "old_reader_error": "Unterminated string starting at: line 1 column 841 (char 840)",
+    "native_characters_preserved": true,
+    "frozen_package_job_succeeded": true,
+    "record_file_unchanged_by_packaging": true,
+    "GPU_inference_executed": false,
+    "Colab_executed": false
+  },
+  "recovery_cell": {
+    "generated_combined_cell_executed": true,
+    "controller_backend": "mock",
+    "old_session_closed": true,
+    "requested_pending_units": [
+      "unit_0061"
+    ],
+    "existing_result_unchanged": true,
+    "manual_native_crop_fix_unchanged": true,
+    "venv_reinstalled": false,
+    "actual_Colab_executed": false,
+    "actual_GPU_inference": false
+  },
+  "Drive_completed_archives_modified": false,
+  "actual_Colab_executed": false
+}

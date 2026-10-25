@@ -1,0 +1,9 @@
+test_changed_release_code_blocks_execution (test_registry.Registry.test_changed_release_code_blocks_execution) ... ok
+test_changed_release_manifest_blocks_execution (test_registry.Registry.test_changed_release_manifest_blocks_execution) ... ok
+test_operational_config_cannot_drift_silently (test_registry.Registry.test_operational_config_cannot_drift_silently) ... ok
+test_release_and_files_are_verified (test_registry.Registry.test_release_and_files_are_verified) ... ok
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.065s
+
+OK

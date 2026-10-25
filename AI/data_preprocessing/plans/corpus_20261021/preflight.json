@@ -1,0 +1,13 @@
+{
+  "documents": 27,
+  "jobs": 148,
+  "source_pages": 13314,
+  "source_hashes_valid": true,
+  "disk_free_bytes": 110187274240,
+  "errors": [],
+  "preparation_ready": true,
+  "cloud_inference_completed": false,
+  "quality_certified": false,
+  "combined_cpt_export_ready": false,
+  "global_duplicate_and_split_audit_pending": true
+}

@@ -1,0 +1,11 @@
+# OPTIONAL PARSER ENVIRONMENT ONLY. Do not install into the Qwen/Paddle venv.
+# Selected from PyPI metadata on 2026-10-20; this full environment has NOT been
+# installed/tested locally. Freeze the resolved Colab environment after canary.
+docling==2.140.0
+python-pptx==1.0.2
+# MinerU needs its OWN environment, not this file: mineru==4.0.12
+# Modern CLI: mineru-kit parse; adapter verifies --help before invoking it.
+# Legacy MinerU 2.x content_list.json imports remain supported offline.
+# Paddle is a THIRD environment: paddleocr==3.7.0, paddlex==3.7.2,
+# paddlepaddle==3.2.2 (CPU) OR paddlepaddle-gpu==3.2.2 (CUDA appropriate wheel).
+# Torch/Qwen must run in a separate process/environment from Paddle.

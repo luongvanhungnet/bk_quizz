@@ -1,0 +1,41 @@
+{
+  "status": "ok",
+  "cache_hit": true,
+  "device": "gpu:0",
+  "raw": {
+    "input_path": "/content/it3170_v2_7B_d682e3b25b0d/crops/p0898_r01207_f00.png",
+    "page_index": null,
+    "rec_formula": "\\mid\\,\\mathcal a[M[k,I]]\\leq\\mathcal a[M[k,j\\!\\!-2^{k}+1]]"
+  },
+  "prediction": {
+    "latex": "\\mid\\,\\mathcal a[M[k,I]]\\leq\\mathcal a[M[k,j\\!\\!-2^{k}+1]]",
+    "semantic_description": null
+  },
+  "elapsed_seconds": 0.09039649300007113,
+  "id": "p0898_r01207_f00",
+  "engine": "formula",
+  "cache_key": "fb830f3cc83f08995b2c966185625b0d309f7a136322c6e033eaeb9510663459",
+  "raw_pixel_sha256": "bd184c1421b4d39912704bb6ccb10ad3d8b86d97dc01a426a3d8a2c7ca84f33f",
+  "semantic_verified": false,
+  "structural_errors": [],
+  "reused_inference": true,
+  "source_cache_key": "e885a4c691d2125a4ae58d2538c7de395df7386402ddb7e26e98cd00aca5f208",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "cc138dd77edd90e380fcce62094ff0940633030542f051129875cdf7969112d2",
+  "destination": "review_queue",
+  "source": {
+    "page": 898,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "733a0aa9bea2e0d844c5233d5749d9ca0cb0c06c6a3d7e40d467b7755ac086e9",
+    "input_file_sha256": "cc138dd77edd90e380fcce62094ff0940633030542f051129875cdf7969112d2"
+  },
+  "quality": {
+    "flags": [],
+    "metrics": {},
+    "evidence_gate_pass": true,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

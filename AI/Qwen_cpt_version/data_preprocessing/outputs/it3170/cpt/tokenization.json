@@ -1,0 +1,22 @@
+{
+  "tokenizer": "Qwen/Qwen2.5-7B",
+  "revision_requested": "d149729398750b98c0af14eb82c78cfe92750796",
+  "revision_resolved": "d149729398750b98c0af14eb82c78cfe92750796",
+  "local_files_sha256": {
+    "chat_template.jinja": "7215110d1460d6dfdb8ed5bbc3f18b1772cc270404795c331bc0adc266a75008",
+    "tokenizer.json": "3fd169731d2cbde95e10bf356d66d5997fd885dd8dbb6fb4684da3f23b2585d8",
+    "tokenizer_config.json": "45c95ede6a3af63d0b746ce5f46da0c1031d8ccc803225bf065af648c51f1dcb"
+  },
+  "eos_token": "<|endoftext|>",
+  "eos_token_id": 151643,
+  "sequence_length": 2048,
+  "packing": "continuous_causal_with_sample_EOS",
+  "cross_sample_attention": true,
+  "labels_shift": "trainer_model_shifts_labels_once",
+  "last_fragment_kept": true,
+  "padding": false,
+  "total_tokens": 29771,
+  "sequences": 15,
+  "source_samples": 264,
+  "chat_template_applied": false
+}

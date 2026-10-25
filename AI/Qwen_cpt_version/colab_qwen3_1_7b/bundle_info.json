@@ -1,0 +1,22 @@
+{
+  "archive": "qwen3_it3170_colab.zip",
+  "sha256": "d8d910a7bc000bd5077c96761a6c8d66dc1ae7c5599484d040ea5074f218d3c7",
+  "bytes": 62254,
+  "samples": 264,
+  "files": {
+    "config.json": "200bb189da4b20bdfbc184186a7f92f6733b0efab48900bc87f12297509959a3",
+    "requirements-colab.txt": "62a4901033c86384700cd9a7da027f89a627cb65b9fc4d8f61395b27efce16f5",
+    "data_utils.py": "1a323f1738cbe7d35f0c2291e338c05cdb6db37c766d13316d7f93ab9354dd35",
+    "prepare.py": "9fbdd9642c45d01f500007871692383aabac04ecacd1bddf5aaccc9a8993edcc",
+    "train.py": "cd653987dace74863ea215eb99f372b666ffda4171ccd18914f4bc674d8046f9",
+    "probe.py": "e34a22b8052ed28bc2bf2b87412de2da99135635acafcd6fbbb01bbdf6e3cb70",
+    "merge_adapter.py": "5c2b2186d55e9ed5db07c2d958a079b7510a4a3ebd8c4eb886c867f4b735fa35",
+    "HUONG_DAN_COLAB.md": "af9efa32ddb3cc4efd9e54716f89deed19cbb04fa7f14de09b7f1cac20997fb2",
+    "data/train.jsonl": "50382689dd525158c3c9ce6c92a6954d4819fa35718d30ea43a3bf82e04835b2",
+    "data/sources.jsonl": "b4e9c6b60206897b22615604fce0809575c6a82f25148e79d46a69b990545360",
+    "data/manifest.json": "b1335ac2944bc3989ccad8b5a25d9eddb4deafebed244737ebfbf9cbcda13a48",
+    "probes/prompts.json": "a117e556bd382379a4862b089a90b41d25fe500f5ac21e4b031ec158bad9ac4d",
+    "probes/gold.json": "c85731623dc5d3f24446ceb590b3e178a76a5c12d8c54031bdd81d5b5b6371cf",
+    "probes/rubric.json": "334d9d977457a71f013d8b54b327931c7650111830401f67781879575db85a20"
+  }
+}

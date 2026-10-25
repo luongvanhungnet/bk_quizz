@@ -1,0 +1,5 @@
+__pycache__/
+prepared_local/
+hf_cache/
+.venv-check/
+*.zip

@@ -1,0 +1,17 @@
+Traceback (most recent call last):
+  File "<stdin>", line 16, in <module>
+  File "D:\BKQuiz\AI\Qwen_cpt_version\data_preprocessing\.venv\Lib\site-packages\paddleocr\_pipelines\table_recognition_v2.py", line 143, in predict
+    return list(
+           ^^^^^
+  File "D:\BKQuiz\AI\Qwen_cpt_version\data_preprocessing\.venv\Lib\site-packages\paddlex\inference\pipelines\_parallel.py", line 161, in predict
+    yield from self._pipeline.predict(
+  File "D:\BKQuiz\AI\Qwen_cpt_version\data_preprocessing\.venv\Lib\site-packages\paddlex\inference\pipelines\table_recognition\pipeline_v2.py", line 1280, in predict
+    single_table_rec_res = self.predict_single_table_recognition_res(
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\BKQuiz\AI\Qwen_cpt_version\data_preprocessing\.venv\Lib\site-packages\paddlex\inference\pipelines\table_recognition\pipeline_v2.py", line 1084, in predict_single_table_recognition_res
+    single_table_recognition_res = get_table_recognition_res(
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\BKQuiz\AI\Qwen_cpt_version\data_preprocessing\.venv\Lib\site-packages\paddlex\inference\pipelines\table_recognition\table_recognition_post_processing_v2.py", line 444, in get_table_recognition_res
+    img_shape = overall_ocr_res["doc_preprocessor_res"]["output_img"].shape[0:2]
+                ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'doc_preprocessor_res'

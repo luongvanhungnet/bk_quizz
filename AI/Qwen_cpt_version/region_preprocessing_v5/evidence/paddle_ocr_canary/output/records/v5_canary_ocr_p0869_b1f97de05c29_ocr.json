@@ -1,0 +1,1112 @@
+{
+  "id": "v5:canary:ocr:p0869",
+  "page": 869,
+  "mode": "ocr",
+  "status": "ok",
+  "fingerprint": "81c4850e2384ec2609e1b97df346312fbb687cd7de7e1b4b8c99877c3be06ede",
+  "input_file_sha256": "85e87f4cd48a9b9891ba9f283d22faf627fe3f41ffc17f0a9c5ba2eac8a0b58e",
+  "config": {
+    "mode": "ocr",
+    "device": "cpu",
+    "lang": "vi",
+    "ocr_version": "PP-OCRv3",
+    "formula_model": "PP-FormulaNet-S",
+    "versions": {
+      "paddleocr": "3.7.0",
+      "paddlex": "3.7.2",
+      "paddlepaddle": "3.2.2",
+      "paddlepaddle-gpu": null
+    }
+  },
+  "native_text": "",
+  "candidates": [
+    {
+      "page": 869,
+      "bbox": [
+        306.42857,
+        97.14286,
+        707.14286,
+        166.66667
+      ],
+      "kind": "text",
+      "text": "Quy hoach döng",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9739691019058228,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 0,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            429,
+            102,
+            990,
+            175
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        55.0,
+        220.95238,
+        279.28571,
+        272.38095
+      ],
+      "kind": "text",
+      "text": "So' dó chung",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.8949310183525085,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 1,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            77,
+            232,
+            391,
+            286
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        80.0,
+        284.7619,
+        890.71429,
+        336.19048
+      ],
+      "kind": "text",
+      "text": ": Chia bai toán xuát phát thanh các bai toán con khng",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9534035325050354,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 2,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            112,
+            299,
+            1247,
+            353
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        103.57143,
+        340.95238,
+        497.85714,
+        387.61905
+      ],
+      "kind": "text",
+      "text": "nhát thiét dc láp vói nhau",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9689604043960571,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 3,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            145,
+            358,
+            697,
+            407
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        83.57143,
+        400.95238,
+        957.85714,
+        446.66667
+      ],
+      "kind": "text",
+      "text": ". Giái các bai toán con tü nhó dén lón, li giái duoc luu trü",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9101107120513916,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 4,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            117,
+            421,
+            1341,
+            469
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        104.28571,
+        454.28571,
+        311.42857,
+        501.90476
+      ],
+      "kind": "text",
+      "text": "lai vao 1 bäng",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9308468699455261,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 5,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            146,
+            477,
+            436,
+            527
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        85.0,
+        515.2381,
+        889.28571,
+        560.0
+      ],
+      "kind": "text",
+      "text": " Bai toán con nhó nhat phäi duo'c giai 1 cách truc tiép",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9291221499443054,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 6,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            119,
+            541,
+            1245,
+            588
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        85.71429,
+        580.95238,
+        910.71429,
+        621.90476
+      ],
+      "kind": "text",
+      "text": " xay dung li giái cüa bai toán lón hon tú li giái da có",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.906018853187561,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 7,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            120,
+            610,
+            1275,
+            653
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        106.42857,
+        632.38095,
+        682.14286,
+        674.28571
+      ],
+      "kind": "text",
+      "text": "cúa các bai toán con nhó ho'n (truy hi)",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.937847912311554,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 8,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            149,
+            664,
+            955,
+            708
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        129.28571,
+        687.61905,
+        893.57143,
+        729.52381
+      ],
+      "kind": "text",
+      "text": " Só luo'ng bai toán con can duo'c bi chan böi da thúc cüa kích",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9056719541549683,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 9,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            181,
+            722,
+            1251,
+            766
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        135.71429,
+        739.04762,
+        407.14286,
+        767.61905
+      ],
+      "kind": "text",
+      "text": "thuóc d liéu dau vao",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9391603469848633,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 10,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            190,
+            776,
+            570,
+            806
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        84.28571,
+        783.80952,
+        912.85714,
+        834.28571
+      ],
+      "kind": "text",
+      "text": " Phü ho'p dé giai hiéu quá mt só bai toán tói uu tö ho'p",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.9021504521369934,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 11,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            118,
+            823,
+            1278,
+            876
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    },
+    {
+      "page": 869,
+      "bbox": [
+        32.85714,
+        927.61905,
+        48.57143,
+        950.47619
+      ],
+      "kind": "text",
+      "text": "3",
+      "engine": "paddle_ocr",
+      "status": "ok",
+      "confidence": 0.999480664730072,
+      "evidence": {
+        "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_ocr_canary\\output\\raw\\v5_canary_ocr_p0869_b1f97de05c29_ocr.json",
+        "parser_output_sha256": "a7b7708633cd757f2eddd14f5b0faf33f656e0e4ed7165aa7fbce26c333fab16",
+        "reading_order": 12,
+        "parser": "paddle_ocr",
+        "parser_version": "3.7.0",
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "backend_family": "paddle_ocr",
+        "geometry_status": "known",
+        "original": {
+          "box": [
+            46,
+            974,
+            68,
+            998
+          ],
+          "item_index": 0
+        },
+        "semantic_verified": false,
+        "region_id": "v5:canary:ocr:p0869"
+      }
+    }
+  ],
+  "semantic_verified": false,
+  "raw": [
+    {
+      "input_path": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\hybrid_preprocessing\\runs\\it3170_test\\native\\assets\\page_0869.png",
+      "page_index": null,
+      "model_settings": {
+        "use_doc_preprocessor": false,
+        "use_textline_orientation": false
+      },
+      "dt_polys": [
+        [
+          [
+            430,
+            102
+          ],
+          [
+            990,
+            107
+          ],
+          [
+            990,
+            175
+          ],
+          [
+            429,
+            171
+          ]
+        ],
+        [
+          [
+            79,
+            232
+          ],
+          [
+            391,
+            242
+          ],
+          [
+            390,
+            286
+          ],
+          [
+            77,
+            276
+          ]
+        ],
+        [
+          [
+            113,
+            299
+          ],
+          [
+            1247,
+            306
+          ],
+          [
+            1247,
+            353
+          ],
+          [
+            112,
+            346
+          ]
+        ],
+        [
+          [
+            145,
+            358
+          ],
+          [
+            697,
+            363
+          ],
+          [
+            697,
+            407
+          ],
+          [
+            145,
+            402
+          ]
+        ],
+        [
+          [
+            117,
+            421
+          ],
+          [
+            1341,
+            427
+          ],
+          [
+            1341,
+            469
+          ],
+          [
+            117,
+            463
+          ]
+        ],
+        [
+          [
+            147,
+            477
+          ],
+          [
+            436,
+            482
+          ],
+          [
+            435,
+            527
+          ],
+          [
+            146,
+            522
+          ]
+        ],
+        [
+          [
+            119,
+            541
+          ],
+          [
+            1245,
+            541
+          ],
+          [
+            1245,
+            588
+          ],
+          [
+            119,
+            588
+          ]
+        ],
+        [
+          [
+            120,
+            610
+          ],
+          [
+            1275,
+            610
+          ],
+          [
+            1275,
+            653
+          ],
+          [
+            120,
+            653
+          ]
+        ],
+        [
+          [
+            149,
+            664
+          ],
+          [
+            955,
+            664
+          ],
+          [
+            955,
+            708
+          ],
+          [
+            149,
+            708
+          ]
+        ],
+        [
+          [
+            181,
+            722
+          ],
+          [
+            1251,
+            726
+          ],
+          [
+            1251,
+            766
+          ],
+          [
+            181,
+            762
+          ]
+        ],
+        [
+          [
+            190,
+            776
+          ],
+          [
+            570,
+            776
+          ],
+          [
+            570,
+            806
+          ],
+          [
+            190,
+            806
+          ]
+        ],
+        [
+          [
+            118,
+            823
+          ],
+          [
+            1278,
+            825
+          ],
+          [
+            1278,
+            876
+          ],
+          [
+            118,
+            874
+          ]
+        ],
+        [
+          [
+            46,
+            974
+          ],
+          [
+            68,
+            974
+          ],
+          [
+            68,
+            998
+          ],
+          [
+            46,
+            998
+          ]
+        ]
+      ],
+      "text_det_params": {
+        "limit_side_len": 64,
+        "limit_type": "min",
+        "thresh": 0.3,
+        "max_side_limit": 4000,
+        "box_thresh": 0.6,
+        "unclip_ratio": 1.5
+      },
+      "text_type": "general",
+      "textline_orientation_angles": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+      ],
+      "text_rec_score_thresh": 0.0,
+      "return_word_box": false,
+      "rec_texts": [
+        "Quy hoach döng",
+        "So' dó chung",
+        ": Chia bai toán xuát phát thanh các bai toán con khng",
+        "nhát thiét dc láp vói nhau",
+        ". Giái các bai toán con tü nhó dén lón, li giái duoc luu trü",
+        "lai vao 1 bäng",
+        " Bai toán con nhó nhat phäi duo'c giai 1 cách truc tiép",
+        " xay dung li giái cüa bai toán lón hon tú li giái da có",
+        "cúa các bai toán con nhó ho'n (truy hi)",
+        " Só luo'ng bai toán con can duo'c bi chan böi da thúc cüa kích",
+        "thuóc d liéu dau vao",
+        " Phü ho'p dé giai hiéu quá mt só bai toán tói uu tö ho'p",
+        "3"
+      ],
+      "rec_scores": [
+        0.9739691019058228,
+        0.8949310183525085,
+        0.9534035325050354,
+        0.9689604043960571,
+        0.9101107120513916,
+        0.9308468699455261,
+        0.9291221499443054,
+        0.906018853187561,
+        0.937847912311554,
+        0.9056719541549683,
+        0.9391603469848633,
+        0.9021504521369934,
+        0.999480664730072
+      ],
+      "rec_polys": [
+        [
+          [
+            430,
+            102
+          ],
+          [
+            990,
+            107
+          ],
+          [
+            990,
+            175
+          ],
+          [
+            429,
+            171
+          ]
+        ],
+        [
+          [
+            79,
+            232
+          ],
+          [
+            391,
+            242
+          ],
+          [
+            390,
+            286
+          ],
+          [
+            77,
+            276
+          ]
+        ],
+        [
+          [
+            113,
+            299
+          ],
+          [
+            1247,
+            306
+          ],
+          [
+            1247,
+            353
+          ],
+          [
+            112,
+            346
+          ]
+        ],
+        [
+          [
+            145,
+            358
+          ],
+          [
+            697,
+            363
+          ],
+          [
+            697,
+            407
+          ],
+          [
+            145,
+            402
+          ]
+        ],
+        [
+          [
+            117,
+            421
+          ],
+          [
+            1341,
+            427
+          ],
+          [
+            1341,
+            469
+          ],
+          [
+            117,
+            463
+          ]
+        ],
+        [
+          [
+            147,
+            477
+          ],
+          [
+            436,
+            482
+          ],
+          [
+            435,
+            527
+          ],
+          [
+            146,
+            522
+          ]
+        ],
+        [
+          [
+            119,
+            541
+          ],
+          [
+            1245,
+            541
+          ],
+          [
+            1245,
+            588
+          ],
+          [
+            119,
+            588
+          ]
+        ],
+        [
+          [
+            120,
+            610
+          ],
+          [
+            1275,
+            610
+          ],
+          [
+            1275,
+            653
+          ],
+          [
+            120,
+            653
+          ]
+        ],
+        [
+          [
+            149,
+            664
+          ],
+          [
+            955,
+            664
+          ],
+          [
+            955,
+            708
+          ],
+          [
+            149,
+            708
+          ]
+        ],
+        [
+          [
+            181,
+            722
+          ],
+          [
+            1251,
+            726
+          ],
+          [
+            1251,
+            766
+          ],
+          [
+            181,
+            762
+          ]
+        ],
+        [
+          [
+            190,
+            776
+          ],
+          [
+            570,
+            776
+          ],
+          [
+            570,
+            806
+          ],
+          [
+            190,
+            806
+          ]
+        ],
+        [
+          [
+            118,
+            823
+          ],
+          [
+            1278,
+            825
+          ],
+          [
+            1278,
+            876
+          ],
+          [
+            118,
+            874
+          ]
+        ],
+        [
+          [
+            46,
+            974
+          ],
+          [
+            68,
+            974
+          ],
+          [
+            68,
+            998
+          ],
+          [
+            46,
+            998
+          ]
+        ]
+      ],
+      "rec_boxes": [
+        [
+          429,
+          102,
+          990,
+          175
+        ],
+        [
+          77,
+          232,
+          391,
+          286
+        ],
+        [
+          112,
+          299,
+          1247,
+          353
+        ],
+        [
+          145,
+          358,
+          697,
+          407
+        ],
+        [
+          117,
+          421,
+          1341,
+          469
+        ],
+        [
+          146,
+          477,
+          436,
+          527
+        ],
+        [
+          119,
+          541,
+          1245,
+          588
+        ],
+        [
+          120,
+          610,
+          1275,
+          653
+        ],
+        [
+          149,
+          664,
+          955,
+          708
+        ],
+        [
+          181,
+          722,
+          1251,
+          766
+        ],
+        [
+          190,
+          776,
+          570,
+          806
+        ],
+        [
+          118,
+          823,
+          1278,
+          876
+        ],
+        [
+          46,
+          974,
+          68,
+          998
+        ]
+      ]
+    }
+  ],
+  "elapsed_seconds": 11.966322699998273
+}

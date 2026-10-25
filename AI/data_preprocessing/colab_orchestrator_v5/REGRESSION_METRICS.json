@@ -1,0 +1,77 @@
+{
+  "preprocessing_version": "6.0.0",
+  "source_sha256": "3a91e242e0ad7c283fe4b4a2722036a02403ea6aca4393bb07ac62d7b1613d28",
+  "IT4906_pages": [
+    {
+      "page": 3,
+      "before_raw_image_occurrences": 24378,
+      "after_image_regions": 0,
+      "background_occurrences_excluded": 24378,
+      "full_page_ocr_retained": true,
+      "source_render_policy": "retained"
+    },
+    {
+      "page": 10,
+      "before_raw_image_occurrences": 24378,
+      "after_image_regions": 0,
+      "background_occurrences_excluded": 24378,
+      "full_page_ocr_retained": true,
+      "source_render_policy": "retained"
+    },
+    {
+      "page": 115,
+      "before_raw_image_occurrences": 24378,
+      "after_image_regions": 0,
+      "background_occurrences_excluded": 24378,
+      "full_page_ocr_retained": true,
+      "source_render_policy": "retained"
+    },
+    {
+      "page": 116,
+      "before_raw_image_occurrences": 24378,
+      "after_image_regions": 0,
+      "background_occurrences_excluded": 24378,
+      "full_page_ocr_retained": true,
+      "source_render_policy": "retained"
+    },
+    {
+      "page": 122,
+      "before_raw_image_occurrences": 24378,
+      "after_image_regions": 0,
+      "background_occurrences_excluded": 24378,
+      "full_page_ocr_retained": true,
+      "source_render_policy": "retained"
+    },
+    {
+      "page": 217,
+      "before_raw_image_occurrences": 24378,
+      "after_image_regions": 0,
+      "background_occurrences_excluded": 24378,
+      "full_page_ocr_retained": true,
+      "source_render_policy": "retained"
+    },
+    {
+      "page": 227,
+      "before_raw_image_occurrences": 24378,
+      "after_image_regions": 0,
+      "background_occurrences_excluded": 24378,
+      "full_page_ocr_retained": true,
+      "source_render_policy": "retained"
+    }
+  ],
+  "total_background_occurrences_excluded": 170646,
+  "pdf_structure_check_seconds": 8.62515739997616,
+  "routing_benchmark": {
+    "records": 5000,
+    "old_seconds": 0.5080064000212587,
+    "new_seconds": 0.02958480000961572,
+    "speedup": 17.171196014715168,
+    "equivalent_output": true,
+    "scope": "local_CPU_synthetic_duplicate_groups_not_end_to_end_Colab"
+  },
+  "original_input_zip_sha256_verified": 134,
+  "index_sha256": "5be5d3351ed51f5a1ddb0e882750f7c857ec2905a338d9ed18c469a0a017b68b",
+  "actual_GPU_inference": false,
+  "actual_Colab_executed": false,
+  "quality_score_measured": false
+}

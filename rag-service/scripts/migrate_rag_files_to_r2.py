@@ -23,7 +23,7 @@ from app.services.document_object_storage import create_document_object_storage 
 
 def migrate(*, settings: Settings, dry_run: bool, delete_local: bool) -> dict[str, int]:
     if settings.document_storage_backend != "r2":
-        raise RuntimeError("DOCUMENT_STORAGE_BACKEND phải là r2 để chạy migration.")
+        raise RuntimeError("DOCUMENT_STORAGE_BACKEND must be r2 to run this migration.")
     database = Database.from_settings(settings)
     database.validate_migrated()
     storage = create_document_object_storage(settings)
@@ -65,7 +65,7 @@ def migrate(*, settings: Settings, dry_run: bool, delete_local: bool) -> dict[st
                     temporary, owner_key, record.id, record.stored_filename
                 )
                 if not storage.exists(owner_key, record.id, record.stored_filename):
-                    raise RuntimeError(f"Không xác minh được object cho document {record.id}.")
+                    raise RuntimeError(f"Unable to verify the object for document {record.id}.")
                 result["copied"] += 1
                 if delete_local:
                     source.unlink(missing_ok=True)

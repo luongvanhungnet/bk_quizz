@@ -1,0 +1,44 @@
+{
+  "id": "p0952_r01258",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "1ecc5c897754b257104c8ba2a92ad6dabb0da0c03b16c6928306eedb7ef08d2e",
+  "raw_pixel_sha256": "6be00ecbde37878236f1921414b98c8e70fa3cc9c7b4a709cfeeee29bebe3a26",
+  "prediction": {
+    "html": "<html><body><table><tr><td>stdin 6 6</td><td>stdout 1</td></tr><tr><td>1 2 1 3 2 5</td><td>2 6 4 5 4 6</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "b1ca0c90a28929b8ac12f897b76282c5f2048de442a9ed6e534ca77218b854e9",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "evidence_sha256": "4f985a9e75b06440999ae153fb09126402a4f75746fe054bf1f76d6e565e2994",
+  "cache_hit": true,
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "8f56a9c33ce2712138af2d0b0a6ffcaefa2151c75116ac09cf243dcbd1d1f3ae",
+  "destination": "review_queue",
+  "source": {
+    "page": 952,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "2c3124a941fa3eee46607fe6096b6856a3ee78367de0e31ed36fdf15e1353efd",
+    "input_file_sha256": "8f56a9c33ce2712138af2d0b0a6ffcaefa2151c75116ac09cf243dcbd1d1f3ae"
+  },
+  "structural_errors": [],
+  "quality": {
+    "flags": [],
+    "metrics": {
+      "native_token_coverage": 1.0,
+      "rows": 2,
+      "column_counts": [
+        2,
+        2
+      ]
+    },
+    "evidence_gate_pass": true,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

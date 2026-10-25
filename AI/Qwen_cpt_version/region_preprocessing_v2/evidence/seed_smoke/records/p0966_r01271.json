@@ -1,0 +1,24 @@
+{
+  "status": "ok",
+  "cache_hit": true,
+  "gpu": "Tesla T4",
+  "raw": {
+    "input_path": "/content/it3170_regions/crops/p0966_r01271.png",
+    "page_index": null,
+    "rec_formula": "\\bullet\\;\\mathrm{W e i g h t\\;o f\\;T}\\ w(T)\\ =\\\\textstyle!\\sumsum_e\\in F(w())"
+  },
+  "prediction": {
+    "latex": "\\bullet\\;\\mathrm{W e i g h t\\;o f\\;T}\\ w(T)\\ =\\\\textstyle!\\sumsum_e\\in F(w())",
+    "semantic_description": null
+  },
+  "elapsed_seconds": 0.08977880899988122,
+  "id": "p0966_r01271",
+  "engine": "formula",
+  "cache_key": "8d00d542cf6ee1663317aab8d37ed9e0730f4216fd76ac51081601255b0e10f1",
+  "raw_pixel_sha256": "0f888f3435780012355f40f29040e63a26732134d0938234ee76bcb8a18eede0",
+  "semantic_verified": false,
+  "structural_errors": [],
+  "reused_inference": true,
+  "source_cache_key": "18b805c1afec2ffb5a08864d827e21f5fd2500e8cdf5bf3df2084ccc5a4f1548",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895"
+}

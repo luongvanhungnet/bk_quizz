@@ -1,0 +1,48 @@
+{
+  "id": "p0679_r00967",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "58b4fd90dae4737fae6f9069854dbd39b42b65942914bc082c94987afd083dfb",
+  "raw_pixel_sha256": "d69cd515570079337b11a9bebd81b46e28309e10660d9a467dd7012b9d60c2fc",
+  "prediction": {
+    "html": "<html><body><table><tr><td>k</td><td>ck</td><td>Tất cả lời giải tối ưu phải thoả mãn</td><td>Giá trị tối đa với các mệnh giá 1, 2, . . . , k − 1 trong bất kỳ OPT</td></tr><tr><td>1</td><td>1</td><td>P ≤ 4</td><td>-</td></tr><tr><td>2</td><td>5</td><td>N ≤ 1</td><td>4</td></tr><tr><td>3</td><td>10</td><td>N + D ≤ 2</td><td>4+5=9</td></tr><tr><td>4</td><td>25</td><td>Q ≤ 3</td><td>20+4=24</td></tr><tr><td>5</td><td>100</td><td>không giới hạn</td><td>75+24=99</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "d586251332557b23c5b6e40223c9e8dad3a0c8c824d4d6775b7db37625da091e",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "evidence_sha256": "829d580c297ee76f5dafcf5a65846f20b0693beca076327348ba01467d37d572",
+  "cache_hit": true,
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "13aa633141b735e0c685f83ceffd80488b13210cf95c3a9c870f743848eba643",
+  "destination": "review_queue",
+  "source": {
+    "page": 679,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "3273ced05b56e956cb2b82cb2d4a0be4491df36a74498d298229a65483e0bb18",
+    "input_file_sha256": "13aa633141b735e0c685f83ceffd80488b13210cf95c3a9c870f743848eba643"
+  },
+  "structural_errors": [],
+  "quality": {
+    "flags": [],
+    "metrics": {
+      "native_token_coverage": 1.0,
+      "rows": 6,
+      "column_counts": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ]
+    },
+    "evidence_gate_pass": true,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

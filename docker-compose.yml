@@ -1,6 +1,19 @@
 name: bkquiz
 
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_API_BASE_URL: /api
+      VITE_DEV_API_TARGET: http://api:8080
+      VITE_API_SAME_ORIGIN_PROXY: "false"
+      VITE_REALTIME_PROVIDER: stomp
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ["5173:5173"]
+
   postgres:
     image: pgvector/pgvector:pg16
     environment:

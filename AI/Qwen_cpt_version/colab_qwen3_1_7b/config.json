@@ -1,0 +1,18 @@
+{
+  "model_id": "Qwen/Qwen3-1.7B",
+  "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+  "sequence_length": 1024,
+  "epochs": 1,
+  "learning_rate": 0.00002,
+  "batch_size": 1,
+  "gradient_accumulation_steps": 4,
+  "lora_r": 8,
+  "lora_alpha": 16,
+  "lora_dropout": 0.05,
+  "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+  "seed": 42,
+  "save_steps": 1,
+  "save_total_limit": 2,
+  "smoke_steps": 2,
+  "probe_max_new_tokens": 1400
+}

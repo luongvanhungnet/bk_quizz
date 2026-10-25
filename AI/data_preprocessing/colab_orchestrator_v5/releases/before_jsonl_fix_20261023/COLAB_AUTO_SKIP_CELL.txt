@@ -1,0 +1,82 @@
+from pathlib import Path
+import json
+import time
+import traceback
+from client import Session
+from common import atomic_json
+
+# Gói lỗi vẫn là pending, không được tính là hoàn thành.
+EXCLUDED_UNITS = {'unit_0025'}  # Đổi thành set() nếu muốn thử lại cả gói 25.
+RETRY_FAILED = False  # True: thử lại các gói lỗi đã ghi ở lượt chạy trước.
+FAILURE_FILE = BASE / 'auto_skipped_units.json'
+
+if FAILURE_FILE.exists():
+    SKIP_LOG = json.loads(FAILURE_FILE.read_text(encoding='utf-8-sig'))
+    if SKIP_LOG.get('plan_sha256') != INDEX['plan_sha256']:
+        raise RuntimeError('Danh sách lỗi thuộc kế hoạch khác; kiểm tra BASE trước khi chạy.')
+else:
+    SKIP_LOG = {'plan_sha256': INDEX['plan_sha256'], 'failed': {}, 'history': []}
+
+if globals().get('SESSION') is not None and SESSION.process.poll() is None:
+    assert getattr(SESSION, 'runtime_revision', None) == 'v6-bounded-regions-l4-20261022', 'Đóng SESSION cũ trước khi nạp bản mới'
+    assert SESSION.base == BASE and SESSION.work == WORK and SESSION.keep_model == KEEP_MODEL_RESIDENT, 'Cấu hình đổi: đóng SESSION trước'
+    assert SESSION.runtime_profile == PROFILE and SESSION.docling_hf_home == str(DOC_HF_HOME), 'Profile/cache đổi: đóng SESSION trước'
+else:
+    SESSION = Session(ENVS['controller'], BASE, keep_model=KEEP_MODEL_RESIDENT, batch_pages=20, work=WORK)
+
+STATE = SESSION.scan()
+print('Đã lưu hợp lệ:', STATE['completed_units'], '/', STATE['total_units'], '; trang:', STATE['completed_pages'])
+BY_ID = {e['unit_id']: e for e in INDEX['bundles']}
+ATTEMPTED = set()
+processed = 0
+
+while True:
+    STATE = SESSION.status()
+    blocked = EXCLUDED_UNITS | (set(SKIP_LOG['failed']) if not RETRY_FAILED else set())
+    eligible = [u for u in STATE['pending_units'] if u not in blocked and u not in ATTEMPTED]
+    if not eligible or (MAX_UNITS is not None and processed >= MAX_UNITS):
+        break
+
+    unit_id = eligible[0]
+    selected = BY_ID[unit_id]
+    if not Path(selected['path']).is_file():
+        print('Gói kế tiếp chưa có trên Drive:', selected['filename'])
+        break
+
+    print('START', unit_id, '—', selected['pages'], 'trang', flush=True)
+    ATTEMPTED.add(unit_id)
+    processed += 1  # MAX_UNITS tính số gói đã thử, bao gồm gói lỗi.
+    try:
+        RESULT = SESSION.process_unit(unit_id)
+    except Exception as exc:
+        error = {'unit_id': unit_id, 'unix': time.time(), 'error': str(exc), 'traceback': traceback.format_exc()}
+        SKIP_LOG['failed'][unit_id] = error
+        SKIP_LOG['history'].append({**error, 'event': 'failed'})
+        atomic_json(FAILURE_FILE, SKIP_LOG)
+        print('BỎ QUA GÓI LỖI:', unit_id, (str(exc).splitlines() or [repr(exc)])[-1][:300], flush=True)
+        print('Chi tiết:', FAILURE_FILE, flush=True)
+
+        # Lỗi cú pháp/module ảnh hưởng toàn bộ runtime; bỏ qua mọi gói không sửa được lỗi này.
+        fatal = ('IndentationError', 'SyntaxError', 'ModuleNotFoundError', 'No module named', 'header too large')
+        if SESSION.process.poll() is not None or any(word in str(exc) for word in fatal):
+            print('Dừng: controller đã thoát hoặc runtime/model bị lỗi chung. Giữ nguyên mọi kết quả đã lưu.', flush=True)
+            raise
+        continue
+
+    print('ĐÃ LƯU DRIVE:', RESULT['archive'], '; SHA256:', RESULT['archive_sha256'], flush=True)
+    if unit_id in SKIP_LOG['failed']:
+        SKIP_LOG['failed'].pop(unit_id)
+        SKIP_LOG['history'].append({'unit_id': unit_id, 'unix': time.time(), 'event': 'resolved'})
+        atomic_json(FAILURE_FILE, SKIP_LOG)
+    STATE = SESSION.status()
+    print('Tiến độ:', STATE['completed_units'], '/', STATE['total_units'], flush=True)
+
+STATE = SESSION.status()
+print('Đã lưu hợp lệ:', STATE['completed_units'], '/', STATE['total_units'], flush=True)
+if not STATE['pending_units']:
+    print('Hoàn tất toàn bộ gói.'); SESSION.close()
+else:
+    print('Chưa hoàn thành:', STATE['pending_units'], flush=True)
+    print('Gói lỗi đã ghi:', sorted(set(STATE['pending_units']) & set(SKIP_LOG['failed'])), flush=True)
+    print('Gói tạm loại trừ:', sorted(set(STATE['pending_units']) & EXCLUDED_UNITS), flush=True)
+    print('Gói lỗi vẫn là pending; bật RETRY_FAILED=True sau khi sửa để thử lại.', flush=True)

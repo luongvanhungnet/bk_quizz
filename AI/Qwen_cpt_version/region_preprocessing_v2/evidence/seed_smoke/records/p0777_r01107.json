@@ -1,0 +1,24 @@
+{
+  "status": "ok",
+  "cache_hit": true,
+  "gpu": "Tesla T4",
+  "raw": {
+    "input_path": "/content/it3170_regions/crops/p0777_r01107.png",
+    "page_index": null,
+    "rec_formula": "X_{1}+X_{2}+....+X_{n}=M"
+  },
+  "prediction": {
+    "latex": "X_{1}+X_{2}+....+X_{n}=M",
+    "semantic_description": null
+  },
+  "elapsed_seconds": 0.07252976900008434,
+  "id": "p0777_r01107",
+  "engine": "formula",
+  "cache_key": "6c170491b30e18f28333555c18e71c74be0af6bf7b5840652a22a26249212877",
+  "raw_pixel_sha256": "80455d286773cefa5565f70a95b8a79fa66e93d5d53f8741b6c658e5f0b0e1ba",
+  "semantic_verified": false,
+  "structural_errors": [],
+  "reused_inference": true,
+  "source_cache_key": "1fa2c90dabc3bfe31cacadd819aab7c48135d3ed3ca1a6e3b8b9c9e0ac6122b4",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895"
+}

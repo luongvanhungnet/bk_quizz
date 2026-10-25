@@ -1,0 +1,19 @@
+{
+  "result": "results_ff398f1e538e.json",
+  "by_engine": {
+    "formula": {
+      "ok": 704,
+      "invalid_structure": 41
+    },
+    "table": {
+      "ok": 16
+    },
+    "vlm": {
+      "not_run": 57
+    }
+  },
+  "tasks": {
+    "not_run": 330
+  },
+  "new_verified_CPT_samples": 0
+}

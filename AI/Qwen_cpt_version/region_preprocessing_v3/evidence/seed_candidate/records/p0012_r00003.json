@@ -1,0 +1,44 @@
+{
+  "id": "p0012_r00003",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "ad05f5922b3ccf8476fb348486085b4d56c922dd6b8aef3030d51d9f14805546",
+  "raw_pixel_sha256": "957833a5f4fac9e8aed86a42a5ca49885de29aeaf9628d6cf232330d88808807",
+  "prediction": {
+    "html": "<html><body><table><tr><td>Ví dụ dữ liệu vào</td><td>Dữ liệu kết quả ra</td></tr><tr><td>2 3 5 4 1</td><td>8 5</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "9b7662934296271c83edfd540c79bd30ca862776e7419e5ebf8235e9aea031b2",
+  "source_manifest_sha256": "d682e3b25b0dfe0cf91aa97608638e18b8f54c0c572d23e1b293da5422b87f6d",
+  "evidence_sha256": "e67772768d2d9b5c15adc33aa102b2796dbdf06d3613a978c882ac2917fc484b",
+  "cache_hit": true,
+  "source_archive_sha256": "f43de90f4c29a824f0134150aab51bf87cd422e868eede35d4ca55b5d20ed2cb",
+  "input_file_sha256": "378135003c903a7b1a5e70be827702ec88621693415fd2aa81b176977a3486e3",
+  "destination": "review_queue",
+  "source": {
+    "page": 12,
+    "document_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+    "render_sha256": "7a65086322a7e7bed9e8089e2822abe560507c2ce8cce350badb810f982b73ef",
+    "input_file_sha256": "378135003c903a7b1a5e70be827702ec88621693415fd2aa81b176977a3486e3"
+  },
+  "structural_errors": [],
+  "quality": {
+    "flags": [],
+    "metrics": {
+      "native_token_coverage": 1.0,
+      "rows": 2,
+      "column_counts": [
+        2,
+        2
+      ]
+    },
+    "evidence_gate_pass": true,
+    "semantic_verified": false,
+    "destination": "review_queue",
+    "note": "Passing heuristics or providing bboxes does not prove semantic correctness."
+  }
+}

@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "<stdin>", line 13, in <module>
+  File "D:\program\python 311\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u1ee5' in position 31: character maps to <undefined>

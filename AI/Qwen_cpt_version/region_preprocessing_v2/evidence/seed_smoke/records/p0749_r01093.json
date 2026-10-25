@@ -1,0 +1,19 @@
+{
+  "id": "p0749_r01093",
+  "engine": "table",
+  "status": "ok",
+  "cache_key": "ad1d87e2363166b2ab61131c7578490359eac3e21d1cf4ec1e1dd35f01bccc47",
+  "raw_pixel_sha256": "c368d8617718a5970ccdb5c17fa98ce9a81866ccac362f2006358a3317496ccd",
+  "prediction": {
+    "html": "<html><body><table><tr><td>Nhanh chóng đưa ra được một lời giải chấp nhận được (feasible solution)</td></tr><tr><td>Hay được dùng để tạo một lời giải khởi đầu cho các thuật toán heuristic/metaheuristic phức tạp</td></tr><tr><td>Tính ứng dụng vào các bài toán thực tế cao, nhất là các bài toán đòi hỏi thời gian thực (real-time) với độ tốt của lời giải là chấp nhận được Về khoa học lý thuyết, thường được sử dụng trong lĩnh vực thuật toán xấp xỉ</td></tr></table></body></html>",
+    "text_source": "native_pdf",
+    "note": "Native geometry scores=1 are API placeholders, not OCR confidence."
+  },
+  "device": "cpu",
+  "semantic_verified": false,
+  "reused_inference": true,
+  "source_cache_key": "3b8e4e1a9e9fade9c8ce46d79d7f8a115361518ad5f1299b788f28f63a426cfe",
+  "source_manifest_sha256": "33f6b7b75d29810b68aaff30bfa9cbef2d5fb1bf0e1ddb7cd3e61de8390b7895",
+  "evidence_sha256": "eee1e312be6170699308077db6f66a8fce2eb89183bdb770d48ee3aefa7e4e12",
+  "cache_hit": true
+}

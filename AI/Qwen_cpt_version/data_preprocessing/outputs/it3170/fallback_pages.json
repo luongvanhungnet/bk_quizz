@@ -1,0 +1,298 @@
+[
+  {
+    "page": 12,
+    "reason": "table_layout"
+  },
+  {
+    "page": 35,
+    "reason": "table_layout"
+  },
+  {
+    "page": 41,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 46,
+    "reason": "table_layout"
+  },
+  {
+    "page": 54,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 57,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 60,
+    "reason": "table_layout"
+  },
+  {
+    "page": 69,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 99,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 101,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 129,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 140,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 144,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 147,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 163,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 170,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 182,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 199,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 202,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 205,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 206,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 245,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 269,
+    "reason": "table_layout"
+  },
+  {
+    "page": 293,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 296,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 301,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 302,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 303,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 352,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 353,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 472,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 485,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 494,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 506,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 507,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 508,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 572,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 659,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 661,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 679,
+    "reason": "table_layout"
+  },
+  {
+    "page": 680,
+    "reason": "table_layout"
+  },
+  {
+    "page": 689,
+    "reason": "table_layout"
+  },
+  {
+    "page": 692,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 700,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 703,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 727,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 737,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 749,
+    "reason": "table_layout"
+  },
+  {
+    "page": 752,
+    "reason": "table_layout"
+  },
+  {
+    "page": 753,
+    "reason": "table_layout"
+  },
+  {
+    "page": 799,
+    "reason": "table_layout"
+  },
+  {
+    "page": 812,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 813,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 814,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 815,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 816,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 817,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 818,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 819,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 820,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 821,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 822,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 930,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 931,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 932,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 933,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 934,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 937,
+    "reason": "table_layout"
+  },
+  {
+    "page": 952,
+    "reason": "table_layout"
+  },
+  {
+    "page": 957,
+    "reason": "table_layout"
+  },
+  {
+    "page": 958,
+    "reason": "table_layout"
+  },
+  {
+    "page": 1005,
+    "reason": "table_layout"
+  },
+  {
+    "page": 1042,
+    "reason": "sparse_or_image_page"
+  },
+  {
+    "page": 1043,
+    "reason": "sparse_or_image_page"
+  }
+]
