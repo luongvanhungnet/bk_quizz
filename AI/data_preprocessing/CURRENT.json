@@ -1,7 +1,7 @@
 {
   "pipeline": "v5",
-  "version": "5.0.0",
-  "release_path": "../Qwen_cpt_version/region_preprocessing_v5_official",
-  "release_manifest_sha256": "27c582322ce77fb5fc9796776612c65222160d74810e9743994c90e9aceec23b",
+  "version": "5.0.1",
+  "release_path": "../Qwen_cpt_version/region_preprocessing_v5_0_1",
+  "release_manifest_sha256": "2decf1bece3c52bf3f3944079f14ba456f568f6c87b13dcb58a7295829ee1366",
   "specification": "SPEC_V5_OFFICIAL.md"
 }

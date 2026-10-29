@@ -1,6 +1,6 @@
 # Data preprocessing chính thức
 
-Phiên bản mặc định: **v5.0.0**. `manage.py` chạy release đã chốt; `CURRENT.json` và SHA-256 bảo vệ snapshot khỏi thay đổi âm thầm. Lớp [điều phối Colab v4](colab_orchestrator_v4/README.md) đọc **134 input độc lập, tối đa 100 trang xử lý/gói** từ `MyDrive/BKQuiz_cpt_data/inputs_134`. Mỗi gói xử lý/đóng ZIP trên `/content`, lưu và kiểm hash trên Drive rồi mới ghi biên nhận. Khi chạy lại chỉ xử lý gói thiếu/hỏng; gói dở chạy lại từ đầu. Tải kết quả riêng bằng Google Drive; không dùng widget upload/download và không chờ DA_TAI. `CURRENT_ORCHESTRATOR.json` chỉ rõ notebook, runtime ZIP và bộ input hiện hành.
+Core cục bộ hiện hành: **v5.0.1**, chuyển phụ thuộc từ baseline v5.0.0; xem [báo cáo chuyển phụ thuộc](DEPENDENCY_MIGRATION.md). `manage.py` chạy release đã chốt; `CURRENT.json` và SHA-256 bảo vệ snapshot khỏi thay đổi âm thầm. Lớp [điều phối Colab v4](colab_orchestrator_v4/README.md) đọc **134 input độc lập, tối đa 100 trang xử lý/gói** từ `MyDrive/BKQuiz_cpt_data/inputs_134`. Mỗi gói xử lý/đóng ZIP trên `/content`, lưu và kiểm hash trên Drive rồi mới ghi biên nhận. Khi chạy lại chỉ xử lý gói thiếu/hỏng; gói dở chạy lại từ đầu. Tải kết quả riêng bằng Google Drive; không dùng widget upload/download và không chờ DA_TAI. `CURRENT_ORCHESTRATOR.json` chỉ rõ notebook, runtime ZIP và bộ input hiện hành.
 
 - [Đặc tả chính thức](SPEC_V5_OFFICIAL.md)
 - [Runbook toàn corpus](RUNBOOK_CORPUS.md)
@@ -16,7 +16,7 @@ Phạm vi hiện tại: **27 PDF, 13.314 trang**. Kế hoạch corpus gốc có 
 Tại `D:\BKQuiz`:
 
 ```powershell
-$py = 'AI\Qwen_cpt_version\data_preprocessing\.venv\Scripts\python.exe'
+$py = 'AI\data_preprocessing\.venv\Scripts\python.exe'
 & $py -X utf8 AI\data_preprocessing\manage.py verify
 & $py -X utf8 AI\data_preprocessing\manage.py preflight --plan AI\data_preprocessing\plans\corpus_20261021
 ```

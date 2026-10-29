@@ -13,7 +13,7 @@ from ingest import digest,link_copy,publish_preserved,safe,write_json
 
 ROOT=Path(__file__).resolve().parent
 RUNTIME=ROOT.parent/'colab_orchestrator_v5'
-CORE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+CORE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
 sys.path.insert(0,str(RUNTIME));sys.path.insert(0,str(CORE))
 from common import verify_release
 from unit_store import inspect_result

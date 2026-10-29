@@ -12,7 +12,7 @@ import zipfile
 
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT.parent/'colab_orchestrator_v5'))
-sys.path.insert(0,str(ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'))
+sys.path.insert(0,str(ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'))
 from jsonl_adapter import read_jsonl
 from review_app import successful_vlm_candidates
 from ingest import digest,write_json

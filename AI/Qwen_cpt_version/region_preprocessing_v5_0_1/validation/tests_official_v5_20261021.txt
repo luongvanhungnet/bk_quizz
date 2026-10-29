@@ -1,0 +1,385 @@
+test_bottom_left_docling_geometry (test_adapters.Adapters.test_bottom_left_docling_geometry) ... ok
+test_docling_body_reading_order_not_storage_order (test_adapters.Adapters.test_docling_body_reading_order_not_storage_order) ... ok
+test_docling_cyclic_refs_terminate (test_adapters.Adapters.test_docling_cyclic_refs_terminate) ... ok
+test_docling_multiple_page_provenance_slices_charspan (test_adapters.Adapters.test_docling_multiple_page_provenance_slices_charspan) ... ok
+test_docling_table_cell_text_escaped_and_spans_preserved (test_adapters.Adapters.test_docling_table_cell_text_escaped_and_spans_preserved) ... ok
+test_docling_unavailable_is_durable_not_fake_success (test_adapters.Adapters.test_docling_unavailable_is_durable_not_fake_success) ... ok
+test_docling_unknown_page_geometry_kept_unknown (test_adapters.Adapters.test_docling_unknown_page_geometry_kept_unknown) ... ok
+test_docvortex_current_schema_points_and_source_page (test_adapters.Adapters.test_docvortex_current_schema_points_and_source_page) ... ok
+test_docvortex_missing_layout_keeps_unknown_geometry (test_adapters.Adapters.test_docvortex_missing_layout_keeps_unknown_geometry) ... ok
+test_docvortex_unknown_protocol_rejected (test_adapters.Adapters.test_docvortex_unknown_protocol_rejected) ... ok
+test_invalid_geometry_not_clamped (test_adapters.Adapters.test_invalid_geometry_not_clamped) ... ok
+test_legacy_mineru_cli_no_shell (test_adapters.Adapters.test_legacy_mineru_cli_no_shell) ... ok
+test_mineru_backend_lineage (test_adapters.Adapters.test_mineru_backend_lineage) ... ok
+test_mineru_missing_page_is_not_guessed (test_adapters.Adapters.test_mineru_missing_page_is_not_guessed) ... ok
+test_mineru_modern_units_explicit_only (test_adapters.Adapters.test_mineru_modern_units_explicit_only) ... ok
+test_mineru_unavailable_is_durable (test_adapters.Adapters.test_mineru_unavailable_is_durable) ... ok
+test_mineru_unsupported_markdown_not_silently_accepted (test_adapters.Adapters.test_mineru_unsupported_markdown_not_silently_accepted) ... ok
+test_mineru_zero_based_pages_and_math_symbols (test_adapters.Adapters.test_mineru_zero_based_pages_and_math_symbols) ... ok
+test_modern_mineru_tier_not_misrepresented_as_legacy (test_adapters.Adapters.test_modern_mineru_tier_not_misrepresented_as_legacy) ... ok
+test_native_pptx_real_file_canary_text_merge_chart (test_adapters.Adapters.test_native_pptx_real_file_canary_text_merge_chart) ... ok
+test_no_guess_of_units (test_adapters.Adapters.test_no_guess_of_units) ... ok
+test_paddle_image_crop_not_assumed_full_page (test_adapters.Adapters.test_paddle_image_crop_not_assumed_full_page) ... ok
+test_paddle_no_duplicate_ocr_when_structure_has_text (test_adapters.Adapters.test_paddle_no_duplicate_ocr_when_structure_has_text) ... ok
+test_paddle_page_index_zero_based_and_full_frame (test_adapters.Adapters.test_paddle_page_index_zero_based_and_full_frame) ... ok
+test_paddle_standalone_formula_and_table (test_adapters.Adapters.test_paddle_standalone_formula_and_table) ... ok
+test_paddle_structure_crop_geometry_maps_to_full_slide (test_adapters.Adapters.test_paddle_structure_crop_geometry_maps_to_full_slide) ... ok
+test_top_left_geometry (test_adapters.Adapters.test_top_left_geometry) ... ok
+test_unknown_cli_is_rejected (test_adapters.Adapters.test_unknown_cli_is_rejected) ... ok
+test_changed_image_cannot_reuse_cached_result (test_adapters.Worker.test_changed_image_cannot_reuse_cached_result) ... ok
+test_expected_hash_checked (test_adapters.Worker.test_expected_hash_checked) ... ok
+test_formula_empty_fails_with_traceback (test_adapters.Worker.test_formula_empty_fails_with_traceback) ... ok
+test_formula_only_explicit_kind (test_adapters.Worker.test_formula_only_explicit_kind) ... ok
+test_formula_preserves_raw_native_and_symbols (test_adapters.Worker.test_formula_preserves_raw_native_and_symbols) ... ok
+test_json_string_wrapped_result (test_adapters.Worker.test_json_string_wrapped_result) ... ok
+test_ocr_only_routes_text_or_explicit_request (test_adapters.Worker.test_ocr_only_routes_text_or_explicit_request) ... ok
+test_original_colon_id_stays_in_evidence_with_safe_filename (test_adapters.Worker.test_original_colon_id_stays_in_evidence_with_safe_filename) ... ok
+test_path_traversal_rejected (test_adapters.Worker.test_path_traversal_rejected) ... ok
+test_table_does_not_fabricate_table_from_ocr (test_adapters.Worker.test_table_does_not_fabricate_table_from_ocr) ... ok
+test_task_geometry_not_guessed (test_adapters.Worker.test_task_geometry_not_guessed) ... ok
+test_valid_specialist_seed_skips_model_and_rerun_is_explicit (test_adapters.Worker.test_valid_specialist_seed_skips_model_and_rerun_is_explicit) ... ok
+test_worker_cache_does_not_rerun (test_adapters.Worker.test_worker_cache_does_not_rerun) ... ok
+test_worker_initialization_failure_only_attempted_once (test_adapters.Worker.test_worker_initialization_failure_only_attempted_once) ... ok
+test_completed_empty_failure_is_critical (test_core.CrossValidationTests.test_completed_empty_failure_is_critical) ... ok
+test_corrupted_native_does_not_win (test_core.CrossValidationTests.test_corrupted_native_does_not_win) ... ok
+test_docling_native_is_not_independent_ocr (test_core.CrossValidationTests.test_docling_native_is_not_independent_ocr) ... ok
+test_formula_structure_error_stays_critical_with_native_fallback (test_core.CrossValidationTests.test_formula_structure_error_stays_critical_with_native_fallback) ... ok
+test_high_risk_consensus_still_needs_human (test_core.CrossValidationTests.test_high_risk_consensus_still_needs_human) ... ok
+test_independent_native_ocr_exact_trusted (test_core.CrossValidationTests.test_independent_native_ocr_exact_trusted) ... ok
+test_inline_math_inside_text_still_high_risk (test_core.CrossValidationTests.test_inline_math_inside_text_still_high_risk) ... ok
+test_input_crop_hash_mismatch_is_critical (test_core.CrossValidationTests.test_input_crop_hash_mismatch_is_critical) ... ok
+test_metadata_contract (test_core.CrossValidationTests.test_metadata_contract) ... ok
+test_new_formula_marked_ok_still_checked_for_corruption (test_core.CrossValidationTests.test_new_formula_marked_ok_still_checked_for_corruption) ... ok
+test_no_majority_vote_can_override_native_disagreement (test_core.CrossValidationTests.test_no_majority_vote_can_override_native_disagreement) ... ok
+test_normalization_retains_vietnamese_and_math (test_core.CrossValidationTests.test_normalization_retains_vietnamese_and_math) ... ok
+test_paddle_mineru_shared_backend_is_not_independent (test_core.CrossValidationTests.test_paddle_mineru_shared_backend_is_not_independent) ... ok
+test_pending_scanned_page_is_not_critical (test_core.CrossValidationTests.test_pending_scanned_page_is_not_critical) ... ok
+test_render_hash_binds_full_slide_native (test_core.CrossValidationTests.test_render_hash_binds_full_slide_native) ... ok
+test_reported_seed_errors_cannot_be_overridden_by_ok_status (test_core.CrossValidationTests.test_reported_seed_errors_cannot_be_overridden_by_ok_status) ... ok
+test_revision_stable_and_bound_to_candidate_changes (test_core.CrossValidationTests.test_revision_stable_and_bound_to_candidate_changes) ... ok
+test_runaway_formula_repetition_is_critical (test_core.CrossValidationTests.test_runaway_formula_repetition_is_critical) ... ok
+test_same_backend_does_not_confirm_itself (test_core.CrossValidationTests.test_same_backend_does_not_confirm_itself) ... ok
+test_source_hash_alone_does_not_bind_region (test_core.CrossValidationTests.test_source_hash_alone_does_not_bind_region) ... ok
+test_source_mismatch_critical (test_core.CrossValidationTests.test_source_mismatch_critical) ... ok
+test_unbound_ocr_is_not_same_region_confirmation (test_core.CrossValidationTests.test_unbound_ocr_is_not_same_region_confirmation) ... ok
+test_unknown_geometry_cannot_confirm_native (test_core.CrossValidationTests.test_unknown_geometry_cannot_confirm_native) ... ok
+test_valid_latex_indices_and_escaped_braces_preserved (test_core.CrossValidationTests.test_valid_latex_indices_and_escaped_braces_preserved) ... ok
+test_vlm_partial_is_not_schema_failure (test_core.CrossValidationTests.test_vlm_partial_is_not_schema_failure) ... ok
+test_vlm_prose_is_not_a_literal_ocr_vote (test_core.CrossValidationTests.test_vlm_prose_is_not_a_literal_ocr_vote) ... ok
+test_cer_wer_edit_distance (test_core.MetricTests.test_cer_wer_edit_distance) ... ok
+test_human_refs_required_and_no_fake_gold (test_core.MetricTests.test_human_refs_required_and_no_fake_gold) ... ok
+test_iou_and_invalid_box (test_core.MetricTests.test_iou_and_invalid_box) ... ok
+test_math_is_not_normalized_away (test_core.MetricTests.test_math_is_not_normalized_away) ... ok
+test_missing_component_matching_is_not_zero_coverage (test_core.MetricTests.test_missing_component_matching_is_not_zero_coverage) ... ok
+test_missing_prediction_counts_as_missing_content (test_core.MetricTests.test_missing_prediction_counts_as_missing_content) ... ok
+test_no_coverage_without_human_inventory (test_core.MetricTests.test_no_coverage_without_human_inventory) ... ok
+test_q_missing_dimension_is_not_zero (test_core.MetricTests.test_q_missing_dimension_is_not_zero) ... ok
+test_reference_metrics_and_composite (test_core.MetricTests.test_reference_metrics_and_composite) ... ok
+test_truthy_machine_flag_is_not_human_verification (test_core.MetricTests.test_truthy_machine_flag_is_not_human_verification) ... ok
+test_blank_reviewer_or_evidence_rejected (test_core.ReviewTests.test_blank_reviewer_or_evidence_rejected) ... ok
+test_changed_manifest_source_rejected (test_core.ReviewTests.test_changed_manifest_source_rejected) ... ok
+test_changed_source_bytes_rejected (test_core.ReviewTests.test_changed_source_bytes_rejected) ... ok
+test_edit_cannot_masquerade_as_approve (test_core.ReviewTests.test_edit_cannot_masquerade_as_approve) ... ok
+test_high_risk_requires_acknowledgment (test_core.ReviewTests.test_high_risk_requires_acknowledgment) ... ok
+test_history_append_only_and_latest_rejection_wins (test_core.ReviewTests.test_history_append_only_and_latest_rejection_wins) ... ok
+test_holdout_cannot_be_training_eligible (test_core.ReviewTests.test_holdout_cannot_be_training_eligible) ... ok
+test_human_approval_audited_separate_from_machine (test_core.ReviewTests.test_human_approval_audited_separate_from_machine) ... ok
+test_proposal_changed_even_without_revision_invalidates_old_decision (test_core.ReviewTests.test_proposal_changed_even_without_revision_invalidates_old_decision) ... ok
+test_revision_changed_invalidates_old_decision (test_core.ReviewTests.test_revision_changed_invalidates_old_decision) ... ok
+test_stale_revision_rejected (test_core.ReviewTests.test_stale_revision_rejected) ... ok
+test_changed_source_requires_new_plan (test_corpus.CorpusTests.test_changed_source_requires_new_plan) ... ok
+test_identical_margin_logo_is_filtered_but_retained (test_corpus.CorpusTests.test_identical_margin_logo_is_filtered_but_retained) ... ok
+test_inventory_deduplicates_sources_and_plan_covers_pages_once (test_corpus.CorpusTests.test_inventory_deduplicates_sources_and_plan_covers_pages_once) ... ok
+test_layout_materialization_creates_table_without_verification (test_corpus.CorpusTests.test_layout_materialization_creates_table_without_verification) ... ok
+test_new_document_requires_layout_before_inference (test_corpus.CorpusTests.test_new_document_requires_layout_before_inference) ... ok
+test_paddle_structure_uses_original_page_not_subset_index (test_corpus.CorpusTests.test_paddle_structure_uses_original_page_not_subset_index) ... ok
+test_routing_budget_defers_without_deleting_knowledge (test_corpus.CorpusTests.test_routing_budget_defers_without_deleting_knowledge) ... ok
+test_all_cells_compile (test_corpus_notebook.CorpusNotebook.test_all_cells_compile) ... ok
+test_discovery_does_not_install_or_load_qwen_unnecessarily (test_corpus_notebook.CorpusNotebook.test_discovery_does_not_install_or_load_qwen_unnecessarily) ... ok
+test_packet_selection_does_not_silently_reuse_old_drive_zip (test_corpus_notebook.CorpusNotebook.test_packet_selection_does_not_silently_reuse_old_drive_zip) ... ok
+test_all_cells_compile_without_execution (test_notebook.NotebookTests.test_all_cells_compile_without_execution) ... ok
+test_default_pilot_and_no_implicit_failure_retry (test_notebook.NotebookTests.test_default_pilot_and_no_implicit_failure_retry) ... ok
+test_download_cell_does_not_require_successful_inference (test_notebook.NotebookTests.test_download_cell_does_not_require_successful_inference) ... ok
+test_env_restore_and_worker_isolation (test_notebook.NotebookTests.test_env_restore_and_worker_isolation) ... ok
+test_cached_specialist_failure_is_deferred_without_blind_rerun (test_production.ProductionPreparation.test_cached_specialist_failure_is_deferred_without_blind_rerun) ... ok
+test_changed_source_fails_before_writing_packet (test_production.ProductionPreparation.test_changed_source_fails_before_writing_packet) ... ok
+test_empty_or_invalid_source_page_selection_rejected (test_production.ProductionPreparation.test_empty_or_invalid_source_page_selection_rejected) ... ok
+test_generic_repeated_image_has_unique_region_ids_and_native_context (test_production.ProductionPreparation.test_generic_repeated_image_has_unique_region_ids_and_native_context) ... ok
+test_shard_preserves_original_pdf_and_page_mapping (test_production.ProductionPreparation.test_shard_preserves_original_pdf_and_page_mapping) ... ok
+test_contextual_crop_is_source_bound (test_review_app.ReviewBoundaryTests.test_contextual_crop_is_source_bound) ... 127.0.0.1 - - [21/Oct/2026 12:50:26] "GET /api/record/p0001_diagram/image/context HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 12:50:26] "GET /api/record/p0001_diagram/image/context HTTP/1.1" 409 -
+ok
+test_cross_origin_blocked_even_with_token (test_review_app.ReviewBoundaryTests.test_cross_origin_blocked_even_with_token) ... 127.0.0.1 - - [21/Oct/2026 12:50:27] "POST /api/review HTTP/1.1" 403 -
+ok
+test_declared_external_asset_root_is_explicit (test_review_app.ReviewBoundaryTests.test_declared_external_asset_root_is_explicit) ... ok
+test_dns_rebinding_host_blocked (test_review_app.ReviewBoundaryTests.test_dns_rebinding_host_blocked) ... 127.0.0.1 - - [21/Oct/2026 12:50:28] "GET /api/bootstrap HTTP/1.1" 403 -
+ok
+test_empty_reviewer_and_evidence_are_rejected (test_review_app.ReviewBoundaryTests.test_empty_reviewer_and_evidence_are_rejected) ... 127.0.0.1 - - [21/Oct/2026 12:50:28] "POST /api/review HTTP/1.1" 400 -
+127.0.0.1 - - [21/Oct/2026 12:50:28] "POST /api/review HTTP/1.1" 400 -
+ok
+test_filter_validation_and_pagination (test_review_app.ReviewBoundaryTests.test_filter_validation_and_pagination) ... 127.0.0.1 - - [21/Oct/2026 12:50:29] "GET /api/records?bucket=uncertain HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 12:50:29] "GET /api/records?bucket=anything HTTP/1.1" 400 -
+127.0.0.1 - - [21/Oct/2026 12:50:29] "GET /api/records?limit=100000 HTTP/1.1" 400 -
+ok
+test_html_disguised_as_png_is_not_served (test_review_app.ReviewBoundaryTests.test_html_disguised_as_png_is_not_served) ... 127.0.0.1 - - [21/Oct/2026 12:50:29] "GET /api/record/p0001_diagram/image/render HTTP/1.1" 400 -
+ok
+test_image_hash_mismatch_rejected (test_review_app.ReviewBoundaryTests.test_image_hash_mismatch_rejected) ... 127.0.0.1 - - [21/Oct/2026 12:50:30] "GET /api/record/p0001_diagram/image/render HTTP/1.1" 409 -
+ok
+test_image_only_from_bound_record (test_review_app.ReviewBoundaryTests.test_image_only_from_bound_record) ... 127.0.0.1 - - [21/Oct/2026 12:50:30] "GET /api/record/p0001_diagram/image/render HTTP/1.1" 200 -
+ok
+test_image_path_escape_rejected (test_review_app.ReviewBoundaryTests.test_image_path_escape_rejected) ... 127.0.0.1 - - [21/Oct/2026 12:50:31] "GET /api/record/p0001_diagram/image/render HTTP/1.1" 403 -
+ok
+test_label_studio_changed_approved_text_requires_correction_decision (test_review_app.ReviewBoundaryTests.test_label_studio_changed_approved_text_requires_correction_decision) ... ok
+test_label_studio_export_copies_only_allowlisted_raster_evidence (test_review_app.ReviewBoundaryTests.test_label_studio_export_copies_only_allowlisted_raster_evidence) ... ok
+test_label_studio_human_import_and_idempotency (test_review_app.ReviewBoundaryTests.test_label_studio_human_import_and_idempotency) ... ok
+test_label_studio_ignores_machine_predictions (test_review_app.ReviewBoundaryTests.test_label_studio_ignores_machine_predictions) ... ok
+test_label_studio_missing_human_evidence_rejected (test_review_app.ReviewBoundaryTests.test_label_studio_missing_human_evidence_rejected) ... ok
+test_label_studio_tampered_source_binding_rejected (test_review_app.ReviewBoundaryTests.test_label_studio_tampered_source_binding_rejected) ... ok
+test_no_token_cannot_mutate (test_review_app.ReviewBoundaryTests.test_no_token_cannot_mutate) ... 127.0.0.1 - - [21/Oct/2026 12:50:34] "POST /api/review HTTP/1.1" 403 -
+ok
+test_non_boolean_ack_and_unknown_fields_rejected (test_review_app.ReviewBoundaryTests.test_non_boolean_ack_and_unknown_fields_rejected) ... 127.0.0.1 - - [21/Oct/2026 12:50:35] "POST /api/review HTTP/1.1" 400 -
+127.0.0.1 - - [21/Oct/2026 12:50:35] "POST /api/review HTTP/1.1" 400 -
+ok
+test_real_store_http_preserves_machine_and_appends_human_history (test_review_app.ReviewBoundaryTests.test_real_store_http_preserves_machine_and_appends_human_history) ... 127.0.0.1 - - [21/Oct/2026 12:50:36] "POST /api/review HTTP/1.1" 201 -
+127.0.0.1 - - [21/Oct/2026 12:50:36] "POST /api/review HTTP/1.1" 201 -
+ok
+test_real_store_pending_filter_matches_review_ui (test_review_app.ReviewBoundaryTests.test_real_store_pending_filter_matches_review_ui) ... 127.0.0.1 - - [21/Oct/2026 12:50:36] "GET /api/records?decision=pending HTTP/1.1" 200 -
+ok
+test_real_store_rejects_modified_evidence_on_submit (test_review_app.ReviewBoundaryTests.test_real_store_rejects_modified_evidence_on_submit) ... 127.0.0.1 - - [21/Oct/2026 12:50:37] "POST /api/review HTTP/1.1" 400 -
+ok
+test_record_api_exposes_candidates_without_approval (test_review_app.ReviewBoundaryTests.test_record_api_exposes_candidates_without_approval) ... 127.0.0.1 - - [21/Oct/2026 12:50:37] "GET /api/record/p0001_diagram HTTP/1.1" 200 -
+ok
+test_stale_revision_cannot_be_reviewed (test_review_app.ReviewBoundaryTests.test_stale_revision_cannot_be_reviewed) ... 127.0.0.1 - - [21/Oct/2026 12:50:38] "POST /api/review HTTP/1.1" 400 -
+ok
+test_static_inventory_blocks_filesystem_reads (test_review_app.ReviewBoundaryTests.test_static_inventory_blocks_filesystem_reads) ... 127.0.0.1 - - [21/Oct/2026 12:50:38] "GET /../manifest.json HTTP/1.1" 404 -
+127.0.0.1 - - [21/Oct/2026 12:50:38] "GET /api/record/p0001_diagram/image/../manifest.json HTTP/1.1" 404 -
+127.0.0.1 - - [21/Oct/2026 12:50:38] "GET /api/record/%2e%2e%2fmanifest.json HTTP/1.1" 400 -
+ok
+test_store_high_risk_guard_survives_http (test_review_app.ReviewBoundaryTests.test_store_high_risk_guard_survives_http) ... 127.0.0.1 - - [21/Oct/2026 12:50:39] "POST /api/review HTTP/1.1" 400 -
+ok
+test_ui_inserts_untrusted_text_as_text_only (test_review_app.ReviewBoundaryTests.test_ui_inserts_untrusted_text_as_text_only) ... 127.0.0.1 - - [21/Oct/2026 12:50:39] "GET /app.js HTTP/1.1" 200 -
+ok
+test_valid_human_submission_is_delegated_once (test_review_app.ReviewBoundaryTests.test_valid_human_submission_is_delegated_once) ... 127.0.0.1 - - [21/Oct/2026 12:50:40] "POST /api/review HTTP/1.1" 201 -
+ok
+test_changed_vlm_component_rejected_even_with_same_record_revision (test_review_app.VLMScopeTests.test_changed_vlm_component_rejected_even_with_same_record_revision) ... 127.0.0.1 - - [21/Oct/2026 12:50:40] "POST /api/review HTTP/1.1" 409 -
+ok
+test_direction_and_action_must_match (test_review_app.VLMScopeTests.test_direction_and_action_must_match) ... 127.0.0.1 - - [21/Oct/2026 12:50:41] "POST /api/review HTTP/1.1" 400 -
+ok
+test_explicit_correction_requires_save_action (test_review_app.VLMScopeTests.test_explicit_correction_requires_save_action) ... 127.0.0.1 - - [21/Oct/2026 12:50:41] "POST /api/review HTTP/1.1" 201 -
+ok
+test_explicit_input_method_required_no_automatic_approval (test_review_app.VLMScopeTests.test_explicit_input_method_required_no_automatic_approval) ... 127.0.0.1 - - [21/Oct/2026 12:50:42] "POST /api/review HTTP/1.1" 400 -
+ok
+test_failed_or_empty_vlm_not_in_factual_queue (test_review_app.VLMScopeTests.test_failed_or_empty_vlm_not_in_factual_queue) ... 127.0.0.1 - - [21/Oct/2026 12:50:42] "GET /api/records HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 12:50:43] "GET /api/records HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 12:50:43] "GET /api/records HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 12:50:43] "GET /api/records HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 12:50:43] "GET /api/stats HTTP/1.1" 200 -
+ok
+test_hidden_native_id_cannot_receive_review (test_review_app.VLMScopeTests.test_hidden_native_id_cannot_receive_review) ... 127.0.0.1 - - [21/Oct/2026 12:50:43] "POST /api/review HTTP/1.1" 403 -
+ok
+test_native_fallback_text_cannot_be_smuggled_into_approval (test_review_app.VLMScopeTests.test_native_fallback_text_cannot_be_smuggled_into_approval) ... 127.0.0.1 - - [21/Oct/2026 12:50:44] "POST /api/review HTTP/1.1" 400 -
+ok
+test_quick_human_key_generates_factual_audit_and_high_risk_ack (test_review_app.VLMScopeTests.test_quick_human_key_generates_factual_audit_and_high_risk_ack) ... 127.0.0.1 - - [21/Oct/2026 12:50:44] "POST /api/review HTTP/1.1" 201 -
+ok
+test_repeated_http_gesture_is_idempotent (test_review_app.VLMScopeTests.test_repeated_http_gesture_is_idempotent) ... 127.0.0.1 - - [21/Oct/2026 12:50:45] "POST /api/review HTTP/1.1" 201 -
+127.0.0.1 - - [21/Oct/2026 12:50:45] "POST /api/review HTTP/1.1" 200 -
+ok
+test_reused_action_id_cannot_change_decision (test_review_app.VLMScopeTests.test_reused_action_id_cannot_change_decision) ... 127.0.0.1 - - [21/Oct/2026 12:50:45] "POST /api/review HTTP/1.1" 201 -
+127.0.0.1 - - [21/Oct/2026 12:50:45] "POST /api/review HTTP/1.1" 409 -
+ok
+test_scoped_counts_are_distinct_from_inventory_and_pdf_pages (test_review_app.VLMScopeTests.test_scoped_counts_are_distinct_from_inventory_and_pdf_pages) ... 127.0.0.1 - - [21/Oct/2026 12:50:46] "GET /api/stats HTTP/1.1" 200 -
+ok
+test_vlm_scope_hides_native_only_record_and_image (test_review_app.VLMScopeTests.test_vlm_scope_hides_native_only_record_and_image) ... 127.0.0.1 - - [21/Oct/2026 12:50:46] "GET /api/records HTTP/1.1" 200 -
+127.0.0.1 - - [21/Oct/2026 12:50:46] "GET /api/record/p0001_diagram HTTP/1.1" 403 -
+127.0.0.1 - - [21/Oct/2026 12:50:46] "GET /api/record/p0001_diagram/image/render HTTP/1.1" 403 -
+ok
+test_wrong_selected_native_proposal_cannot_be_approved (test_review_app.VLMScopeTests.test_wrong_selected_native_proposal_cannot_be_approved) ... 127.0.0.1 - - [21/Oct/2026 12:50:47] "POST /api/review HTTP/1.1" 409 -
+ok
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmpoyn922_d\\docs",
+  "documents": 1,
+  "pages": 2,
+  "bytes": 6299,
+  "statuses": {
+    "ready": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "e165d16be6305f70e6e86e36c6247b16fe2f4383ed8e102db0b6a960abce42c7"
+}
+{
+  "documents": 1,
+  "pages": 2,
+  "jobs": 1,
+  "pages_per_packet": 2,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "1f8d9503dcb87eb414f5eccfc7d8dba89610848fd190cf1268a45f63800f704d",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmphuykjw74\\docs",
+  "documents": 2,
+  "pages": 6,
+  "bytes": 13810,
+  "statuses": {
+    "ready": 1,
+    "exact_duplicate_source": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "adf445062a9a3275973888e645c025b1c7823e5fd98403f16ac192a3f25b289e"
+}
+{
+  "documents": 1,
+  "pages": 3,
+  "jobs": 2,
+  "pages_per_packet": 2,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "7ee9a9f28a747fe5ae20026af2f5e1d74cf3aa2253cb776c12615c418d422d2d",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmp2v_th547\\docs",
+  "documents": 1,
+  "pages": 2,
+  "bytes": 6299,
+  "statuses": {
+    "ready": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "6b7653540a4c9f3f012c510395a4fd59d4b27a9de4bd81ae786537c772baa977"
+}
+{
+  "documents": 1,
+  "pages": 2,
+  "jobs": 1,
+  "pages_per_packet": 2,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "bfb22dd7bc94f87972af576bed28892d0c5f2619aecf2f0bbd671f9fb2bb1678",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+C:\Users\hungw\AppData\Local\Temp\tmp2v_th547\work\runs\a_02789b2ac1d2
+C:\Users\hungw\AppData\Local\Temp\tmp2v_th547\work\packets\discovery\a_02789b2ac1d2_p00001-00002\6f9b9785fb40\v5_colab_input.zip
+C:\Users\hungw\AppData\Local\Temp\tmp2v_th547\work\packets\inference\a_02789b2ac1d2_p00001-00002\3b03bb5fc8cc\v5_colab_input.zip
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmp3pva917d\\docs",
+  "documents": 1,
+  "pages": 2,
+  "bytes": 6299,
+  "statuses": {
+    "ready": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "047d80b6db7ddf2595b4d58f214fd3844b44482bfb1724cfdc2f22c76fb161aa"
+}
+{
+  "documents": 1,
+  "pages": 2,
+  "jobs": 1,
+  "pages_per_packet": 2,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "aab7da82cbccc39eac404c1d8eebfce695f0ac9b865f2428c61d4aaece8b341d",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+C:\Users\hungw\AppData\Local\Temp\tmp3pva917d\work\runs\a_0600c387e5be
+C:\Users\hungw\AppData\Local\Temp\tmp3pva917d\work\packets\discovery\a_0600c387e5be_p00001-00002\6f5869506f4e\v5_colab_input.zip
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmpt_yb9qns\\docs",
+  "documents": 1,
+  "pages": 2,
+  "bytes": 6299,
+  "statuses": {
+    "ready": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "27d0af71e19e8012493d13756da0f6139734582f538b8972c3af3bb5fdab07eb"
+}
+{
+  "documents": 1,
+  "pages": 2,
+  "jobs": 2,
+  "pages_per_packet": 1,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "d12852fd530409c865f63ba030cdcf14a18c38538f6483b60b318ce4efad1e53",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+C:\Users\hungw\AppData\Local\Temp\tmpt_yb9qns\work\runs\a_66755a68fbe8
+C:\Users\hungw\AppData\Local\Temp\tmpt_yb9qns\work\packets\discovery\a_66755a68fbe8_p00002-00002\20dd6199326a\v5_colab_input.zip
+C:\Users\hungw\AppData\Local\Temp\tmpa_2an435\run
+C:\Users\hungw\AppData\Local\Temp\tmpa_2an435\packet\v5_colab_input.zip
+C:\Users\hungw\AppData\Local\Temp\tmpres3122_\run
+C:\Users\hungw\AppData\Local\Temp\tmphj71hsb7\run
+C:\Users\hungw\AppData\Local\Temp\tmptfwm5d8u\run
+C:\Users\hungw\AppData\Local\Temp\tmpfahwcf64\run
+C:\Users\hungw\AppData\Local\Temp\tmpfahwcf64\packet\v5_colab_input.zip
+r1 ok
+test_cloud_merge_preserves_observation_without_verifying_it (test_workflow.AssociationTests.test_cloud_merge_preserves_observation_without_verifying_it) ... ok
+test_full_inventory_does_not_expand_vlm_budget_silently (test_workflow.AssociationTests.test_full_inventory_does_not_expand_vlm_budget_silently) ... ok
+test_paddle_same_request_lines_aggregated_and_bound (test_workflow.AssociationTests.test_paddle_same_request_lines_aggregated_and_bound) ... ok
+test_paddle_wrong_crop_rejected (test_workflow.AssociationTests.test_paddle_wrong_crop_rejected) ... ok
+test_parser_formula_needs_same_region (test_workflow.AssociationTests.test_parser_formula_needs_same_region) ... ok
+C:\Users\hungw\AppData\Local\Temp\tmpewukj4p0\cloud\vlm_results_7d9c7f2b3d66.json
+r1 ok
+test_stale_context_rejects_old_vlm_output (test_workflow.AssociationTests.test_stale_context_rejects_old_vlm_output) ... ok
+test_unknown_geometry_cannot_create_agreement (test_workflow.AssociationTests.test_unknown_geometry_cannot_create_agreement) ... ok
+test_approved_holdout_not_exported (test_workflow.ExportTests.test_approved_holdout_not_exported) ... ok
+test_changed_approved_asset_is_rejected (test_workflow.ExportTests.test_changed_approved_asset_is_rejected) ... ok
+test_changed_manifest_cannot_export_approved_source (test_workflow.ExportTests.test_changed_manifest_cannot_export_approved_source) ... ok
+test_human_approved_text_preserves_math_signs (test_workflow.ExportTests.test_human_approved_text_preserves_math_signs) ... ok
+test_machine_trusted_is_not_human_approval (test_workflow.ExportTests.test_machine_trusted_is_not_human_approval) ... ok
+test_stale_machine_revision_requires_new_human_review (test_workflow.ExportTests.test_stale_machine_revision_requires_new_human_review) ... ok
+test_bad_image_hash_rejected (test_workflow.PlainVLMTests.test_bad_image_hash_rejected) ... ok
+C:\Users\hungw\AppData\Local\Temp\tmp3ahhrlpj\cloud\vlm_results_a92f29b422a8.json
+r1 error
+r2 ok
+test_failed_image_does_not_block_other_images (test_workflow.PlainVLMTests.test_failed_image_does_not_block_other_images) ... ok
+C:\Users\hungw\AppData\Local\Temp\tmp27gpd48w\out\vlm_results_b7b6eada7b33.json
+r1 error
+test_failure_does_not_create_schema_retry_chain (test_workflow.PlainVLMTests.test_failure_does_not_create_schema_retry_chain) ... ok
+C:\Users\hungw\AppData\Local\Temp\tmp843lusmx\out\vlm_results_7d6780ccbd55.json
+r1 ok
+test_one_call_accepts_partial_plain_text (test_workflow.PlainVLMTests.test_one_call_accepts_partial_plain_text) ... ok
+test_resize_limits_patch_count (test_workflow.PlainVLMTests.test_resize_limits_patch_count) ... ok
+C:\Users\hungw\AppData\Local\Temp\tmp3dap5ehr\out\vlm_results_0743ba18e6db.json
+r1 ok
+test_success_cache_prevents_second_call (test_workflow.PlainVLMTests.test_success_cache_prevents_second_call) ... ok
+
+----------------------------------------------------------------------
+Ran 167 tests in 28.331s
+
+OK
+C:\Users\hungw\AppData\Local\Temp\tmp6t9h9cmp\out\vlm_results_e04c26e963df.json
+C:\Users\hungw\AppData\Local\Temp\tmp6t9h9cmp\out\vlm_results_ae5a75303e80.json

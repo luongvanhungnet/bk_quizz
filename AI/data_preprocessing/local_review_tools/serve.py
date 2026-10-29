@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 
 ROOT=Path(__file__).resolve().parent
 RUNTIME=ROOT.parent/'colab_orchestrator_v5'
-CORE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+CORE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
 sys.path.insert(0,str(RUNTIME));sys.path.insert(0,str(CORE))
 from common import verify_release
 from jsonl_adapter import read_jsonl

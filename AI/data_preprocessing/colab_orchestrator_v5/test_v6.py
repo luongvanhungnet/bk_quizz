@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parent
-ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
 sys.path.insert(0,str(ENGINE));sys.path.insert(0,str(ROOT))
 from common import atomic_json,digest,load,rows
 from region_policy import proposals,MAX_REGIONS_PER_PAGE,limit_candidates

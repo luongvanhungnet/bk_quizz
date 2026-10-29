@@ -11,7 +11,7 @@ from common import atomic_json,checked_extract,digest,load,rows,safe,verify_rele
 from unit_store import inspect_result
 
 ROOT=Path(__file__).resolve().parent
-ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
 
 
 def import_units(index_path,archives,*,check_only=False,output_dir=None):

@@ -1,0 +1,63 @@
+{
+  "id": "p0300_r00272",
+  "page": 300,
+  "engine": "vlm",
+  "cache_key": "f46fc8d66b60ed4cdf3a099178291e8bdd40e899eb571ed68e0976e560ed1ca3",
+  "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+  "crop_sha256": "0f9fc77429359ba8e1b6c6146d218072e73d6ae35e657247de9937abeeda71f4",
+  "input_image_sha256": "9823ec196cceab55298527f4fc0a78cf979552afd6b490ec6d199abfa0d170e7",
+  "packet_manifest_sha256": "24f2f2d02890d1dcb39abd727e73358f8d6f1d27c5cf8d5ac3a683c636537c69",
+  "status": "ok",
+  "text": "Đồ thị này có bốn đỉnh: 1, 2, 3 và 4. Cạnh có hướng từ đỉnh 1 đến đỉnh 2, từ đỉnh 2 đến đỉnh 3, từ đỉnh 3 đến đỉnh 1, từ đỉnh 2 đến đỉnh 4 và từ đỉnh 3 đến đỉnh 4.",
+  "semantic_verified": false,
+  "model_config": {
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+    "quantization": "nf4",
+    "visual_tokens": 512,
+    "max_new_tokens": 512,
+    "prompt_sha256": "c1403bf190a08720e1bc09250385f8709e41c765e5cb3aade5e8645aa70c6958",
+    "runtime_sha256": "d255953098f5550008b2125454b863467c64c5fb5a09b5fab2028b1abc6c6d0f",
+    "output": "plain_text",
+    "generation_calls_per_image": 1
+  },
+  "context_supplied": "Các loại cạnh\nKhông có trọng số hoặc Có trọng số\nVô hướng hoặc Có hướng\nTrong trường hợp đồ thị có hướng, cạnh có hướng thường được gọi là cung chỉ tính định hướng của cung giữa hai đỉnh đầu mút\n1\n2\n3\n4\n6 / 55",
+  "one_generation_call": true,
+  "partial_observation": false,
+  "telemetry": {
+    "before": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    },
+    "text_tokens": 239,
+    "input_tokens": 490,
+    "image_grid_thw": [
+      [
+        1,
+        42,
+        24
+      ]
+    ],
+    "visual_tokens": 252,
+    "original_image_size": [
+      346,
+      604
+    ],
+    "effective_image_size": [
+      336,
+      588
+    ],
+    "output_tokens": 71,
+    "possibly_truncated": false,
+    "peak_allocated": 6169448448,
+    "after_cleanup": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    }
+  },
+  "elapsed_seconds": 6.267637829999785
+}

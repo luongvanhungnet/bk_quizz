@@ -1,0 +1,23 @@
+{
+  "document": {
+    "sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087"
+  },
+  "requests": [
+    {
+      "id": "v5:canary:ocr:p0869",
+      "page": 869,
+      "kind": "text",
+      "image": "assets/page_0869.png",
+      "crop_bbox": [
+        0,
+        0,
+        1000,
+        1000
+      ],
+      "is_full_page": true,
+      "crop_sha256": "85e87f4cd48a9b9891ba9f283d22faf627fe3f41ffc17f0a9c5ba2eac8a0b58e",
+      "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+      "native_text": ""
+    }
+  ]
+}

@@ -77,7 +77,7 @@ Khi chưa có mẫu được duyệt cho cả train/validation/test, chỉ xuấ
 
 ## Lệnh trên Windows
 
-Từ `D:\BKQuiz`, dùng Python có sẵn `AI\Qwen_cpt_version\data_preprocessing\.venv\Scripts\python.exe`:
+Từ `D:\BKQuiz`, dùng Python có sẵn `AI\data_preprocessing\.venv\Scripts\python.exe`:
 
 ```powershell
 python -X utf8 AI\Qweun_sft_version\pedagogy_tools\package_pedagogy.py --workspace AI\Qweun_sft_version\pedagogical_workspaces\qwen7b_v1_20261025

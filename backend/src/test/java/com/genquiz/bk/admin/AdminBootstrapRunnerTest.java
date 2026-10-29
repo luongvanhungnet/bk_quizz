@@ -32,6 +32,22 @@ class AdminBootstrapRunnerTest {
     private final SecurityOutboxService outbox = mock(SecurityOutboxService.class);
 
     @Test
+    void completionTimeUsesJdbcCompatibleTimestamp() throws Exception {
+        User target = new User("Owner", "owner@example.com", "hash-value-long-enough");
+        target.verifyEmail();
+        stubState(null, null);
+        stubNoExistingOwner();
+        when(users.findByIdAndDeletedAtIsNull(target.getId())).thenReturn(Optional.of(target));
+
+        new AdminBootstrapRunner(users, jdbc, audit, outbox, target.getId().toString())
+                .run(new DefaultApplicationArguments(new String[0]));
+
+        var timestamp = org.mockito.ArgumentCaptor.forClass(Object.class);
+        verify(jdbc).update(contains("security_bootstrap_state"), timestamp.capture(), eq(target.getId()));
+        assertThat(timestamp.getValue()).isInstanceOf(java.sql.Timestamp.class);
+    }
+
+    @Test
     void verifiedUserCanBeBootstrappedToOwner() throws Exception {
         User target = new User("Owner", "owner@example.com", "hash-value-long-enough");
         target.verifyEmail();

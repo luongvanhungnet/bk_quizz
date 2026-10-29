@@ -64,7 +64,7 @@ def publish_preserved(run,records,receipt):
     The importer already validates every archive/source/asset and record schema.
     This local organisation step must retain proposal text, flags and revisions.
     """
-    core=Path(__file__).resolve().parent.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+    core=Path(__file__).resolve().parent.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
     if str(core) not in sys.path:sys.path.insert(0,str(core))
     from models import validate_record
     from io_utils import canonical,sha,write_once

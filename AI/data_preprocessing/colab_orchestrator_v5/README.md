@@ -67,7 +67,7 @@ Sau khi runtime mất, chạy lại notebook với cùng BASE: kiểm ZIP đã l
 CLI importer mới mặc định nhập vào `AI/data_preprocessing/workspaces/unit100_v6_20261022`, tách snapshot máy v6 khỏi các workspace cũ:
 
 ```powershell
-AI\Qwen_cpt_version\data_preprocessing\.venv\Scripts\python.exe -X utf8 AI\data_preprocessing\colab_orchestrator_v5\import_units.py --index AI\data_preprocessing\uploads_134_unit100_20261022\UPLOAD_INDEX.json --results "D:\duong_dan\unit_result.zip" --check-only
+AI\data_preprocessing\.venv\Scripts\python.exe -X utf8 AI\data_preprocessing\colab_orchestrator_v5\import_units.py --index AI\data_preprocessing\uploads_134_unit100_20261022\UPLOAD_INDEX.json --results "D:\duong_dan\unit_result.zip" --check-only
 ```
 
 Bỏ `--check-only` để nhập thật; dùng `--output` để chọn workspace khác. Raw ZIP và audit được giữ, SQLite người duyệt không được ghi đè. Dùng app review v5 với run mới. Nguồn PDF/native text/công thức gốc giữ nguyên; VLM không tự viết lại nội dung hay tự tạo quyết định con người. Region overflow và câu trả lời lỗi cần review; gói xử lý xong không đồng nghĩa dataset đã được chứng nhận sạch hoặc sẵn sàng CPT.

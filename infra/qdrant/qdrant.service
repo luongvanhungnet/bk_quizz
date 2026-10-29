@@ -1,0 +1,16 @@
+[Unit]
+Description=BKQuiz local Qdrant vector database
+After=network.target
+
+[Service]
+Type=simple
+User=qdrant
+Group=qdrant
+WorkingDirectory=/var/lib/qdrant
+ExecStart=/usr/bin/qdrant --config-path /etc/qdrant/config.yaml
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

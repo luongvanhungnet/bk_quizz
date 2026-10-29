@@ -6,7 +6,7 @@
   "upstream_page_map": "D:/bk_quizz_data/slide_processed/_audit/page_map.json",
   "work_root": "D:/BKQuiz/AI/data_preprocessing/workspaces/corpus_20261021",
   "reuse_runs": [
-    "D:/BKQuiz/AI/Qwen_cpt_version/region_preprocessing_v5/runs/it3170_v5_20261020"
+    "D:/BKQuiz/AI/data_preprocessing/dependency_data/it3170_v5"
   ],
   "pages_per_packet": 100,
   "maximum_packet_bytes": 536870912,

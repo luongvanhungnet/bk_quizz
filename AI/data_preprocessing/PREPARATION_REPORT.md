@@ -1,6 +1,6 @@
 # Báo cáo chốt v5 và chuẩn bị corpus — 21/10/2026
 
-**v5.0.0 đã là phiên bản mặc định chính thức.** `CURRENT.json` trỏ tới snapshot `region_preprocessing_v5_official`; launcher kiểm checksum 48 file trước khi chạy. Mã VLM, prompt, model revision và cấu hình suy luận khớp lượt pilot v5 đã đo. Các bộ v1–v4, run/cached result v5 và lịch sử duyệt IT3170 được giữ.
+**v5.0.0 đã là phiên bản mặc định chính thức.** `CURRENT.json` trỏ tới snapshot `region_preprocessing_v5_0_1`; launcher kiểm checksum 48 file trước khi chạy. Mã VLM, prompt, model revision và cấu hình suy luận khớp lượt pilot v5 đã đo. Các bộ v1–v4, run/cached result v5 và lịch sử duyệt IT3170 được giữ.
 
 ## Đã hoàn thành
 

@@ -124,7 +124,7 @@ Chưa có bằng chứng model tốt hơn cho đến khi chấm nội dung trư�
 
 
 def main():
-    source=ROOT.parent/'data_preprocessing/outputs/it3170'
+    source=ROOT.parents[1]/'data_preprocessing/dependency_data/pilot_cpt'
     validation=load(source/'validation.json');quality=load(source/'quality_report.json')
     if not validation['passed']:raise ValueError('Source dataset has not passed validation')
     rows=read_jsonl(source/'cpt/train.jsonl');metadata=read_jsonl(source/'cpt/train.metadata.jsonl')

@@ -1,0 +1,63 @@
+{
+  "id": "p1042_r01351",
+  "page": 1042,
+  "engine": "vlm",
+  "cache_key": "3060ab01f9f825b2cba09b2e301df8616d3f337a659bc9ec7b4cf8d5d3a83bee",
+  "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+  "crop_sha256": "ba52092f094ad7ce515fd1a90fa3cde681843263686d8c1f9fd6210d126c0e1f",
+  "input_image_sha256": "c0fc800764ea14d35e0c7289c73135f8f39d18c71e518d1b8d908899075f25ba",
+  "packet_manifest_sha256": "24f2f2d02890d1dcb39abd727e73358f8d6f1d27c5cf8d5ac3a683c636537c69",
+  "status": "ok",
+  "text": "Đây là một biểu đồ mô tả quá trình duyệt sâu (Depth-First Search - DFS) với gốc từ node 6. Các node được duyệt theo thứ tự sau: 6 -> 1 -> 3 -> 2 -> 8 -> 5 -> 9 -> 7 -> 4. Node 3 ở bên dưới không liên kết với bất kỳ node nào khác trong hình.",
+  "semantic_verified": false,
+  "model_config": {
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+    "quantization": "nf4",
+    "visual_tokens": 512,
+    "max_new_tokens": 512,
+    "prompt_sha256": "c1403bf190a08720e1bc09250385f8709e41c765e5cb3aade5e8645aa70c6958",
+    "runtime_sha256": "d255953098f5550008b2125454b863467c64c5fb5a09b5fab2028b1abc6c6d0f",
+    "output": "plain_text",
+    "generation_calls_per_image": 1
+  },
+  "context_supplied": "3\nDFS(6)\n6\n1\n4\n3\n2\n8\n5\n9\n7",
+  "one_generation_call": true,
+  "partial_observation": false,
+  "telemetry": {
+    "before": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    },
+    "text_tokens": 198,
+    "input_tokens": 697,
+    "image_grid_thw": [
+      [
+        1,
+        40,
+        50
+      ]
+    ],
+    "visual_tokens": 500,
+    "original_image_size": [
+      1343,
+      1082
+    ],
+    "effective_image_size": [
+      700,
+      560
+    ],
+    "output_tokens": 83,
+    "possibly_truncated": false,
+    "peak_allocated": 6209811968,
+    "after_cleanup": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    }
+  },
+  "elapsed_seconds": 7.67046643599997
+}

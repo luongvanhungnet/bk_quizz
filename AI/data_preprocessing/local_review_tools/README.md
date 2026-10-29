@@ -4,10 +4,10 @@ Bộ công cụ cục bộ dùng frozen core v5 và runtime JSONL adapter v6. Gi
 
 Cột **Kết quả VLM** trên trang chọn học phần hiển thị **còn lại/tổng số**. Chỉ quyết định mới nhất `approve`, `correct` hoặc `reject` khớp identity của kết quả hiện tại mới làm giảm số còn lại. Mẫu chưa duyệt, tạm hoãn và quyết định cũ cần duyệt lại vẫn được tính là còn lại. Số đếm đọc trực tiếp SQLite, tự cập nhật mỗi 15 giây khi trang đang hiển thị và khi quay lại trang; không tạo hay sửa quyết định duyệt.
 
-Dùng Python của `AI/Qwen_cpt_version/data_preprocessing/.venv/Scripts/python.exe`, tại thư mục dự án:
+Dùng Python của `AI/data_preprocessing/.venv/Scripts/python.exe`, tại thư mục dự án:
 
 ```powershell
-$py = 'AI/Qwen_cpt_version/data_preprocessing/.venv/Scripts/python.exe'
+$py = 'AI/data_preprocessing/.venv/Scripts/python.exe'
 & $py -X utf8 -u AI/data_preprocessing/local_review_tools/ingest.py --extract
 & $py -X utf8 -u AI/data_preprocessing/local_review_tools/assemble.py
 & $py -X utf8 -u AI/data_preprocessing/local_review_tools/restore_reviews.py

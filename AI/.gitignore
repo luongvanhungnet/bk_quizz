@@ -21,6 +21,7 @@
 *.xz
 
 # Generated corpus imports, review state and Colab deliveries.
+/data_preprocessing/dependency_data/
 /data_preprocessing/catalogs/
 /data_preprocessing/results/
 /data_preprocessing/uploads_*/

@@ -1,9 +1,0 @@
-{
-  "tables": 16,
-  "old_doc_preprocessor_errors_reproduced": 16,
-  "new_structure_pass": 16,
-  "semantic_verified": 0,
-  "initial_attempt_structure_pass": 14,
-  "bbox_repairs": 2,
-  "scope": "CPU package integration, not semantic table accuracy or Colab GPU benchmark"
-}

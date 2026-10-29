@@ -169,7 +169,7 @@ RUN=DRIVE_ROOT/'runs'/RUN_NAME
 RUN.mkdir(parents=True,exist_ok=True)
 ''')
     md("## Môi trường\nDùng bootstrap pip đã sửa, giữ CUDA torch của Colab. Log cài đặt được lưu đầy đủ.")
-    bootstrap = (SFT/"completed_sft_tools/colab_bootstrap.py").read_text(encoding="utf-8")
+    bootstrap = (SFT/"sft_v2_tools/completed_native/colab_bootstrap.py").read_text(encoding="utf-8")
     code(bootstrap + '\n' + '''VENV=Path('/content/bkquiz_four_way_venv')
 PYTHON=ensure_colab_venv(VENV)
 (RUNTIME/'sitecustomize.py').write_text("import importlib.util\\n_original=importlib.util.find_spec\\ndef _find(name,*args,**kwargs):\\n    if name.split('.')[0] in {'torchvision','torchaudio','librosa'}:return None\\n    return _original(name,*args,**kwargs)\\nimportlib.util.find_spec=_find\\n",encoding='utf-8')

@@ -8,7 +8,7 @@ Phạm vi đã kiểm kê: **27 PDF, 13.314 trang**. Kế hoạch có **148 shar
 
 ```powershell
 Set-Location D:\BKQuiz
-$py = 'AI\Qwen_cpt_version\data_preprocessing\.venv\Scripts\python.exe'
+$py = 'AI\data_preprocessing\.venv\Scripts\python.exe'
 $entry = 'AI\data_preprocessing\manage.py'
 $plan = 'AI\data_preprocessing\plans\corpus_20261021'
 $work = 'AI\data_preprocessing\workspaces\corpus_20261021'
@@ -22,7 +22,7 @@ $work = 'AI\data_preprocessing\workspaces\corpus_20261021'
 - Inventory: `catalogs/corpus_20261021/documents.csv` và `documents.jsonl`.
 - Jobs: `plans/corpus_20261021/jobs.jsonl`.
 - Chỉ định release: `CURRENT.json`; cấu hình: `production.json`.
-- Notebook corpus: `AI/Qwen_cpt_version/region_preprocessing_v5_official/Colab_V5_Official_Corpus.ipynb`.
+- Notebook corpus: `AI/Qwen_cpt_version/region_preprocessing_v5_0_1/Colab_V5_Official_Corpus.ipynb`.
 - `START_HERE.md` ghi packet đầu tiên thực tế đã chuẩn bị và hash của nó.
 
 ## 2. Chạy tiếp IT3170 từ cache
@@ -147,7 +147,7 @@ Không chấm Q hoặc accuracy bằng tỷ lệ API/schema pass. Tạo human-re
 
 ## 9. Quản lý phiên bản và sự cố
 
-- `CURRENT.json` chọn v5.0.0. Không sửa mã trong `region_preprocessing_v5_official`; controller sẽ báo hash sai.
+- `CURRENT.json` chọn v5.0.0. Không sửa mã trong `region_preprocessing_v5_0_1`; controller sẽ báo hash sai.
 - Mã thử nghiệm tiếp tục ở `region_preprocessing_v5`, không tự ảnh hưởng release đã chốt. Thay đổi hành vi sản xuất phải phát hành version mới và cập nhật CURRENT sau kiểm thử.
 - Không dùng `pip install -U` chung vào env VLM/Paddle. Lưu freeze sau mỗi lượt Colab; đọc lỗi và xác minh compatibility trước khi thay package.
 - Parser/VLM lỗi: giữ ZIP, log, trace, raw, GPU info. Không sửa output thành “ok” hoặc “verified” để tiếp tục.

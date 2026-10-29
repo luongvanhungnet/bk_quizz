@@ -101,7 +101,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
                 update security_bootstrap_state
                 set completed_at = ?, completed_user_id = ?
                 where bootstrap_key = 'INITIAL_OWNER' and completed_at is null
-                """, Instant.now(), userId);
+                """, java.sql.Timestamp.from(Instant.now()), userId);
     }
 
     private record BootstrapState(java.time.OffsetDateTime completedAt, UUID completedUserId) {}

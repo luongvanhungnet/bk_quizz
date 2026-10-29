@@ -54,7 +54,7 @@ def audit(folder):
         path=folder/'precompleted_results'/e['filename']
         if digest(path)!=e['sha256']:raise ValueError('Precompleted ZIP changed')
         inspect_result(path,by_id[e['unit_id']],index['plan_sha256'])
-    core=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official';verified=verify_release(core)
+    core=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1';verified=verify_release(core)
     result={'schema':'unit100-audit-v1','input_archives':len(index['bundles']),'documents':len(sources),'pages':len(points),
             'full_units':sum(e['pages']==100 for e in index['bundles']),'last_unit_pages':index['bundles'][-1]['pages'],
             'input_members_verified':objects,'total_input_bytes':index['total_bytes'],'max_input_bytes':max(e['bytes'] for e in index['bundles']),

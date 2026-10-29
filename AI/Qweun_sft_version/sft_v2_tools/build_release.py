@@ -113,7 +113,7 @@ for name,wanted in m['files_sha256'].items(): assert file_sha(WORK/name)==wanted
 RUNTIME=WORK/'runtime'
 RUN=DRIVE_ROOT/'runs'/RUN_NAME;RUN.mkdir(parents=True,exist_ok=True)
 ''')
-    helper = (ROOT/'completed_sft_tools/colab_bootstrap.py').read_text(encoding='utf-8')
+    helper = (HERE/'completed_native/colab_bootstrap.py').read_text(encoding='utf-8')
     code(helper+'\n'+'''VENV=Path('/content/bkquiz_sft_v2_venv')
 PYTHON=ensure_colab_venv(VENV)
 (RUNTIME/'sitecustomize.py').write_text("import importlib.util\\n_original=importlib.util.find_spec\\ndef _find(name,*args,**kwargs):\\n    if name.split('.')[0] in {'torchvision','torchaudio','librosa'}:return None\\n    return _original(name,*args,**kwargs)\\nimportlib.util.find_spec=_find\\n",encoding='utf-8')

@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parent
-ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
 sys.path.insert(0,str(ENGINE));sys.path.insert(0,str(ROOT))
 # Pin modules with __file__-relative assets before temporary engine paths exist.
 import package_cloud,corpus,batch_layout
@@ -115,7 +115,7 @@ class FakeWorker:
 
 class UnitTests(unittest.TestCase):
     def test_partition_exact_134_all_pages_once_and_global_budget(self):
-        source=load(ROOT.parent/'uploads_14_sequential_20261021/_build_metadata/plan.json')
+        source=load(ROOT.parent/'colab_orchestrator_v5/fixtures/corpus_plan/plan.json')
         units=partition(source['jobs'])
         self.assertEqual(len(units),134);self.assertEqual([u['pages'] for u in units],[100]*133+[14])
         points=[(j['source_sha256'],p) for u in units for j in u['jobs'] for p in range(j['first_page'],j['last_page']+1)]

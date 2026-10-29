@@ -1,9 +1,0 @@
-{
-  "folder": "D:\\BKQuiz\\AI\\data_preprocessing\\colab_orchestrator_v4\\drive_upload",
-  "input_folder": "D:\\BKQuiz\\AI\\data_preprocessing\\colab_orchestrator_v4\\drive_upload\\inputs_134",
-  "input_archives": 134,
-  "precompleted_result_archives": 7,
-  "runtime_zip": "colab_orchestrator_v4_units_runtime.zip",
-  "runtime_sha256": "90af6298a00235e20b53ecfd3d264dbfced355ee54e2484baeea13662e5e4bad",
-  "upload_bytes": 5617876707
-}

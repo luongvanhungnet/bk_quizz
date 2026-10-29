@@ -1,8 +1,0 @@
-{
-  "tables": 16,
-  "old_missing_doc_preprocessor_reproduced": 14,
-  "new_structure_pass": 14,
-  "semantic_verified": 0,
-  "historical_tracebacks_available": false,
-  "reproduction_scope": "new CPU executions with pinned packages; old archive untouched"
-}

@@ -8,7 +8,7 @@ import time
 from common import atomic_json,digest,load
 
 ROOT=Path(__file__).resolve().parent
-ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
 
 
 def build():

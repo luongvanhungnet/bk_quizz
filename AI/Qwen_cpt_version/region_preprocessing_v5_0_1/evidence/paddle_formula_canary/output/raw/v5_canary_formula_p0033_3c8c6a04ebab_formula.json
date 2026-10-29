@@ -1,0 +1,29 @@
+{
+  "records": [
+    {
+      "res": {
+        "input_path": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v3\\runs\\it3170_v3_20261019\\crops\\p0033_r00013_f01_v3_boundary.png",
+        "page_index": null,
+        "rec_formula": "\\mathcal{O}(n\\log n)"
+      },
+      "metadata": {
+        "page": 33,
+        "image_width": 168,
+        "image_height": 44,
+        "crop_bbox": [
+          260.0,
+          590.4761904761905,
+          380.0,
+          632.3809523809524
+        ],
+        "is_full_page": false,
+        "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+        "source_file": null,
+        "version": "3.7.0",
+        "backend_family": "paddle_structure",
+        "ocr_version": "PP-OCRv3",
+        "lang": "vi"
+      }
+    }
+  ]
+}

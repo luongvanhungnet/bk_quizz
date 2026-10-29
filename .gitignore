@@ -70,3 +70,21 @@ _deps/
 
 # Temporary local files
 /tmp/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+~$*
+.coverage
+.coverage.*
+htmlcov/
+*.tsbuildinfo
+/hs_err_pid*.log
+/replay_pid*.log
+
+# Downloaded model tokenizer (restore with the model download workflow)
+/rag-service/data/models/embedding-onnx/tokenizer.json
+
+# Generated spreadsheet export
+/train.samples.xlsx

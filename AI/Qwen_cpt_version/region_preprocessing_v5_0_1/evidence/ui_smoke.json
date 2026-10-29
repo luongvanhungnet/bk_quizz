@@ -1,0 +1,53 @@
+{
+  "date_client": "2026-10-20",
+  "timezone_client": "Asia/Bangkok",
+  "run": "runs/it3170_v5_candidate",
+  "browser": "Edge",
+  "automation": "Documented CUA browser API",
+  "url": "http://127.0.0.1:8765/",
+  "server_exec_session": 30852,
+  "server_stopped_after_check": true,
+  "checks": {
+    "title": "BKQuiz · Kiểm duyệt v5",
+    "machine_bucket_choices": ["Tin cậy", "Chưa chắc chắn", "Lỗi nghiêm trọng"],
+    "observed_total_records": 2245,
+    "observed_machine_buckets": {"trusted": 0, "uncertain": 2204, "critical": 41},
+    "critical_filter_results": 41,
+    "navigation_from": "p0137_r00082_f00",
+    "navigation_to": "p0137_r00082_f02",
+    "original_slide_visually_displayed": true,
+    "exact_crop_visually_displayed": true,
+    "context_crop_visually_displayed": true,
+    "native_and_paddle_candidates_displayed": true,
+    "final_text_editable": true,
+    "editing_automatically_selected_correct": true,
+    "unsaved_edit_warning_displayed": true,
+    "unsaved_edit_discarded_by_closing_test_tab": true,
+    "metadata_collapsed_for_source_visibility": true
+  },
+  "http_image_check_record": "p0137_r00082_f02",
+  "http_image_checks": {
+    "render": {"status": 200, "content_type": "image/png", "bytes": 219244},
+    "crop": {"status": 200, "content_type": "image/png", "bytes": 630},
+    "context": {"status": 200, "content_type": "image/png", "bytes": 4671}
+  },
+  "post_check": {
+    "human_reviews_submitted": 0,
+    "sqlite_review_rows": 0,
+    "reviewed": 0,
+    "human_verified": 0,
+    "eligible_for_training": 0,
+    "all_records_pending": 2245
+  },
+  "screenshot": {
+    "captured_and_visually_inspected": true,
+    "saved_artifact": null,
+    "note": "The documented browser screenshot method returned image bytes and displayed them. No supported path-save API was used; no screenshot file is claimed."
+  },
+  "limitations": [
+    "No approve/correct/reject/defer action was submitted against the real run.",
+    "Writable decision flows were verified only on temporary test fixtures.",
+    "The machine counts describe the prepared candidate before new GPU inference.",
+    "One formula context crop remained a narrow fragment; the full slide stayed available for comparison."
+  ]
+}

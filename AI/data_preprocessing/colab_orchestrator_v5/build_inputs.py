@@ -1,4 +1,4 @@
-"""Build independent <=100-page units from the unchanged 14-input corpus plan."""
+"""Build independent <=100-page units from a retained corpus plan or legacy index."""
 import argparse
 import json
 import math
@@ -10,7 +10,7 @@ import zipfile
 from common import atomic_json,digest,load,rows,verify_release,write_archive
 
 ROOT=Path(__file__).resolve().parent
-ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+ENGINE=ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
 INPUT_SCHEMA='v5-unit-input-v1'
 
 
@@ -46,21 +46,40 @@ def partition(jobs, size=100):
     return units
 
 
+def source_plan(source):
+    """Read a verified legacy index or a retained plan; relocate only dependency paths."""
+    old_index = Path(source).resolve()
+    candidate = load(old_index)
+    if 'jobs' in candidate and 'config' in candidate:
+        plan = candidate
+        old = {'plan_sha256': digest(old_index)}
+    else:
+        old=load(old_index);plan=None
+        for b in old['bundles']:
+            path=Path(b['path'])
+            print('VERIFY OLD INPUT',path.name,flush=True)
+            if digest(path)!=b['sha256']:raise ValueError('Old input changed: '+str(path))
+            with zipfile.ZipFile(path) as z:
+                content=z.read('plan.json')
+                import hashlib
+                if hashlib.sha256(content).hexdigest()!=old['plan_sha256']:raise ValueError('Old plan changed')
+                if plan is None:plan=json.loads(content)
+    release = verify_release(ENGINE)
+    current = digest(ENGINE/'RELEASE.json')
+    predecessor = release.get('migration', {}).get('previous_release_manifest_sha256')
+    if plan['release_manifest_sha256'] != current and (not predecessor or plan['release_manifest_sha256'] != predecessor):
+        raise ValueError('Core release mismatch')
+    sys.path.insert(0, str(ENGINE))
+    from io_utils import relocated
+    plan = relocated(plan)
+    plan['release_manifest_sha256'] = current
+    return plan, old
+
+
 def build(old_index,out):
     old_index,out=Path(old_index).resolve(),Path(out).resolve()
     if out.exists():raise FileExistsError('Inputs are immutable; choose a new output directory')
-    old=load(old_index);plan=None
-    for b in old['bundles']:
-        path=Path(b['path'])
-        print('VERIFY OLD INPUT',path.name,flush=True)
-        if digest(path)!=b['sha256']:raise ValueError('Old input changed: '+str(path))
-        with zipfile.ZipFile(path) as z:
-            content=z.read('plan.json')
-            import hashlib
-            if hashlib.sha256(content).hexdigest()!=old['plan_sha256']:raise ValueError('Old plan changed')
-            if plan is None:plan=json.loads(content)
-    verify_release(ENGINE)
-    if digest(ENGINE/'RELEASE.json')!=plan['release_manifest_sha256']:raise ValueError('Core release mismatch')
+    plan,old=source_plan(old_index)
     units=partition(plan['jobs']);count=len(units)
     out.mkdir(parents=True);meta=out/'plan';meta.mkdir()
     jobs=[j for u in units for j in u['jobs']]
@@ -122,5 +141,5 @@ def build(old_index,out):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--old-index',type=Path,required=True);p.add_argument('--out',type=Path,required=True)
+    p=argparse.ArgumentParser();p.add_argument('--old-index','--plan',dest='old_index',type=Path,required=True);p.add_argument('--out',type=Path,required=True)
     a=p.parse_args();print(json.dumps({k:v for k,v in build(a.old_index,a.out).items() if k!='bundles'},indent=2))

@@ -1,3 +1,0 @@
--r requirements.txt
-paddleocr[doc-parser]==3.7.0
-paddlepaddle==3.2.2

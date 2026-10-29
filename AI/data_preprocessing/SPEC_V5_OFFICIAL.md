@@ -9,7 +9,7 @@
 | Ngày chốt | **21/10/2026**, Asia/Bangkok |
 | Entrypoint chính thức | `D:\BKQuiz\AI\data_preprocessing\manage.py` |
 | Chỉ định phiên bản | `AI/data_preprocessing/CURRENT.json` |
-| Mã chạy cố định | `AI/Qwen_cpt_version/region_preprocessing_v5_official/` |
+| Mã chạy cố định | `AI/Qwen_cpt_version/region_preprocessing_v5_0_1/` |
 | Cấu hình corpus | `AI/data_preprocessing/production.json` |
 | Mục tiêu | Native + OCR + VLM + Cross-validation + Human Review, tạo dữ liệu truy vết được cho continued pretraining |
 

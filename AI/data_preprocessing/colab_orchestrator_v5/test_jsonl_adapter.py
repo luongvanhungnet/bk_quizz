@@ -8,7 +8,7 @@ import types
 import unittest
 
 ROOT = Path(__file__).resolve().parent
-ENGINE = ROOT.parent.parent / 'Qwen_cpt_version/region_preprocessing_v5_official'
+ENGINE = ROOT.parent.parent / 'Qwen_cpt_version/region_preprocessing_v5_0_1'
 sys.path.insert(0, str(ENGINE)); sys.path.insert(0, str(ROOT))
 from jsonl_adapter import JSONLDecodeError, install, loads_jsonl, read_jsonl
 from common import atomic_json, digest, rows, write_compact_archive

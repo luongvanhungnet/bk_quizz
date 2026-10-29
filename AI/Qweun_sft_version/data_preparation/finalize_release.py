@@ -96,10 +96,10 @@ Các trích xuất native đầy đủ nằm tại `extracted/` trên máy, khô
 
 ## Tái tạo và kiểm tra
 
-Dùng Python đã có: `D:/BKQuiz/AI/Qwen_cpt_version/data_preprocessing/.venv/Scripts/python.exe`. Trong `D:/BKQuiz`:
+Dùng Python đã có: `D:/BKQuiz/AI/data_preprocessing/.venv/Scripts/python.exe`. Trong `D:/BKQuiz`:
 
 ```powershell
-$py = 'AI/Qwen_cpt_version/data_preprocessing/.venv/Scripts/python.exe'
+$py = 'AI/data_preprocessing/.venv/Scripts/python.exe'
 $data = 'AI/Qweun_sft_version/datasets/sft_exams_20261024'
 $tools = 'AI/Qweun_sft_version/data_preparation'
 $tokenizer = 'AI/data_preprocessing/training_releases/cpt_27courses_20261023/tokenizer_pinned'

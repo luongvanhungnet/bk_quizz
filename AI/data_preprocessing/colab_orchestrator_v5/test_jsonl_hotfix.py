@@ -42,7 +42,7 @@ class HotfixTests(unittest.TestCase):
         self.assertIn('loads_jsonl(read_logical(name)', (self.runtime/'unit_store.py').read_text())
         # Independent child interpreter confirms packaging aliases pick up the fix.
         import subprocess
-        engine = ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_official'
+        engine = ROOT.parent.parent/'Qwen_cpt_version/region_preprocessing_v5_0_1'
         command = [sys.executable, '-X', 'utf8', '-c',
                    'import sys;sys.path.insert(0,sys.argv[1]);sys.path.insert(0,sys.argv[2]);'
                    'import corpus;from jsonl_adapter import install,loads_jsonl,read_jsonl;install();'
