@@ -5,6 +5,7 @@ import com.genquiz.bk.config.AppProperties;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -20,6 +21,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 @Configuration
 @EnableWebSocketMessageBroker
+@ConditionalOnProperty(name = "bkquiz.realtime.provider", havingValue = "stomp", matchIfMissing = true)
 public class ClassroomWebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final JwtService jwt;
     private final ClassroomMemberRepository members;

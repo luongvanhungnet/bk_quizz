@@ -12,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.genquiz.bk.config.RagProperties;
+import com.genquiz.bk.config.RagIamProperties;
 import com.genquiz.bk.job.JobEventLevel;
 import com.genquiz.bk.job.JobEventService;
 import com.sun.net.httpserver.HttpServer;
@@ -21,6 +22,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.ObjectMapper;
@@ -31,6 +33,42 @@ class RagClientTest {
     @AfterEach
     void stopServer() {
         if (server != null) server.stop(0);
+    }
+
+    @Test
+    void sendsCloudRunIdentityTokenWhenIamAuthenticationIsEnabled() throws Exception {
+        AtomicReference<String> authorization = new AtomicReference<>();
+        server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/api/v2/capabilities", exchange -> {
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            byte[] body = """
+                    {"quizGenerationContract":"cognitive-repair-v1","capabilities":{
+                      "questionPlan":true,"acceptedQuestions":true,"streaming":true,
+                      "partialCognitiveRepair":true,"structuredOutputCheckpoint":true},
+                     "buildRevision":"stage9"}
+                    """.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        var properties = new RagProperties(
+                true,
+                "http://127.0.0.1:" + server.getAddress().getPort(),
+                "internal-key",
+                Duration.ofSeconds(2),
+                Duration.ofSeconds(2));
+        var client = new RagClient(
+                properties,
+                new RagIamProperties(true, "https://bkquiz-rag.example.run.app"),
+                audience -> "cloud-run-id-token",
+                new ObjectMapper(),
+                null);
+
+        client.requireQuizGenerationContract();
+
+        assertEquals("Bearer cloud-run-id-token", authorization.get());
     }
 
     @Test

@@ -47,6 +47,13 @@ spring:
   jackson:
     default-property-inclusion: non_null
     time-zone: UTC
+  data:
+    redis:
+      url: ${REDIS_URL:redis://localhost:6379}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${REDIS_COMMAND_TIMEOUT:2s}
+      repositories:
+        enabled: false
   ai:
     model:
       chat: ${AI_CHAT_PROVIDER:none}
@@ -131,6 +138,12 @@ bkquiz:
     heartbeat-delay: ${JOB_WORKER_HEARTBEAT_DELAY:10s}
     lease-duration: ${JOB_LEASE_DURATION:2m}
     max-attempts: ${JOB_MAX_ATTEMPTS:5}
+  realtime:
+    provider: ${REALTIME_PROVIDER:stomp}
+    ably-api-key: ${ABLY_API_KEY:}
+    channel-prefix: ${ABLY_CHANNEL_PREFIX:bkquiz:classroom:}
+    token-ttl-seconds: ${ABLY_TOKEN_TTL_SECONDS:300}
+    publish-enabled: ${REALTIME_PUBLISH_ENABLED:true}
   rag:
     enabled: ${RAG_ENABLED:false}
     base-url: ${RAG_SERVICE_URL:http://127.0.0.1:8090}
@@ -138,11 +151,71 @@ bkquiz:
     connect-timeout: ${RAG_CONNECT_TIMEOUT:5s}
     read-timeout: ${RAG_READ_TIMEOUT:120s}
     health-poll-delay: ${RAG_HEALTH_POLL_DELAY:10s}
+    iam:
+      enabled: ${RAG_IAM_ENABLED:false}
+      audience: ${RAG_IAM_AUDIENCE:}
   admin-bootstrap:
     enabled: ${ADMIN_BOOTSTRAP_ENABLED:false}
-    email: ${ADMIN_BOOTSTRAP_EMAIL:}
-    username: ${ADMIN_BOOTSTRAP_USERNAME:BKQuiz Admin}
-    password: ${ADMIN_BOOTSTRAP_PASSWORD:}
+    user-id: ${ADMIN_BOOTSTRAP_USER_ID:}
+  anti-abuse:
+    enabled: ${ANTI_ABUSE_ENABLED:false}
+    ip-hash-secret: ${ANTI_ABUSE_IP_HASH_SECRET:${JWT_ACCESS_SECRET:change-me-in-production-access-secret-32chars}}
+    rate-window: ${ANTI_ABUSE_RATE_WINDOW:1h}
+    user-rate-limit: ${ANTI_ABUSE_USER_RATE_LIMIT:20}
+    ip-rate-limit: ${ANTI_ABUSE_IP_RATE_LIMIT:40}
+    device-rate-limit: ${ANTI_ABUSE_DEVICE_RATE_LIMIT:30}
+    concurrency-ttl: ${AI_CONCURRENCY_TTL:30m}
+    cost-key-ttl: ${AI_COST_KEY_TTL:3d}
+    pricing:
+      default-input-per-million: ${AI_DEFAULT_INPUT_COST_PER_MILLION:0.10}
+      default-output-per-million: ${AI_DEFAULT_OUTPUT_COST_PER_MILLION:0.40}
+      estimated-input-tokens-per-question: ${AI_ESTIMATED_INPUT_TOKENS_PER_QUESTION:900}
+      estimated-output-tokens-per-question: ${AI_ESTIMATED_OUTPUT_TOKENS_PER_QUESTION:500}
+    levels:
+      trusted:
+        daily-quota: ${AI_TRUSTED_DAILY_QUOTA:100}
+        daily-cost-budget: ${AI_TRUSTED_DAILY_COST_BUDGET:2.00}
+        concurrency: ${AI_TRUSTED_CONCURRENCY:3}
+        challenge-required: false
+      normal:
+        daily-quota: ${AI_NORMAL_DAILY_QUOTA:40}
+        daily-cost-budget: ${AI_NORMAL_DAILY_COST_BUDGET:0.80}
+        concurrency: ${AI_NORMAL_CONCURRENCY:2}
+        challenge-required: false
+      caution:
+        daily-quota: ${AI_CAUTION_DAILY_QUOTA:15}
+        daily-cost-budget: ${AI_CAUTION_DAILY_COST_BUDGET:0.30}
+        concurrency: ${AI_CAUTION_CONCURRENCY:1}
+        challenge-required: false
+      restricted:
+        daily-quota: ${AI_RESTRICTED_DAILY_QUOTA:3}
+        daily-cost-budget: ${AI_RESTRICTED_DAILY_COST_BUDGET:0.08}
+        concurrency: ${AI_RESTRICTED_CONCURRENCY:1}
+        challenge-required: true
+      blocked:
+        daily-quota: 0
+        daily-cost-budget: 0
+        concurrency: 0
+        challenge-required: true
+    risk:
+      verified-email-trust: ${RISK_VERIFIED_EMAIL_TRUST:15}
+      normal-activity-trust: ${RISK_NORMAL_ACTIVITY_TRUST:3}
+      successful-session-trust: ${RISK_SUCCESSFUL_SESSION_TRUST:1}
+      account-age-trust-per-day: ${RISK_ACCOUNT_AGE_TRUST_PER_DAY:0.10}
+      account-age-trust-cap: ${RISK_ACCOUNT_AGE_TRUST_CAP:10}
+      trusted-min-score: ${RISK_TRUSTED_MIN_SCORE:75}
+      trusted-min-legitimate-activities: ${RISK_TRUSTED_MIN_LEGITIMATE_ACTIVITIES:10}
+      caution-risk-score: ${RISK_CAUTION_SCORE:0.30}
+      restricted-risk-score: ${RISK_RESTRICTED_SCORE:0.60}
+      blocked-risk-score: ${RISK_BLOCKED_SCORE:0.90}
+    turnstile:
+      enabled: ${TURNSTILE_ENABLED:false}
+      secret-key: ${TURNSTILE_SECRET_KEY:}
+      verify-url: ${TURNSTILE_VERIFY_URL:https://challenges.cloudflare.com/turnstile/v0/siteverify}
+  analytics:
+    aggregation-enabled: ${ANALYTICS_AGGREGATION_ENABLED:true}
+    aggregation-delay: ${ANALYTICS_AGGREGATION_DELAY:5m}
+    max-range-days: ${ANALYTICS_MAX_RANGE_DAYS:366}
 
 logging:
   pattern:
@@ -153,10 +226,12 @@ logging:
 
 resend:
   api:
-    key: ${RESEND_API_KEY:}
+    # RESEND_API_TOKEN is canonical. RESEND_API_KEY remains a rollout fallback.
+    key: ${RESEND_API_TOKEN:${RESEND_API_KEY:}}
     url: ${RESEND_API_URL:https://api.resend.com/emails}
-    connect-timeout: ${RESEND_CONNECT_TIMEOUT:10s}
-    read-timeout: ${RESEND_READ_TIMEOUT:15s}
+    connect-timeout: ${RESEND_CONNECT_TIMEOUT:30s}
+    read-timeout: ${RESEND_READ_TIMEOUT:45s}
+    network-retry-delay: ${RESEND_NETWORK_RETRY_DELAY:30s}
 
 app:
   mail:

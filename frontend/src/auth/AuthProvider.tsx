@@ -33,9 +33,10 @@ export function AuthProvider({
 
   function commit(payload: AuthPayload): UserDto {
     accessTokenStore.set(payload.accessToken);
-    setUser(payload.user);
+    const enriched = withTokenAuthorities(payload.user, payload.accessToken);
+    setUser(enriched);
     setStatus("authenticated");
-    return payload.user;
+    return enriched;
   }
 
   async function login(request: LoginRequest): Promise<UserDto> {
@@ -108,6 +109,22 @@ export function AuthProvider({
       {children}
     </AuthContext.Provider>
   );
+}
+
+function withTokenAuthorities(user: UserDto, token: string): UserDto {
+  try {
+    const encoded = token.split(".")[1];
+    if (!encoded) return user;
+    const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="))) as {
+      roles?: unknown; permissions?: unknown;
+    };
+    const roles = Array.isArray(payload.roles) ? payload.roles.filter((v): v is string => typeof v === "string") : user.administrativeRoles;
+    const permissions = Array.isArray(payload.permissions) ? payload.permissions.filter((v): v is string => typeof v === "string") : user.permissions;
+    return { ...user, ...(roles ? { administrativeRoles: roles } : {}), ...(permissions ? { permissions } : {}) };
+  } catch {
+    return user;
+  }
 }
 
 export function useAuth(): AuthContextValue {

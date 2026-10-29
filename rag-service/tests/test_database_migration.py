@@ -33,7 +33,12 @@ def test_alembic_creates_documents_and_partial_unique_index(
     columns = {item["name"] for item in inspector.get_columns("documents")}
     assert {"math_extraction_status", "math_formula_count", "math_warning_count"} <= columns
     assert "math_extractions" in inspector.get_table_names()
-    assert {"documents", "indexing_jobs", "audit_events"}.issubset(inspector.get_table_names())
+    assert {
+        "documents",
+        "indexing_jobs",
+        "audit_events",
+        "vector_index_snapshots",
+    }.issubset(inspector.get_table_names())
     indexes = {item["name"] for item in inspector.get_indexes("indexing_jobs")}
     assert "idx_indexing_jobs_pending_updated" in indexes
     assert "idx_indexing_jobs_running_heartbeat" in indexes

@@ -1,0 +1,15 @@
+{
+  "validation_kind": "CPU contracts and tokenizer only; not GPU inference",
+  "tests_passed": 15,
+  "test_command": "python -m unittest discover -s AI/Qweun_sft_version/comparison_tools -p test_comparison.py -v",
+  "notebook_code_cells_parse": true,
+  "fresh_sft_has_no_cpt_tensor_loader": true,
+  "training_arguments_ast_matches_returned_training_release": true,
+  "closed_book_prompts_reconstructed_from_original_questions_and_options_only": true,
+  "report_and_archive_exercised_on_temporary_synthetic_fixtures": true,
+  "fixtures_are_not_model_evaluation_results": true,
+  "dataset_counts": {"train": 281, "validation": 40, "test": 40},
+  "all_361_chat_masks_retokenized": true,
+  "gpu_training_or_inference_executed": false,
+  "four_way_model_ranking_available": false
+}

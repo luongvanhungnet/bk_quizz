@@ -1,0 +1,11 @@
+{
+  "tests": 52,
+  "failures": 0,
+  "errors": 0,
+  "successful": true,
+  "seconds": 189.73399999999674,
+  "actual_GPU_inference": false,
+  "actual_Colab_executed": false,
+  "actual_IT4025_native_pages": 100,
+  "unit_semantics": "Only complete hash-verified Drive ZIPs count as completed"
+}

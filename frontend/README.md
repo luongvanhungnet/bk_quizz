@@ -22,12 +22,17 @@ Configure this build variable before deploying:
 
 ```text
 VITE_API_BASE_URL=https://<cloud-run-service-host>/api
+VITE_REALTIME_PROVIDER=ably
 ```
 
 The value is embedded by Vite at build time, so changing it requires a new Pages
 deployment. Do not leave it as `/api`: Vite's development proxy does not exist on
 Cloudflare Pages and POST requests such as registration would be sent to the
 static site and return HTTP 405.
+
+`VITE_REALTIME_PROVIDER=ably` enables the production classroom realtime client.
+The browser obtains a short-lived, subscribe-only token from Spring; never put an
+Ably API key in any `VITE_*` variable.
 
 Only set `VITE_API_SAME_ORIGIN_PROXY=true` when Cloudflare actually has a Worker
 or another reverse proxy forwarding `/api` to Spring. The Spring environment

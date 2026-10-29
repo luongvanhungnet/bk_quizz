@@ -37,6 +37,9 @@ class ProductionConfigurationTest {
                 .isEqualTo("https://example-account.r2.cloudflarestorage.com");
         assertThat(environment.getProperty("bkquiz.storage.region")).isEqualTo("auto");
         assertThat(environment.getProperty("bkquiz.storage.bucket")).isEqualTo("bkquiz-production");
+        assertThat(environment.getProperty("bkquiz.realtime.provider")).isEqualTo("ably");
+        assertThat(environment.getProperty("bkquiz.realtime.token-ttl-seconds")).isEqualTo("300");
+        assertThat(environment.getProperty("bkquiz.rag.iam.enabled")).isEqualTo("true");
     }
 
     @Test
@@ -55,6 +58,8 @@ class ProductionConfigurationTest {
                 .withProperty("COOKIE_SECURE", "false")
                 .withProperty("WORKER_ENABLED", "true")
                 .withProperty("FLYWAY_ENABLED", "true");
+        environment.withProperty("REALTIME_PROVIDER", "stomp")
+                .withProperty("ABLY_TOKEN_TTL_SECONDS", "300");
 
         assertThat(environment.getProperty("server.port")).isEqualTo("9090");
         assertThat(environment.getProperty("spring.datasource.hikari.maximum-pool-size"))
@@ -66,6 +71,17 @@ class ProductionConfigurationTest {
                 .isEqualTo("https://quiz.example.com");
         assertThat(environment.getProperty("spring.datasource.url"))
                 .endsWith("sslmode=verify-full");
+        assertThat(environment.getProperty("bkquiz.realtime.provider")).isEqualTo("stomp");
+        assertThat(environment.getProperty("bkquiz.realtime.token-ttl-seconds")).isEqualTo("300");
+    }
+
+    @Test
+    void resendTokenTakesPrecedenceOverLegacyKeyDuringSecretRotation() {
+        var environment = productionEnvironment()
+                .withProperty("RESEND_API_TOKEN", "re_new_secret")
+                .withProperty("RESEND_API_KEY", "re_old_revoked_secret");
+
+        assertThat(environment.getProperty("resend.api.key")).isEqualTo("re_new_secret");
     }
 
     private MockEnvironment productionEnvironment() {

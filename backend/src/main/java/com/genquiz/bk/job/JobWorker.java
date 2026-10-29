@@ -7,6 +7,8 @@ import com.genquiz.bk.source.SourceService;
 import com.genquiz.bk.quiz.QuizService;
 import com.genquiz.bk.quiz.QuizGenerationOperation;
 import com.genquiz.bk.rag.RagServiceException;
+import com.genquiz.bk.auth.ResendDeliveryException;
+import com.genquiz.bk.auth.ResendConnectivityException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -60,7 +62,7 @@ public class JobWorker {
         try {
             presence.heartbeat(workerId);
         } catch (RuntimeException exception) {
-            log.error("Không thể cập nhật heartbeat cho job worker {}.", workerId, exception);
+            log.error("Unable to update heartbeat for job worker {}.", workerId, exception);
         }
     }
 
@@ -72,7 +74,7 @@ public class JobWorker {
     @Scheduled(fixedDelayString = "30s")
     public void reclaimStale() {
         int count = jobs.reclaimStale(properties.jobs().leaseDuration());
-        if (count > 0) log.warn("Đã thu hồi {} job bị mất heartbeat.", count);
+        if (count > 0) log.warn("Recovered {} jobs with a missing heartbeat.", count);
     }
 
     private void process(Job job) {
@@ -89,13 +91,13 @@ public class JobWorker {
     private void processWithTrace(Job job) {
         JobHandler handler = handlers.get(job.getType());
         try {
-            if (handler == null) throw new IllegalStateException("Chưa có handler cho loại job " + job.getType());
+        if (handler == null) throw new IllegalStateException("No handler is registered for job type " + job.getType());
             jobs.succeed(job.getId(), handler.handle(job));
         } catch (JobDeferredException deferred) {
             jobs.defer(job.getId(), deferred.delay());
-            log.debug("Job {} đang chờ tác vụ upstream hoàn tất.", job.getId());
+            log.debug("Job {} is waiting for the upstream operation to complete.", job.getId());
         } catch (Exception exception) {
-            log.error("Job {} loại {} thất bại ở lần {}.", job.getId(), job.getType(), job.getAttempts(), exception);
+            log.error("Job {} of type {} failed on attempt {}.", job.getId(), job.getType(), job.getAttempts(), exception);
             if (exception instanceof RagServiceException rag && rag.upstreamRequestId() != null) {
                 log.error("RAG upstream requestId={} cho job {}.", rag.upstreamRequestId(), job.getId());
             }
@@ -162,6 +164,13 @@ public class JobWorker {
             case "RAG_STREAM_READ_TIMEOUT" -> "RAG không gửi trạng thái mới trước thời hạn chờ của backend.";
             case "QUIZ_CITATION_SOURCE_FORBIDDEN" -> "Trích dẫn không thuộc nguồn đã chọn cho Quiz.";
             case "RAG_CONTRACT_MISMATCH" -> "Backend và dịch vụ RAG chưa dùng cùng contract sinh quiz.";
+            case "RESEND_AUTHENTICATION_FAILED" -> "Khóa API Resend không hợp lệ hoặc đã bị thu hồi.";
+            case "RESEND_SENDER_NOT_VERIFIED" -> "Tên miền gửi email chưa được xác minh trên Resend.";
+            case "RESEND_SENDER_INVALID" -> "Địa chỉ người gửi email không hợp lệ.";
+            case "RESEND_CONFIGURATION_MISSING" -> "Worker gửi email chưa được cấu hình Resend.";
+            case "RESEND_REQUEST_REJECTED" -> "Resend từ chối yêu cầu gửi email.";
+            case "RESEND_CONNECTION_TIMEOUT" -> "Kết nối từ máy chủ tới Resend đã quá thời gian chờ.";
+            case "RESEND_CONNECTION_FAILED" -> "Máy chủ tạm thời không thể kết nối Resend.";
             default -> "Không thể hoàn tất tác vụ. Vui lòng thử lại.";
         };
     }
@@ -186,6 +195,12 @@ public class JobWorker {
     }
 
     static String failureCode(JobType type, Exception exception) {
+        if (exception instanceof ResendDeliveryException resend) {
+            return resend.code();
+        }
+        if (exception instanceof ResendConnectivityException resend) {
+            return resend.code();
+        }
         if (type == JobType.QUIZ_GENERATION
                 && exception instanceof ResponseStatusException response
                 && response.getReason() != null

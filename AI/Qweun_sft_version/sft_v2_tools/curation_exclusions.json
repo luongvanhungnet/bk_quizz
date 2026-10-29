@@ -1,0 +1,565 @@
+{
+  "review_origin": "Codex editorial source-reading; not a human/expert approval",
+  "exclusions": [
+    {
+      "record_id": "it3011_57dd24461e1d:57dd24461e1d:p0027:text",
+      "quote_sha256": "e91dfc0efbc1fe3cebedfd43fb736a7e5009fa2eb2361976d902e70c35826f9b",
+      "concept": "Algorithm",
+      "reason": "truncated_or_native_corruption",
+      "definition": "là dãy các bước cần thực hiện đểtừdữliệu vào (input) đưa ra"
+    },
+    {
+      "record_id": "it3011_57dd24461e1d:57dd24461e1d:p0303:text",
+      "quote_sha256": "f51a2b47197e2be888537f0d5a189e7db6ba101e49c0c3f0fd6d2a44a7bbea55",
+      "concept": "Sắp xếp chèn",
+      "reason": "truncated_or_native_corruption",
+      "definition": "tại chỗvà ổn định. Nói cách khác nó luôn đúng và kết thúc. Thời gian của thuật toán"
+    },
+    {
+      "record_id": "it3070_ff9ac273a6ac:ff9ac273a6ac:p0511:text",
+      "quote_sha256": "221280084c5a699d5a6ad300c840583e4374894dc66312025b477d0c17ef02bd",
+      "concept": "Trang của tiến trình",
+      "reason": "truncated_or_native_corruption",
+      "definition": "l bộ nhớ vật lý, l một số trang nằm trên đĩa(bộ nhớ ảo)"
+    },
+    {
+      "record_id": "it3070_ff9ac273a6ac:ff9ac273a6ac:p0529:text",
+      "quote_sha256": "5e6a435bc986d9355ce938fd0730e27880c73976566876ff3391eb4f762c8b5c",
+      "concept": "File thực thi",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Chuỗi các mã lệnh có thể thực hiện trong bộ nhớ l . . "
+    },
+    {
+      "record_id": "it3120_b0474f670c62:b0474f670c62:p0264:text",
+      "quote_sha256": "9ff5623d177db882d5f9079649a65916ab008e9c2e9b4cac50dd9aae744661b7",
+      "concept": "Tín hiệu",
+      "reason": "truncated_or_native_corruption",
+      "definition": "một đối tượng có tên, được gửi đi một cách không đồng bộ bởi một đối tượng và được tiếp nhận bởi một đối"
+    },
+    {
+      "record_id": "it3120_b0474f670c62:b0474f670c62:p0265:text",
+      "quote_sha256": "c992860b81553683f2bef0d5b8f431f5d1a87741f3b742b55e986f4a765e94a4",
+      "concept": "Sự kiện thay đổi",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Đó là sự kiện biểu diễn cho một sự thay đổi trạng thái, hoặc sự thoả mãn một điều kiện nào đó. Thường diễn"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0103:text",
+      "quote_sha256": "eed5147537b6d3d1652149a3d31ca0afd13f0586e09a6693eeded3290e04d678",
+      "concept": "Đệ qui",
+      "reason": "truncated_or_native_corruption",
+      "definition": "gì Trong thực tế ta thường gặp những đối tượng bao gồm chính nó hoặc được định nghĩa dưới dạng của chính nó. Ta nói các đối tượng đó được xác định một cách đệ qui 6 / 45"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0104:text",
+      "quote_sha256": "7924dbf94529b144ee6b03b9f32fa82e4a2f585cd2fd1056dab36a7f1a069309",
+      "concept": "Đệ qui",
+      "reason": "truncated_or_native_corruption",
+      "definition": "gì Trong thực tế ta thường gặp những đối tượng bao gồm chính nó hoặc được định nghĩa dưới dạng của chính nó. Ta nói các đối tượng đó được xác định một cách đệ qui Đệ qui và qui nạp"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0259:text",
+      "quote_sha256": "ad4fd752ed8534e083c414dc86c195929d8d4092a938d1cf34d97f3d6f401f19",
+      "concept": "Dãy con tăng dài nhất",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Độ phức tạp tính toán Có n khả năng cho đầu vào input Mỗi input được tính trong thời gian O(n)"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0270:text",
+      "quote_sha256": "afdbbd8c18314191db5b785fe6bb8986b952757e64d659527b758722137bd6da",
+      "concept": "Dãy con chung dài nhất",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Độ phức tạp tính toán Có n khả năng cho đầu vào input Mỗi input được tính trong thời gian O(1)"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0514:text",
+      "quote_sha256": "3d8dd4f2b70a040e74e863453ccbd1f570347195f297462cd242eaa0ce28c5d5",
+      "concept": "Thuật toán Prim",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Kỹ thuật cài đặt Sử dụng mảng đánh dấu bIn_T. bIn_T[v] = false nếu như đỉnh tt v chưa được kết nạp vào T"
+    },
+    {
+      "record_id": "it4263_7b9b93618023:7b9b93618023:p0189:text",
+      "quote_sha256": "3e77b7e01fb5b2380fd3a81c4f1a8b74eef80b6a23e398976020abdbcbbabc01",
+      "concept": "Content-Type",
+      "reason": "truncated_or_native_corruption",
+      "definition": "text/html; charset=UTF-8\\r\\n \\r\\n data data data data data ... data, e.g., requested HTML file"
+    },
+    {
+      "record_id": "it4441_73ee427a7ebf:73ee427a7ebf:p0364:text",
+      "quote_sha256": "49a58d18c10cdd819a2450a28b93be3ebb98fbca4979addc0bfc657d8b517b09",
+      "concept": "Sketch",
+      "reason": "truncated_or_native_corruption",
+      "definition": "một bản mô phỏng trên giấy hoặc có sự hỗ trợ của máy tính về hình dáng bên ngoài của hệ thống tương tác dự"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0162:text",
+      "quote_sha256": "8e93ea69c24e4f1f05c314bb415ace10f2753516f4983164c98fcbbd5c8565b3",
+      "concept": "Cơ chế bất đồng bộ",
+      "reason": "truncated_or_native_corruption",
+      "definition": "chương trình cho phép phân nhánh quá trình code hoạt động, làm cho có cảm giác như đa luồng (có thể"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0358:text",
+      "quote_sha256": "ea24381c87676ea5601f04b13ee3fcbc2e0029f5ebe123523e96c217db05b808",
+      "concept": "Spacer widget",
+      "reason": "truncated_or_native_corruption",
+      "definition": "tạo ra một khoảng không gian trống, có thể điều chỉnh được, được sử dụng để điều chỉnh khoảng cách giữa các Widget con bên trong một Flex container như Column, Row, "
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0369:text",
+      "quote_sha256": "263d8362a3652bd6490987b725f7ef793d87a216a71daab34477ac66ddcda8f3",
+      "concept": "Navigation.push",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Từ một màn hình bất kì, muốn chuyển sang một màn hình khác Navigator.push( context, MaterialPageRoute("
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0550:text",
+      "quote_sha256": "156302959759f947f809f62a1efccc5a141357a87019b9e057119b2670363c3f",
+      "concept": "Đồ họa 3D",
+      "reason": "truncated_or_native_corruption",
+      "definition": "+ React Native không cung cấp các core component để hỗ trợ kết xuất 3D. Tuy nhiên cộng đồng cung cấp các thư viện hỗ trợ, phổ"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0615:text",
+      "quote_sha256": "24443c7de6235f28b37410b442dee1f3a64551ed803bf16ee9ff316a7e337908",
+      "concept": "Cảm biến tiệm cận",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Cảm biến này xác định mức độ gần của iPhone với khuôn mặt. Nó giúp iPhone tự động tắt màn hình khi đưa điện"
+    },
+    {
+      "record_id": "it4812_e858cb54ff7f:e858cb54ff7f:p0033:text",
+      "quote_sha256": "7458180d861b6e20436938d0708c59bc6eaba1bb6bac4af53eefd0fe82a01764",
+      "concept": "Setuid",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Bit này liên quan đến quá trình tạo một tiến trình mới. Nếu bit này được thiết lập, tiến trình được tạo từ }ile này sẽ không kế thừa quyền từ tiến trình cha, mà sẽ có quyền từ user id của chính }ile đó"
+    },
+    {
+      "record_id": "it4812_e858cb54ff7f:e858cb54ff7f:p0040:text",
+      "quote_sha256": "eda607e4bb0ae0e626977c8b68dcff72ec9dc32b03c6109c6cd9552e699e30db",
+      "concept": "Shared Lock",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Cho phép các tiến trình khác (kể cả tiến trình giành được khóa) đọc nhưng không được ghi vào một phần đã khóa của }ile"
+    },
+    {
+      "record_id": "it4812_e858cb54ff7f:e858cb54ff7f:p0040:text",
+      "quote_sha256": "eac2177a8ae1582d9c4127e7d76c913d793bb08dbb84ff0167d0b637181f8227",
+      "concept": "Exclusive Lock",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Cấm tất cả các tiến trình khác không được đọc hay ghi vào phần đã khóa của }ile. Tiến trình giành được khóa có quyền đọc hoặc ghi vào }ile"
+    },
+    {
+      "record_id": "it4812_e858cb54ff7f:e858cb54ff7f:p0041:text",
+      "quote_sha256": "adc5c62f8dd29f4aba8b52270dc471921390e8813c751ffe991f0b3ff600bbc9",
+      "concept": "LockFile, UnlockFile",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Khóa và mở khóa đồng bộ, sẽ không trở về đến khi giành được khóa hoặc mở được khóa"
+    },
+    {
+      "record_id": "it4868_4cf9fd27efa4:4cf9fd27efa4:p0260:text",
+      "quote_sha256": "8dd2c4cb48519cf29a52c2e046575355106474a1b936f37a3397ef8020163030",
+      "concept": "Truy vấn từ khóa",
+      "reason": "truncated_or_native_corruption",
+      "definition": "Câu truy vấn gồm một danh sách các từkhóa. Các văn bản trảvềcó thểchứa một, một vài, hoặc tất cảcác từkhóa. Trật tự"
+    },
+    {
+      "record_id": "it2000_4085a99a1ba9:4085a99a1ba9:p0055:text",
+      "quote_sha256": "fcf71935d8793cd6f0f463c30699d6996c92b8707fa21ed186796411f84ca64e",
+      "concept": "Communication",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "kiểu kết nối mạng được sử dụng rộng rãi nhất hiện nay"
+    },
+    {
+      "record_id": "it3011_57dd24461e1d:57dd24461e1d:p0303:text",
+      "quote_sha256": "72f2cbd95b04e9d1ee14d52889b2d40e78d77a823197e1ec75a0dfab30029975",
+      "concept": "Trường hợp tốt nhất",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "0 có hoán đổi hay dãy cho vào đã được sắp xếp rồi"
+    },
+    {
+      "record_id": "it3070_ff9ac273a6ac:ff9ac273a6ac:p0074:text",
+      "quote_sha256": "e0adc782a79f01c5b18defd7094e3a48c4698f744d47827a6679ef8b09229c92",
+      "concept": "Tiến trình đặc biệt",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "nơi giao tiếp giữa người dùng và hệ điều hành"
+    },
+    {
+      "record_id": "it3070_ff9ac273a6ac:ff9ac273a6ac:p0117:text",
+      "quote_sha256": "dd640ab9db740aa35db13c2114ca2a3c949fcdb1553fcbe87ebb5827b753d8e7",
+      "concept": "Trạng thái của tiến trình",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "một phần trong hoạt động hiện tại của tiến trình"
+    },
+    {
+      "record_id": "it3100_2c7c6a9f4b4d:2c7c6a9f4b4d:p0320:text",
+      "quote_sha256": "c7e4158820776028d876b42134286cd36d612c66131f60e7b7d62da5d369251f",
+      "concept": "OOP",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Khi mô hình thế giới thực, tồn tại nhiều loại đối tượng có các thuộc tính và hành vi tương tự hoặc liên quan đến nhau"
+    },
+    {
+      "record_id": "it3100_2c7c6a9f4b4d:2c7c6a9f4b4d:p0384:text",
+      "quote_sha256": "e5209769156f995b9039981f966cb69937fb30d45bdb380f2e130e2a3c813a7c",
+      "concept": "Tính đúng đắn",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Định nghĩa lại một phương thức trong lớp dẫn xuất có thểlàm sai lạc ý nghĩa của nó"
+    },
+    {
+      "record_id": "it3120_b0474f670c62:b0474f670c62:p0131:text",
+      "quote_sha256": "c34ac7e249bb0f059020de2e920f37dcafe33247dd225d434ced7efbd3b6b8e8",
+      "concept": "Một thuộc tính",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "dẫn xuất, nếu giá trịcủa nó được tính từgiá trịcủa những thuộc tính khác của lớp"
+    },
+    {
+      "record_id": "it3120_b0474f670c62:b0474f670c62:p0252:text",
+      "quote_sha256": "0cf230886599770feb5bf0263c32ce3e610d8e7a2f5e5092f803697ac9b65166",
+      "concept": "Ngoại lệ",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Nhân viên có thểxin huỷđơn xin của mình trước khi đơn được duyệt"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0113:text",
+      "quote_sha256": "68e0cc131e8d8d909b8fdcad9a7047e7b7dddff31afcdcbd08e3ee70d7fc0370",
+      "concept": "Tham lam",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Các thuật toán tham lam có thể cài đặt theo kỹ thuật đệ qui 15 / 45"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0394:text",
+      "quote_sha256": "05c3e5da353c238e1fa558eb157361fd23001534d59307ef576c625f72cfa4a0",
+      "concept": "Cầu",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Giới thiệu Bây giờ quan sát các giá trị tính được từ cây DFS"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0555:text",
+      "quote_sha256": "f0948d3c95ddba09d2931ce3c073daf462d20a93b561752c88c7ec22fbedcb91",
+      "concept": "Một đồ thị",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "hai phía nếu như các đỉnh được phân chia thành hai tập sao cho với mỗi cạnh (u, v) thì u và v nằm ở hai tập khác nhau"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0676:text",
+      "quote_sha256": "3a6d12bebe08c6a603bf07d0bc7f1752561261c4e36197ea738ecfd378cf2ee6",
+      "concept": "Đổi tiền",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Thuật toán Thuật toán Người Thu Ngân Ở mỗi bước, trả đồng tiền mệnh giá lớn nhất không vượt quá lượng tiền cần đổi"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0698:text",
+      "quote_sha256": "6115fcf85addb5456c640d62acec514f28a2d71f6e5923030c5a10771b43e8c1",
+      "concept": "Tập đoạn thẳng không giao nhau",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Chứng minh tính tối ưu thuật toán Kết-Thúc-Sớm-Xét-Trước Định lí Thuật toán Kết-Thúc-Sớm-Xét-Trước cho kết quả tối ưu!"
+    },
+    {
+      "record_id": "it3180_039f1c80196b:039f1c80196b:p0009:text",
+      "quote_sha256": "77b4e2ed33cadb4ec1dad30703c5f6ce1df604844cc09cdec49604806b031885",
+      "concept": "Chất lượng phần mềm",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "không mòn đi mà có xu hướng tốt lên sau mỗi lần có lỗi (error/bug) được phát hiện và sửa"
+    },
+    {
+      "record_id": "it3180_039f1c80196b:039f1c80196b:p0140:text",
+      "quote_sha256": "ef22376efa69ba0fc6d212a8bc7beb5dbdcf7a6a5b6e50471ce1cee79a546167",
+      "concept": "Programming",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Vòng lặp (trong khi) gồm một điểm vào và một điểm ra. Điểm vào có điều kiện phải được thỏa mãn và điểm ra có các yêu cầu sẽ được đáp ứng. Không có bước nhảy vào biểu mẫu từ các điểm bên ngoài của mã"
+    },
+    {
+      "record_id": "it3190_32f08352df18:32f08352df18:p0335:text",
+      "quote_sha256": "ac4e8c59021559b9a8475cd1d61f8ef373ebd23a5e62b6eeb2229f793d5a0bfd",
+      "concept": "Một ANN",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "liên kết đầy đủ (fully connected) nếu mọi đầu ra từ một tầng liên kết với mọi nơ-ron của tầng kế tiếp"
+    },
+    {
+      "record_id": "it3190_32f08352df18:32f08352df18:p0396:text",
+      "quote_sha256": "5fc99ce48c2deca521884720c07269725d2a65d53614dcce117857e5f305ab55",
+      "concept": "SVM",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "một phương pháp tốt (phù hợp) đối với những bài toán phân lớp có không gian rất nhiều chiều (các đối tượng cần phân lớp được biểu diễn bởi một tập rất lớn các thuộc tính)"
+    },
+    {
+      "record_id": "it3323_0b4abf96594a:0b4abf96594a:p0215:text",
+      "quote_sha256": "cfcf9c0edfde6f2ca7ef900c4cedb31aac6ac8870a08df38110db3f80065fda5",
+      "concept": "Thuộc tính",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "tổng hợp nếu giá trịcủa nó tại một nút trong cây được xác định từgiá trịcủa các nút con của nó"
+    },
+    {
+      "record_id": "it4263_7b9b93618023:7b9b93618023:p0207:text",
+      "quote_sha256": "819ed2835ae463b22f5bde5e528c96c74571e3a54bcd5352eb7148a4af0bebb3",
+      "concept": "Giao thức truy cập",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "HTTPS nhưng nội dung website không được chứng thực đầy đủ"
+    },
+    {
+      "record_id": "it4410_8c288fad09d7:8c288fad09d7:p0106:text",
+      "quote_sha256": "52b11d898d73339a6a39ff16cc6186100e5f8a4f214668d6ee41356c2350bc5c",
+      "concept": "Giải quyết vấn đề",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Khởi tạo các phép phát biểu này bằng các phép dịch chuyển hợp lý"
+    },
+    {
+      "record_id": "it4410_8c288fad09d7:8c288fad09d7:p0120:text",
+      "quote_sha256": "514a738210f45e095206e10f5bd2ba1b05f6fc0c5a69c6b2d75b7a4da3a6fc20",
+      "concept": "Tốc độ xử lý",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "nếu tốc độ xử lý quá chậm => phản hồi thông tin chậm"
+    },
+    {
+      "record_id": "it4410_8c288fad09d7:8c288fad09d7:p0174:text",
+      "quote_sha256": "eadb096f8e4120a9ddda41bb9ef383a379be16fb2456f2f310d4dcfa54ec6272",
+      "concept": "Giao diện người dùng",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "một trong số các thành phần quan trọng nhất của bất kỳ một hệ thống máy tính nào"
+    },
+    {
+      "record_id": "it4410_8c288fad09d7:8c288fad09d7:p0203:text",
+      "quote_sha256": "4bb01daf0161b2bfee9cbea95e8a605a4e2df6b4d6f5051f3a132f6d4c33a0c5",
+      "concept": "Xử lý theo lô",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "tập lệnh được lưu trên bìa hay băng giấy sau để nạp vào máy tính"
+    },
+    {
+      "record_id": "it4410_8c288fad09d7:8c288fad09d7:p0229:text",
+      "quote_sha256": "d616310e46a8d3cc73ae0e8a6a55fa873e7913f66695f053c754ee922c80ebc4",
+      "concept": "Thiết kế xã hội",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "tập trung phát triển đầy đủ và nhất quán hệ thống"
+    },
+    {
+      "record_id": "it4410_8c288fad09d7:8c288fad09d7:p0329:text",
+      "quote_sha256": "021136e9f32c3c37b08ddf4b0b1f6309135fd3a273a39541dbf19e21b05e6974",
+      "concept": "Các chế độ nhãn",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Tập trung vào tính dễ nhìn, dễ quan sát và dễ dự đoán của các nhãn biểu diễn"
+    },
+    {
+      "record_id": "it4410_8c288fad09d7:8c288fad09d7:p0329:text",
+      "quote_sha256": "bd24ec10949a870a2341c4ce17d75d0d6cd35cd3ba4939c8667b27138a48cde2",
+      "concept": "Tính phù hợp của kiểu hội thoại",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Sử dụng kiểu hội thoại phù hợp cho từng loại giao diện"
+    },
+    {
+      "record_id": "it4410_8c288fad09d7:8c288fad09d7:p0346:text",
+      "quote_sha256": "ed367f603136c5500983ffe15a020977587226b42879daecea030eb8d9547c53",
+      "concept": "Kế hoạch",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Người quản lý dự án không có kinh nghiệm để lập một kế hoạch hợp lý và chi phí cho quá trình thiết kế"
+    },
+    {
+      "record_id": "it4441_73ee427a7ebf:73ee427a7ebf:p0409:text",
+      "quote_sha256": "138ee839e5b0b9b9682a43e84acd45147603081e9b2ed81a96f8fa77ba0c43f4",
+      "concept": "Kế hoạch thử nghiệm",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "bản gốc bạn đã tạo để thử nghiệm (khoảng 1 trang cho mỗi tình huống)"
+    },
+    {
+      "record_id": "it4441_73ee427a7ebf:73ee427a7ebf:p0487:text",
+      "quote_sha256": "6dd4757d2fb9706e7e202df0f69ecee0ba2d8ab329afdf150239e0042c1a4b1c",
+      "concept": "Giao tiếp không dây",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "PDA được trang bị modem để nhận tin nhắn văn bản thông qua kỹ thuật vệ tinh"
+    },
+    {
+      "record_id": "it4593_98fe99bdd103:98fe99bdd103:p0094:text",
+      "quote_sha256": "446585a556c6511cbb6979b5b93bef2808657f908c50d378223042919d7d339c",
+      "concept": "Quá trình ngẫu nhiên",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "ergodic nếu các đặc trưng thống kê của nó có thể suy ra được từ một chuỗi các mẫu đủ dài của nó"
+    },
+    {
+      "record_id": "it4611_cf530e06e05a:cf530e06e05a:p0417:text",
+      "quote_sha256": "d34f27662c9105ca36b15501fb97846bac664ffb3d3b85506f502a8c6f7eba1d",
+      "concept": "Multicasting",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "1 thông điệp gửi đến 1 nhóm các tiến trình, thì cần phải được gửi đến mọi tiến trình trong nhóm"
+    },
+    {
+      "record_id": "it4785_117b5c6faff1:117b5c6faff1:p0184:text",
+      "quote_sha256": "b82d25c8d5b33523efb2b0426506fdad2c8007f163c79e4a2cda059cc1b97615",
+      "concept": "Weight",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Cách này tương tự như chỉ định trọng số layout_weight trong LinearLayout vậy. Để sử dụng được weight trong ConstraintLayout thì phải chỉ định các view trong chain về match_constraint, rồi tìm đến thuộc tính horizontal_weight hoặc vertical_weight để thiết lập trọng số này cho từng view"
+    },
+    {
+      "record_id": "it4785_117b5c6faff1:117b5c6faff1:p0617:text",
+      "quote_sha256": "474101414c1c2dfb8edb9e963e7fdb94308e489b3e5aba2f4a197cc13547a28d",
+      "concept": "Fragment result API",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "với các dữliệu dùng 1 lần, có thểgói trong bundle"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0322:text",
+      "quote_sha256": "15724519f55c44e67ce5c84efe9316ac303df5623e52cdd9a956c6e3533127b9",
+      "concept": "Mô hình Null Navigation",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "một Controller được liên kết với nhiều View và sẽ xác định rõ ràng cái nào sẽ hiển thị"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0425:text",
+      "quote_sha256": "fc45c883b2b11969488e7e726406eb4dc7008da83e07cdc49f27a2ea7f497976",
+      "concept": "Bảo mật",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "vấn đề quan trọng của mọi ứng dụng có đông người dùng. Vì khách hàng càng đông thì càng có nguy cơ bị tấn công Bên cạnh đó việc dữ liệu càng nhiều thì client càng phải lưu trữ nhiều thông tin để giảm tải cho server. => Việc bảo mật cần phải làm ở cả phía server và client. a) Dữ liệu để đăng nhập"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0572:text",
+      "quote_sha256": "5c3fb00e2fd0556620272aca80a5bddb78739403be6c681bd7ba9946f7191c89",
+      "concept": "Opening webview",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Mở liên kết “MYTH BUSTERS” và truy cập vào website WHO"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0617:text",
+      "quote_sha256": "86443a20bdb2b6c3e693f767a42aecc9a3f56fd977383bf27ca8165cb201141f",
+      "concept": "La bàn",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Tất cả các mẫu iPhone bắt đầu với iPhone 3GS cũng có la bàn được tích hợp sẵn. Cảm biến này được sử dụng với tính năng GPS của thiết bị và công cụ nhận biết vị trí khác để giúp xác định vị trí iPhone"
+    },
+    {
+      "record_id": "it4868_4cf9fd27efa4:4cf9fd27efa4:p0469:text",
+      "quote_sha256": "3c4f3a54337369854d58bff0454d19c68d9d94bee3bdc5d955b8b67c3ec00e20",
+      "concept": "Unigram",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Các từ, token trong câu; loại bỏ các stopword (publist.com)"
+    },
+    {
+      "record_id": "it4868_4cf9fd27efa4:4cf9fd27efa4:p0510:text",
+      "quote_sha256": "7b0cbf605e80b60dd839bcbc0b05cd1fbc2d924e050846b761d92ce32d91f1a2",
+      "concept": "Từ chỉ cảm xúc",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "great, good, bad, poor; “the battery of this camera lasts long”/ “This program takes a long time to run”"
+    },
+    {
+      "record_id": "it4868_4cf9fd27efa4:4cf9fd27efa4:p0576:text",
+      "quote_sha256": "19d6a38add69bcf690b0aac3eb97bc7e69dc098b45c72f504039ca7d1dd07499",
+      "concept": "Tên riêng",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "“Thủ tướng Nguyễn Xuân Phúc tuyên bố giãn cách xã hội. Thủ tướng Phúc cũng yêu cầu người dân tự giác thực hiện các quy định.”"
+    },
+    {
+      "record_id": "it4868_4cf9fd27efa4:4cf9fd27efa4:p0598:text",
+      "quote_sha256": "f856a9c00ad20ca98f6fef952cea9f5118f0c9ace3d34b076fd35718a431ed24",
+      "concept": "Hệ tìm kiếm",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "Người dùng thể hiện mong muốn thông qua câu truy vấn"
+    },
+    {
+      "record_id": "it4931_463547605240:463547605240:p0447:text",
+      "quote_sha256": "f2516f4e0157466177e74cb3557ec22710fb2c18fff700301945c7dbd14063bc",
+      "concept": "Query",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "operations on input usual map/filter/reduce new window, session ops"
+    },
+    {
+      "record_id": "it4931_463547605240:463547605240:p0448:text",
+      "quote_sha256": "27aa69bdb926b1dd47153076b17c9dedf49b2598d0cc696aea03641e1c61b686",
+      "concept": "Output",
+      "reason": "not_a_standalone_definition_or_wrong_label",
+      "definition": "what part of result to write to data sink after every trigger"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0059:text",
+      "quote_sha256": "002985a4a8a7a34100428b5ea04d870ba9e4bb86cf55f01510987f4c208c17d2",
+      "concept": "char",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "biến nguyên 8-bit (thường được sử dụng để biểu diễn các ký tự ASCII)"
+    },
+    {
+      "record_id": "it3170_c6c829f14bf2:c6c829f14bf2:p0666:text",
+      "quote_sha256": "1b1b111a69a0a70846eea984a8b51b17b8a5587d6f62a05af2a2bc6d9fef0a0a",
+      "concept": "Thuật toán Kruskal",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "⋆ Sắp xếp các cạnh theo trọng số giảm dần ⋆ Mỗi bước bổ sung vào tập đang xây dựng một cạnh theo thứ tự sắp xếp mà không tạo ra chu trình trong tập"
+    },
+    {
+      "record_id": "it3190_32f08352df18:32f08352df18:p0289:text",
+      "quote_sha256": "eeaca53d742bc807c03f3e5a1234d5654005ae250a8511c28a0e5df41b20e71c",
+      "concept": "Giả thuyết i.i.d",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "giả định rằng dữ liệu được sinh ra một cách độc lập với nhau"
+    },
+    {
+      "record_id": "it4263_7b9b93618023:7b9b93618023:p0055:text",
+      "quote_sha256": "c9090f21bccccd0ae72c65e6d93bb012d826c2cef1d99d2f8235b86153211731",
+      "concept": "Tính xác thực",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "người nhận có thểchứng minh được văn bản được ký bởi gửi"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0118:text",
+      "quote_sha256": "615950ad0619d9fd1f46e97ea97abca3d9ba25b5682d44935c1bcf0bbc7857d7",
+      "concept": "Flutter engine",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "viết bằng C++ cung cấp các hỗ trợ render mức thấp cho thư viện đồ họa Skia của Google"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0169:text",
+      "quote_sha256": "a1c2e1b5fafda395194d29d7b7fc37614b177d948062988248fc3bd27531e527",
+      "concept": "Widgets",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "được xây dựng theo dạng cây với những object là lớp kế thừa của RenderObject. Widgets nhận và lưu trữ trạng thái (state) của UI, và sẽ rebuild nếu state thay đổi"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0236:text",
+      "quote_sha256": "3d6052db014779db85f611038e19915d7c56ef6e6e9b74dad5cd76d891dbdd59",
+      "concept": "Life cycle",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "một vòng đời của một React component từ lúc được render lần đầu tiên và mỗi lần render lại (mounting) và khi gỡ bỏ component (unmounting)"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0408:text",
+      "quote_sha256": "cc704425fa652aee13a8686f92ee7b50c5e6bed33da48f36a8565c5da86f3e83",
+      "concept": "GDPR",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "Bộ luật bảo vệ dữ liệu chung (General Data Protection Regulation) được ban hành 2018"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0413:text",
+      "quote_sha256": "a36a9de0fe37949da4038f0bca5006846f630648a481cb1ff4d7b55b7218ee43",
+      "concept": "Kiến trúc một khối",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "mẫu thiết kế được dùng nhiều nhất trong giới lập trình web hiện nay bởi tính đơn giản của nó khi phát triển và khi deploy"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0599:text",
+      "quote_sha256": "a5a6d2a4e3f853798fd6f068ec207c5dd4646ee53183e607227893ef34caf476",
+      "concept": "GPU",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "Nhìn chung, Flutter hoạt động tốt hơn một chút so với React Native"
+    },
+    {
+      "record_id": "it4788_1a254adf53e4:1a254adf53e4:p0600:text",
+      "quote_sha256": "8d27f6154f885237cba898bb7ee1dee56689d35a319cc5262fc4c042484353c7",
+      "concept": "GPU",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "Công cụ “GPU rendering tool” trên Android chưa tương thích với ứng dụng Flutter nên so sánh này chưa được thực hiện"
+    },
+    {
+      "record_id": "it4868_4cf9fd27efa4:4cf9fd27efa4:p0319:text",
+      "quote_sha256": "67df77a2bf9e39244ed70ce100b8d53ff6c4ff051edd99fc89beaaa189c4994c",
+      "concept": "Phân loại đồ thị",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "Phân loại các đỉnh và các cạnh của đồ thị vào các lớp cho trước"
+    },
+    {
+      "record_id": "it4868_4cf9fd27efa4:4cf9fd27efa4:p0433:text",
+      "quote_sha256": "da54ba95bc6b62611d12490ef2dcd683dbd978f9f4367cd1f527e67cc024350b",
+      "concept": "SST",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "Tương tự SST-1 nhưng loại bỏ nhãn trung tính và chỉ có hai nhãn tích cực và tiêu cực"
+    },
+    {
+      "record_id": "it4931_463547605240:463547605240:p0182:text",
+      "quote_sha256": "1c5c2a9c30d00a48df0cd0952866fce4846b0415d60c1de9d18550d99138f938",
+      "concept": "CAP theorem",
+      "reason": "semantic_or_temporal_claim_requires_expert_check",
+      "definition": "any distributed database with shared data, can have at most two of the three desirable properties, C, A or P. These are trade-offs involved in distributed system by Eric Brewer in PODC 2000"
+    }
+  ]
+}

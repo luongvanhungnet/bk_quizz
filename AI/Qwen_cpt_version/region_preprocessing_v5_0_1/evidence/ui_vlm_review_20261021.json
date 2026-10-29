@@ -1,0 +1,66 @@
+{
+  "client_date": "2026-10-21",
+  "timezone": "Asia/Bangkok",
+  "browser": "Edge via documented CUA API",
+  "real_run": "runs/it3170_v5_20261020",
+  "real_url": "http://127.0.0.1:8765/",
+  "real_checks": {
+    "default_scope": "vlm",
+    "successful_outputs": 6,
+    "vlm_source_pages": 6,
+    "pdf_source_pages": 1060,
+    "queue_ids": [
+      "p0129_r00070",
+      "p0300_r00272",
+      "p0494_r00455",
+      "p0812_r01121",
+      "p0930_r01239",
+      "p1042_r01351"
+    ],
+    "original_slide_and_readonly_vlm_text_visually_checked": true,
+    "supplementary_details_collapsed": true,
+    "right_key_navigated_pages": [
+      129,
+      300
+    ],
+    "reviewer_name_entered": false,
+    "prior_reviewer_name": "blank",
+    "human_decisions_submitted": 0,
+    "post_check_pending": 6,
+    "post_check_human_verified": 0
+  },
+  "synthetic_checks": {
+    "url": "http://127.0.0.1:8766/",
+    "data": "temporary synthetic development-split records only",
+    "reviewer_name_asked_once_and_persisted_after_reload": true,
+    "up_approved_and_advanced": true,
+    "down_rejected_and_advanced": true,
+    "edit_button_unlocked_field": true,
+    "down_while_typing_did_not_review": true,
+    "save_correction_recorded_correct": true,
+    "total_review_history_rows": 3,
+    "eligible_for_training": 0,
+    "input_methods": [
+      "review_scope=vlm; input_method=keyboard_up; candidate_sha256=7973039637bafd5fe23182d9e130c413dd1f7c9bf021f17741732ebbffc40a0f; Explicit UI action recorded. UI instructs the human to compare the source slide before deciding.",
+      "review_scope=vlm; input_method=keyboard_down; candidate_sha256=a162a59a5664c78f6ed4e9bcf31c0947be5416bf85f2b46d2d8711fd30665fb6; Explicit UI action recorded. UI instructs the human to compare the source slide before deciding.",
+      "review_scope=vlm; input_method=click_save_correction; candidate_sha256=f0f5b5ba7b751d0051db324e87cdabebba1f962876b87080ae70016ab6b16404; Explicit UI action recorded. UI instructs the human to compare the source slide before deciding."
+    ]
+  },
+  "automated_checks": {
+    "python_review_tests": 40,
+    "python_review_tests_result": "PASS",
+    "node_keyboard_guards_and_cross_page_navigation": "PASS",
+    "javascript_syntax": "PASS"
+  },
+  "screenshots": {
+    "captured_and_visually_inspected": true,
+    "saved_artifact": null,
+    "note": "Documented browser API returned screenshot bytes; no unsupported filesystem API was used to save them."
+  },
+  "servers": {
+    "real_session": 39397,
+    "real_left_running": true,
+    "synthetic_session": 23055,
+    "synthetic_stop_requested_after_checks": true
+  }
+}

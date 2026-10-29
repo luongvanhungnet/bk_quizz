@@ -27,6 +27,9 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ObjectNode;
+import com.genquiz.bk.abuse.AiAbuseProtectionService;
+import com.genquiz.bk.abuse.AiAdmissionContext;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/attempts/{attemptId}/ai-chat")
@@ -35,13 +38,16 @@ public class AttemptAiChatController {
     private final ActorIdentityService actors;
     private final RagClient rag;
     private final ObjectMapper mapper;
+    private final AiAbuseProtectionService abuseProtection;
 
     public AttemptAiChatController(AttemptAiChatService service, ActorIdentityService actors,
-                                   RagClient rag, ObjectMapper mapper) {
+                                   RagClient rag, ObjectMapper mapper,
+                                   AiAbuseProtectionService abuseProtection) {
         this.service = service;
         this.actors = actors;
         this.rag = rag;
         this.mapper = mapper;
+        this.abuseProtection = abuseProtection;
     }
 
     @GetMapping("/messages")
@@ -57,8 +63,15 @@ public class AttemptAiChatController {
                                                        @Valid @RequestBody AttemptAiChatDtos.SendRequest request,
                                                        Principal principal) {
         UUID actorId = actors.requireUserId(principal);
-        AttemptAiChatService.Prepared prepared = service.prepare(actorId, attemptId, request);
-        return stream(actorId, prepared);
+        AiAdmissionContext admission = abuseProtection.admitDirect(
+                actorId, "attempt_ai_chat", "attempt-tutor", 1);
+        try {
+            AttemptAiChatService.Prepared prepared = service.prepare(actorId, attemptId, request);
+            return stream(actorId, prepared, admission);
+        } catch (RuntimeException exception) {
+            abuseProtection.releaseDirect(actorId, admission);
+            throw exception;
+        }
     }
 
     @PostMapping(value = "/messages/{messageId}/regenerate/stream", produces = "application/x-ndjson")
@@ -66,7 +79,14 @@ public class AttemptAiChatController {
                                                              @PathVariable UUID messageId,
                                                              Principal principal) {
         UUID actorId = actors.requireUserId(principal);
-        return stream(actorId, service.prepareRegenerate(actorId, attemptId, messageId));
+        AiAdmissionContext admission = abuseProtection.admitDirect(
+                actorId, "attempt_ai_chat_regenerate", "attempt-tutor", 1);
+        try {
+            return stream(actorId, service.prepareRegenerate(actorId, attemptId, messageId), admission);
+        } catch (RuntimeException exception) {
+            abuseProtection.releaseDirect(actorId, admission);
+            throw exception;
+        }
     }
 
     @DeleteMapping
@@ -75,7 +95,8 @@ public class AttemptAiChatController {
         return ResponseEntity.noContent().build();
     }
 
-    private ResponseEntity<StreamingResponseBody> stream(UUID actorId, AttemptAiChatService.Prepared prepared) {
+    private ResponseEntity<StreamingResponseBody> stream(UUID actorId, AttemptAiChatService.Prepared prepared,
+                                                          AiAdmissionContext admission) {
         StreamingResponseBody body = output -> {
             StringBuilder answer = new StringBuilder();
             List<RagDtos.TutorSource> sources = new ArrayList<>();
@@ -109,6 +130,10 @@ public class AttemptAiChatController {
                                     usage.path("inputTokens").isNumber() ? usage.path("inputTokens").intValue() : null,
                                     usage.path("outputTokens").isNumber() ? usage.path("outputTokens").intValue() : null,
                                     sources);
+                            abuseProtection.completedDirect(actorId, admission,
+                                    event.path("model").stringValue("attempt-tutor"), Map.of(
+                                            "inputTokens", usage.path("inputTokens").intValue(0),
+                                            "outputTokens", usage.path("outputTokens").intValue(0)));
                             terminalSent.set(true);
                         }
                         write(output, forwarded);
@@ -135,6 +160,8 @@ public class AttemptAiChatController {
                     failed.put("errorCode", "AI_CHAT_FAILED");
                     write(output, failed);
                 }
+            } finally {
+                abuseProtection.releaseDirect(actorId, admission);
             }
         };
         return ResponseEntity.ok()

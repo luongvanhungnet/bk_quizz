@@ -150,3 +150,14 @@ class AuditEvent(Base):
     target_id: Mapped[str] = mapped_column(String(128), nullable=False)
     metadata_json: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class VectorIndexSnapshotRecord(Base):
+    __tablename__ = "vector_index_snapshots"
+
+    namespace: Mapped[str] = mapped_column(String(160), primary_key=True)
+    active_version: Mapped[str] = mapped_column(String(36), nullable=False)
+    manifest_json: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utc_now, onupdate=utc_now
+    )

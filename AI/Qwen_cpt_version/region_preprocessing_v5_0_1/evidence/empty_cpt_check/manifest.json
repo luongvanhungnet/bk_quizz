@@ -1,0 +1,10 @@
+{
+  "samples": 0,
+  "training_ready": false,
+  "human_approved_only": true,
+  "machine_trusted_auto_exported": 0,
+  "holdout_excluded": true,
+  "tokenizer": null,
+  "all_pdf_knowledge_complete": false,
+  "records_snapshot_sha256": "36629346d79bc886f78463636f35a90aebe4bf00316da3e7209b972bbc38a42b"
+}

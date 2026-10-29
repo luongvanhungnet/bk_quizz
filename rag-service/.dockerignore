@@ -1,6 +1,11 @@
 .env
+.env.*
+!.env.example
 .venv
+.git
+.gcloudignore
 __pycache__
+*.py[cod]
 .pytest_cache
 .mypy_cache
 .ruff_cache
@@ -8,3 +13,12 @@ tests
 data
 evaluation/reports
 README-TESTING.md
+client_secret*.json
+application_default_credentials.json
+*.log
+celerybeat-schedule*
+*.db
+*.sqlite*
+*.faiss
+*.npy
+*.npz

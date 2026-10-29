@@ -7,7 +7,7 @@ import httpx
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="So sánh retrieval baseline và hybrid.")
+    parser = argparse.ArgumentParser(description="Compare baseline and hybrid retrieval.")
     parser.add_argument("dataset", type=Path)
     parser.add_argument("--base-url", default="http://127.0.0.1:8090")
     parser.add_argument("--user-id", required=True)
@@ -21,7 +21,7 @@ def main() -> int:
     internal_key = os.environ.get("SPRING_BOOT_INTERNAL_API_KEY", "")
     debug_key = os.environ.get("RAG_DEBUG_API_KEY", "")
     if not internal_key or not debug_key:
-        raise SystemExit("Thiếu SPRING_BOOT_INTERNAL_API_KEY hoặc RAG_DEBUG_API_KEY.")
+        raise SystemExit("SPRING_BOOT_INTERNAL_API_KEY or RAG_DEBUG_API_KEY is required.")
     dataset = json.loads(args.dataset.read_text(encoding="utf-8-sig"))
     headers = {
         "X-Internal-API-Key": internal_key,

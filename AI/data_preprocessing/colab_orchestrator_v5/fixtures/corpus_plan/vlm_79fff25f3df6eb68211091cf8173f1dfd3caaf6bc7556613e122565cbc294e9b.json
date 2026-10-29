@@ -1,0 +1,63 @@
+{
+  "id": "p0494_r00455",
+  "page": 494,
+  "engine": "vlm",
+  "cache_key": "79fff25f3df6eb68211091cf8173f1dfd3caaf6bc7556613e122565cbc294e9b",
+  "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+  "crop_sha256": "50776d31d04ee8b2584fb68468fa79e824721ffcea938cfe753a304f91e30175",
+  "input_image_sha256": "e3db0ce56ab59059604dd51e47b21ce046acdb24ab6eaf54d3079aa7e21002aa",
+  "packet_manifest_sha256": "24f2f2d02890d1dcb39abd727e73358f8d6f1d27c5cf8d5ac3a683c636537c69",
+  "status": "ok",
+  "text": "Đây là một đồ thị không hướng với các đỉnh được nhãn từ a đến g. Các cạnh kết nối các đỉnh và có trọng số cho mỗi cạnh. Cụ thể:\n\n- Có 7 đỉnh: a, b, c, d, e, f, g.\n- Có 10 cạnh: \n  - a-b với trọng số 7,\n  - a-d với trọng số 5,\n  - b-c với trọng số 8,\n  - b-e với trọng số 7,\n  - b-d với trọng số 9,\n  - d-e với trọng số 15,\n  - d-f với trọng số 6,\n  - e-f với trọng số 8,\n  - e-g với trọng số 9,\n  - f-g với trọng số 11.\n\nCác trọng số đại diện cho độ dài hoặc giá trị của mỗi cạnh.",
+  "semantic_verified": false,
+  "model_config": {
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+    "quantization": "nf4",
+    "visual_tokens": 512,
+    "max_new_tokens": 512,
+    "prompt_sha256": "c1403bf190a08720e1bc09250385f8709e41c765e5cb3aade5e8645aa70c6958",
+    "runtime_sha256": "d255953098f5550008b2125454b863467c64c5fb5a09b5fab2028b1abc6c6d0f",
+    "output": "plain_text",
+    "generation_calls_per_image": 1
+  },
+  "context_supplied": "Demo thuật toán Kruskal\na\n7\n8\n5\nb\nc\n9\n7\n5\n15\nd\ne\nd\n6\n8\n9\n11\nf\ng",
+  "one_generation_call": true,
+  "partial_observation": false,
+  "telemetry": {
+    "before": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    },
+    "text_tokens": 220,
+    "input_tokens": 723,
+    "image_grid_thw": [
+      [
+        1,
+        42,
+        48
+      ]
+    ],
+    "visual_tokens": 504,
+    "original_image_size": [
+      980,
+      851
+    ],
+    "effective_image_size": [
+      672,
+      588
+    ],
+    "output_tokens": 183,
+    "possibly_truncated": false,
+    "peak_allocated": 6213982720,
+    "after_cleanup": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    }
+  },
+  "elapsed_seconds": 15.35325235099981
+}

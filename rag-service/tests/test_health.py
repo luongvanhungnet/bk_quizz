@@ -108,6 +108,19 @@ def test_health_is_public_and_does_not_require_gemini(client: TestClient) -> Non
     }
 
 
+def test_cloud_run_startup_health_excludes_worker_dependencies(client: TestClient) -> None:
+    response = client.get("/health/startup")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "UP"
+    assert response.json()["checks"] == {
+        "database": "UP",
+        "storage": "UP",
+        "vectorStore": "UP",
+        "embedding": "UP",
+    }
+
+
 def test_health_reports_gemini_configured(settings: Settings) -> None:
     configured = settings.model_copy(update={"gemini_api_key": "secret"})
 

@@ -1,8 +1,8 @@
 import asyncio
 import json
+import re
 import traceback
 import uuid
-import re
 from datetime import datetime, timezone
 from typing import Any, AsyncIterator, Literal
 
@@ -16,8 +16,8 @@ from app.core.contracts import (
 )
 from app.core.exceptions import ServiceError
 from app.models.user_context import UserContext
-from app.schemas.indexing_job import AsyncUploadResponse, IndexingJobDto, JobMutationResponse
 from app.schemas.chat import AttemptTutorRequest
+from app.schemas.indexing_job import AsyncUploadResponse, IndexingJobDto, JobMutationResponse
 from app.schemas.user_document import (
     GroundedQuizRequest,
     GroundedQuizResponse,

@@ -9,9 +9,19 @@ from uuid import uuid4
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import Response as FastApiResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
-from redis import Redis
 
-from app.api.routes import chat, evaluation, health, operations, rag, system_documents, user_documents, user_rag, v2
+from app.api.routes import (
+    chat,
+    cloud_jobs,
+    evaluation,
+    health,
+    operations,
+    rag,
+    system_documents,
+    user_documents,
+    user_rag,
+    v2,
+)
 from app.core.config import (
     Settings,
     gemini_credential_diagnostics,
@@ -20,13 +30,21 @@ from app.core.config import (
 from app.core.contracts import QUIZ_GENERATION_CONTRACT
 from app.core.exceptions import register_exception_handlers
 from app.db.database import Database
+from app.models.user_context import safe_user_key
 from app.services.async_document_service import AsyncDocumentProcessor, AsyncDocumentService
+from app.services.cache_redis import create_cache_redis
 from app.services.chunking_service import ChunkingService
 from app.services.citation_matcher import CitationMatcher
 from app.services.context_builder import ContextBuilder
+from app.services.document_object_storage import create_document_object_storage
 from app.services.document_parser import DocumentParser
 from app.services.embedding_service import EmbeddingService
 from app.services.evaluation_service import RetrievalEvaluationService
+from app.services.gcp_job_transport import (
+    CloudTasksEnqueuer,
+    GoogleOidcVerifier,
+    PubSubJobDispatcher,
+)
 from app.services.gemini_math_vision import GeminiMathVisionService
 from app.services.gemini_quiz_providers import GeminiApiKeyProvider, GeminiOAuthProvider
 from app.services.gemini_service import GeminiService
@@ -35,6 +53,7 @@ from app.services.hybrid_retrieval import HybridRetrievalService
 from app.services.indexing_job_service import IndexingJobService
 from app.services.job_dispatcher import CeleryJobDispatcher
 from app.services.ollama_qwen_provider import OllamaQwenProvider
+from app.services.qdrant_vector_store import build_qdrant_client
 from app.services.query_rewrite_service import QueryRewriteService
 from app.services.quiz_llm_provider import (
     QuizLLMProvider,
@@ -51,7 +70,7 @@ from app.services.upload_validation import UploadValidator
 from app.services.user_document_service import UserDocumentService
 from app.services.user_index_manager import UserIndexManager
 from app.services.user_rag_service import UserRagService
-from app.services.vector_store import VectorStore
+from app.services.vector_store_factory import create_vector_store
 
 HTTP_REQUESTS = Counter(
     "rag_http_requests_total", "HTTP requests", ["method", "path", "status"]
@@ -174,10 +193,6 @@ def create_app(
             pass
         if resolved_settings.app_env != "test" and resolved_settings.rag_preload_embedding:
             await asyncio.to_thread(lambda: embedding.dimension)
-        store = vector_store or VectorStore(
-            resolved_settings.system_index_dir,
-            resolved_settings.embedding_model,
-        )
         owned_database = database is None
         db = database or Database.from_settings(
             resolved_settings,
@@ -185,6 +200,25 @@ def create_app(
         )
         if resolved_settings.app_env != "test":
             db.validate_migrated()
+        owned_qdrant_client = (
+            build_qdrant_client(resolved_settings)
+            if resolved_settings.vector_store_backend == "qdrant"
+            else None
+        )
+        document_object_storage = create_document_object_storage(resolved_settings)
+        document_staging_root = (
+            resolved_settings.document_staging_dir
+            if resolved_settings.document_storage_backend == "r2"
+            else resolved_settings.user_upload_dir
+        )
+        store = vector_store or create_vector_store(
+            settings=resolved_settings,
+            database=db,
+            embedding_service=embedding,
+            namespace="system",
+            faiss_directory=resolved_settings.system_index_dir,
+            qdrant_client=owned_qdrant_client,
+        )
         math_vision = GeminiMathVisionService(resolved_settings, db) if resolved_settings.math_vision_enabled else None
         indexing = system_indexing_service or SystemIndexingService(
             documents_dir=resolved_settings.system_documents_dir,
@@ -245,24 +279,41 @@ def create_app(
             ),
         )
         application.state.vector_store = store
+        application.state.document_object_storage = document_object_storage
         application.state.system_indexing_service = indexing
         application.state.retrieval_service = retrieval
         application.state.rag_service = rag_service or RagService(retrieval)
         application.state.reranker_service = reranker
         application.state.hybrid_retrieval_service = hybrid
         application.state.rag_pipeline_service = pipeline
+        cache_redis_client = create_cache_redis(resolved_settings)
         indexes = user_index_manager or UserIndexManager(
             resolved_settings.user_index_dir,
             embedding,
             resolved_settings.embedding_model,
             resolved_settings.rag_min_score,
             hybrid.clear_cache,
-            resolved_settings.redis_url,
+            resolved_settings.cache_redis_url,
             app_env=resolved_settings.app_env,
             lock_mode=resolved_settings.index_lock_mode,
             redis_connect_timeout_seconds=resolved_settings.redis_connect_timeout_seconds,
             redis_socket_timeout_seconds=resolved_settings.redis_socket_timeout_seconds,
             redis_fallback_cooldown_seconds=resolved_settings.index_lock_fallback_cooldown_seconds,
+            redis_client=cache_redis_client,
+            store_factory=(
+                lambda owner_id: create_vector_store(
+                    settings=resolved_settings,
+                    database=db,
+                    embedding_service=embedding,
+                    namespace=f"user:{owner_id}",
+                    faiss_directory=(
+                        resolved_settings.user_index_dir / safe_user_key(owner_id)
+                    ),
+                    qdrant_client=owned_qdrant_client,
+                )
+            )
+            if resolved_settings.vector_store_backend == "qdrant"
+            else None,
         )
         documents = user_document_service or UserDocumentService(
             database=db,
@@ -277,6 +328,8 @@ def create_app(
             ),
             index_manager=indexes,
             validator=UploadValidator(),
+            object_storage=document_object_storage,
+            staging_root=document_staging_root,
         )
         application.state.database = db
         application.state.user_index_manager = indexes
@@ -290,21 +343,31 @@ def create_app(
             max_documents=resolved_settings.max_documents_per_user,
             max_storage_bytes=resolved_settings.max_storage_mb_per_user * 1024 * 1024,
             validator=UploadValidator(),
+            object_storage=document_object_storage,
+            staging_root=document_staging_root,
         )
         application.state.indexing_job_service = job_service
         application.state.async_document_processor = processor
         application.state.async_document_service = async_documents
-        application.state.job_dispatcher = job_dispatcher or CeleryJobDispatcher()
-        redis_client = Redis.from_url(
-            resolved_settings.redis_url,
-            decode_responses=True,
-            socket_connect_timeout=resolved_settings.redis_connect_timeout_seconds,
-            socket_timeout=resolved_settings.redis_socket_timeout_seconds,
-            health_check_interval=30,
-        )
-        application.state.redis_client = redis_client
+        owned_job_dispatcher = None
+        if job_dispatcher is not None:
+            application.state.job_dispatcher = job_dispatcher
+        elif resolved_settings.job_dispatch_backend == "gcp":
+            owned_job_dispatcher = PubSubJobDispatcher(resolved_settings)
+            application.state.job_dispatcher = owned_job_dispatcher
+        else:
+            application.state.job_dispatcher = CeleryJobDispatcher()
+        if resolved_settings.job_dispatch_backend == "gcp":
+            application.state.cloud_tasks_enqueuer = CloudTasksEnqueuer(resolved_settings)
+            application.state.gcp_oidc_verifier = GoogleOidcVerifier(
+                audience=resolved_settings.cloud_tasks_oidc_audience,
+                allowed_service_account=resolved_settings.cloud_tasks_service_account_email,
+            )
+        application.state.redis_client = cache_redis_client
         application.state.rate_limiter = (
-            NoopRateLimiter() if resolved_settings.app_env == "test" else RedisRateLimiter(redis_client)
+            NoopRateLimiter()
+            if resolved_settings.app_env == "test"
+            else RedisRateLimiter(cache_redis_client)
         )
         application.state.user_rag_service = user_rag_service or UserRagService(
             documents, indexes, store, pipeline
@@ -321,7 +384,14 @@ def create_app(
                 await owned_quiz_router.close()
             if owned_database:
                 db.dispose()
-            redis_client.close()
+            if owned_qdrant_client is not None:
+                owned_qdrant_client.close()
+            close_storage = getattr(document_object_storage, "close", None)
+            if callable(close_storage):
+                close_storage()
+            if owned_job_dispatcher is not None:
+                owned_job_dispatcher.close()
+            cache_redis_client.close()
 
     development = resolved_settings.app_env == "development"
     application = FastAPI(
@@ -354,6 +424,8 @@ def create_app(
     application.state.async_document_processor = None
     application.state.async_document_service = None
     application.state.job_dispatcher = job_dispatcher
+    application.state.cloud_tasks_enqueuer = None
+    application.state.gcp_oidc_verifier = None
     application.state.redis_client = None
     application.state.rate_limiter = None
     application.state.logger = logging.getLogger("uvicorn.error")
@@ -403,6 +475,7 @@ def create_app(
     application.include_router(v2.router, prefix="/api/v2")
     application.include_router(user_rag.router, prefix="/api/v2")
     application.include_router(operations.router)
+    application.include_router(cloud_jobs.router)
     return application
 
 

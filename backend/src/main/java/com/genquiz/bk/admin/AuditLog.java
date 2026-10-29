@@ -24,13 +24,23 @@ public class AuditLog {
     @Column(name = "metadata", nullable = false, columnDefinition = "jsonb")
     private String detailsJson;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @Column(name = "request_id", length = 100) private String requestId;
+    @Column(name = "ip_hash", length = 64) private String ipHash;
+    @Column(name = "device_id", length = 128) private String deviceId;
     protected AuditLog() {}
     public AuditLog(UUID actorUserId, String action, String targetType, String targetId, String detailsJson) {
+        this(actorUserId, action, targetType, targetId, detailsJson, null, null, null);
+    }
+    public AuditLog(UUID actorUserId, String action, String targetType, String targetId, String detailsJson,
+                    String requestId, String ipHash, String deviceId) {
         this.id = UUID.randomUUID(); this.actorUserId = actorUserId; this.action = action;
         this.targetType = targetType;
         this.targetId = targetId == null ? null : UUID.fromString(targetId);
         this.outcome = "SUCCESS";
         this.detailsJson = detailsJson;
+        this.requestId = requestId;
+        this.ipHash = ipHash;
+        this.deviceId = deviceId;
     }
     @PrePersist void init() { if (createdAt == null) createdAt = Instant.now(); }
     public UUID getId() { return id; }
@@ -40,4 +50,7 @@ public class AuditLog {
     public String getTargetId() { return targetId == null ? null : targetId.toString(); }
     public String getDetailsJson() { return detailsJson; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getRequestId() { return requestId; }
+    public String getIpHash() { return ipHash; }
+    public String getDeviceId() { return deviceId; }
 }

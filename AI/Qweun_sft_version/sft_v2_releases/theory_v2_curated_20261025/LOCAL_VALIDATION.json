@@ -1,0 +1,19 @@
+{
+  "tests_passed": 30,
+  "test_command": "python -m unittest discover -s AI/Qweun_sft_version/sft_v2_tools -p test_v2.py -v",
+  "cpu_preflight_passed": {"diagnostics_old_dev": 40, "train": 270, "validation": 30, "heldout_test": 100},
+  "all_400_assistant_masks_reencoded_with_pinned_tokenizer": true,
+  "raw_native_source_spans_verified": true,
+  "no_test_text_in_training_bundle_or_training_retrieval": true,
+  "same_course_and_partition_distractor_sources_verified": true,
+  "fresh_lora_initialization_and_generation_selection_contract_checked": true,
+  "real_qwen_tokenizer_json_token_paths_tested_on_cpu": true,
+  "grammar_note": "LMFE freetext shortcut excludes some compound boundary tokens; tests verified an equivalent legal token path preserving the exact decoded Vietnamese JSON, not every greedy tokenization.",
+  "notebook_cells_and_child_code_syntax_checked": true,
+  "colab_cuda_environment_actually_executed": false,
+  "model_training_or_inference_actually_executed": false,
+  "human_approval_events_created": 0,
+  "expert_semantics_verified": false,
+  "reference_scope": "controlled concept-discrimination pilot, not unrestricted scenario generation",
+  "preview": {"url": "http://127.0.0.1:8779/preview.html", "server_pid": 19860, "bind": "127.0.0.1", "read_only": true}
+}

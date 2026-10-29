@@ -1,0 +1,8 @@
+{
+  "release_id": "theory_v2_curated_20261025",
+  "release_path": "D:/BKQuiz/AI/Qweun_sft_version/sft_v2_releases/theory_v2_curated_20261025",
+  "dataset_path": "D:/BKQuiz/AI/Qweun_sft_version/datasets/theory_sft_v2_20261025",
+  "folder_url": "https://drive.google.com/drive/folders/14pm7CSufL0zmtCFhA4MXAQyNyxUu_2Dz",
+  "publication_receipt": "D:/BKQuiz/AI/Qweun_sft_version/sft_v2_releases/theory_v2_curated_20261025/DRIVE_UPLOAD_RECEIPT.json",
+  "serving_model_updated": false
+}

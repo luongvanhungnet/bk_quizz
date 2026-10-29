@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataAccessException.class)
     ResponseEntity<ApiEnvelope<Void>> handleDataAccess(DataAccessException exception,
                                                         HttpServletRequest request) {
-        log.error("Lỗi truy cập dữ liệu tại {} {} traceId={}", request.getMethod(), request.getRequestURI(),
+        log.error("Data access failure at {} {} traceId={}", request.getMethod(), request.getRequestURI(),
                 request.getAttribute("traceId"), exception);
         if ("/api/classrooms/join".equals(request.getRequestURI())) {
             String message = "Không thể hoàn tất việc tham gia lớp học do lỗi dữ liệu. "
@@ -115,7 +115,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ApiEnvelope<Void>> handleUnknown(Exception exception, HttpServletRequest request) {
-        log.error("Lỗi chưa được xử lý tại {} {} traceId={}", request.getMethod(), request.getRequestURI(),
+        log.error("Unhandled failure at {} {} traceId={}", request.getMethod(), request.getRequestURI(),
                 request.getAttribute("traceId"), exception);
         return response(HttpStatus.INTERNAL_SERVER_ERROR, "Hệ thống đang gặp sự cố. Vui lòng thử lại sau.",
                 List.of(new ApiFieldError("INTERNAL_ERROR", "Hệ thống đang gặp sự cố. Vui lòng thử lại sau.")), request);

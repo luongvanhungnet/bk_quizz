@@ -1,4 +1,3 @@
-import shutil
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Request
@@ -6,7 +5,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import Gauge
 from sqlalchemy import text
 
-QUEUE_LENGTH = Gauge("rag_celery_queue_length", "Celery indexing queue length")
+QUEUE_LENGTH = Gauge("rag_job_queue_length", "Indexing queue length when available")
 DOCUMENTS = Gauge("rag_documents", "Documents by status", ["status"])
 CHUNKS = Gauge("rag_chunks", "Ready document chunks")
 
@@ -16,6 +15,36 @@ router = APIRouter(tags=["operations"])
 @router.get("/health/live")
 def live() -> dict[str, str]:
     return {"status": "UP"}
+
+
+@router.get("/health/startup")
+def startup(request: Request) -> JSONResponse:
+    checks: dict[str, str] = {}
+    try:
+        with request.app.state.database.engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        checks["database"] = "UP"
+    except Exception:
+        checks["database"] = "DOWN"
+    try:
+        request.app.state.document_object_storage.ping()
+        checks["storage"] = "UP"
+    except Exception:
+        checks["storage"] = "DOWN"
+    try:
+        if request.app.state.settings.vector_store_backend == "qdrant":
+            request.app.state.vector_store.ping()
+        checks["vectorStore"] = "UP"
+    except Exception:
+        checks["vectorStore"] = "DOWN"
+    checks["embedding"] = (
+        "UP" if request.app.state.embedding_service is not None else "DOWN"
+    )
+    healthy = all(value == "UP" for value in checks.values())
+    return JSONResponse(
+        status_code=200 if healthy else 503,
+        content={"status": "UP" if healthy else "DOWN", "checks": checks},
+    )
 
 
 @router.get("/health/ready")
@@ -49,30 +78,37 @@ def ready(request: Request) -> JSONResponse:
         checks["database"] = "UP"
     except Exception:
         checks["database"] = "DOWN"
-    try:
-        request.app.state.redis_client.ping()
-        queue_length = int(request.app.state.redis_client.llen(request.app.state.settings.celery_queue))
-        QUEUE_LENGTH.set(queue_length)
-        checks["redis"] = "UP"
-        checks["celeryWorker"] = (
-            "UP"
-            if request.app.state.redis_client.exists(
-                request.app.state.settings.celery_worker_heartbeat_key
-            )
-            else "DOWN"
-        )
-    except Exception:
-        checks["redis"] = "DOWN"
-        checks["celeryWorker"] = "DOWN"
     settings = request.app.state.settings
     try:
-        for path in (settings.user_upload_dir, settings.user_index_dir):
-            path.mkdir(parents=True, exist_ok=True)
-            if shutil.disk_usage(path).free < settings.minimum_free_disk_mb * 1024 * 1024:
-                raise OSError("low disk")
+        request.app.state.redis_client.ping()
+        checks["cacheRedis"] = "UP"
+        if settings.job_dispatch_backend == "celery":
+            queue_length = int(request.app.state.redis_client.llen(settings.celery_queue))
+            checks["celeryWorker"] = (
+                "UP"
+                if request.app.state.redis_client.exists(settings.celery_worker_heartbeat_key)
+                else "DOWN"
+            )
+    except Exception:
+        checks["cacheRedis"] = "DOWN"
+        if settings.job_dispatch_backend == "celery":
+            checks["celeryWorker"] = "DOWN"
+    if settings.job_dispatch_backend == "gcp":
+        checks["pubsub"] = "UP" if request.app.state.job_dispatcher is not None else "DOWN"
+        checks["cloudTasks"] = "UP" if request.app.state.cloud_tasks_enqueuer is not None else "DOWN"
+        checks["cloudScheduler"] = "UP"
+    QUEUE_LENGTH.set(queue_length)
+    try:
+        request.app.state.document_object_storage.ping()
         checks["storage"] = "UP"
     except Exception:
         checks["storage"] = "DOWN"
+    try:
+        if settings.vector_store_backend == "qdrant":
+            request.app.state.vector_store.ping()
+        checks["vectorStore"] = "UP"
+    except Exception:
+        checks["vectorStore"] = "DOWN"
     embedding = request.app.state.embedding_service
     checks["embedding"] = "UP" if embedding is not None else "DOWN"
     checks["gemini"] = "UP" if settings.gemini_api_key else "DOWN"
@@ -92,9 +128,11 @@ def ready(request: Request) -> JSONResponse:
             "status": "UP" if healthy else "DOWN",
             "checks": checks,
             "databaseBackend": request.app.state.database.backend,
+            "vectorStoreBackend": settings.vector_store_backend,
             "queueLength": queue_length,
             "pendingJobs": pending_jobs,
             "runningJobs": running_jobs,
             "oldestPendingSeconds": oldest_pending_seconds,
+            "cacheRedisProvider": settings.cache_redis_provider,
         },
     )

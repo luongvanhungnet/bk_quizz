@@ -423,7 +423,7 @@ public class QuizService {
             return objectMapper.writeValueAsString(payload);
         } catch (JacksonException exception) {
             throw new IllegalStateException(
-                    "KhÃ´ng thá»ƒ táº¡o payload sinh ná»‘i cÃ¢u há»i",
+                    "Unable to build the append-question generation payload",
                     exception);
         }
     }

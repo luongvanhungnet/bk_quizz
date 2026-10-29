@@ -1,0 +1,12 @@
+{
+  "documents": 27,
+  "pages": 13314,
+  "jobs": 148,
+  "pages_per_packet": 100,
+  "reused_documents": 1,
+  "new_documents_needing_layout": 26,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "92f084c23c5025b7ad7832c878fd9ad1b8fc935e7f1d3b081186a212b24fc930",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}

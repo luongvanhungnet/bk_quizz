@@ -8,7 +8,7 @@ from huggingface_hub import snapshot_download
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Tải embedding ONNX int8 không cần PyTorch.")
+    parser = argparse.ArgumentParser(description="Download the int8 ONNX embedding model without PyTorch.")
     parser.add_argument("--model", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
@@ -32,7 +32,7 @@ def main() -> int:
     downloaded = output / "onnx" / "model_quint8_avx2.onnx"
     target = output / "onnx" / "model_qint8_avx2.onnx"
     if not downloaded.exists():
-        raise FileNotFoundError("Model repository không có ONNX AVX2 int8.")
+        raise FileNotFoundError("The model repository does not contain an int8 AVX2 ONNX model.")
     shutil.copy2(downloaded, target)
     print(f"ONNX int8 model ready: {target}")
     return 0

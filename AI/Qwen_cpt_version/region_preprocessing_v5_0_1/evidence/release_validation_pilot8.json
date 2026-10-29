@@ -1,0 +1,66 @@
+{
+  "date_client": "2026-10-20",
+  "run": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\runs\\it3170_v5_20261020",
+  "records": 2245,
+  "schema_valid_records": 2245,
+  "review_stats": {
+    "total": 2245,
+    "buckets": {
+      "uncertain": 2204,
+      "critical": 41
+    },
+    "decisions": {
+      "pending": 2245
+    },
+    "pending": 2245,
+    "reviewed": 0,
+    "human_verified": 0,
+    "eligible_for_training": 0,
+    "high_risk": 1749,
+    "stale_reviews": 0
+  },
+  "packet": {
+    "manifest_sha256": "7fd7e5f8ddd41ce72cfb411654e9b419a8910b2917a93f8c9a23a237e059564d",
+    "zip_sha256": "9f70478cd307993367ab1c922e2edc5c7dd23499611ccceab3a5e40f477221d9",
+    "zip_bytes": 3620590,
+    "requests": 14,
+    "by_kind": {
+      "text": 8,
+      "diagram": 6
+    },
+    "vlm_images": 6,
+    "pages": [
+      20,
+      49,
+      129,
+      300,
+      494,
+      812,
+      930,
+      1042
+    ],
+    "crc_valid": true,
+    "code_and_image_hashes_valid": true
+  },
+  "human_metrics_available": false,
+  "Q": null,
+  "empty_cpt_check": {
+    "samples": 0,
+    "training_ready": false,
+    "human_approved_only": true,
+    "machine_trusted_auto_exported": 0,
+    "holdout_excluded": true,
+    "tokenizer": null,
+    "all_pdf_knowledge_complete": false,
+    "records_snapshot_sha256": "36629346d79bc886f78463636f35a90aebe4bf00316da3e7209b972bbc38a42b"
+  },
+  "notebook_cells_compile": true,
+  "new_qwen_gpu_inference_executed": false,
+  "docling_or_mineru_model_executed_locally": false,
+  "tests": {
+    "count": 138,
+    "passed": 138,
+    "log": "evidence/tests_release.txt"
+  },
+  "v3_manifest_sha256": "aa4973c0f29fe834579fd5f92625e10538cad733218e88c692552a4a0e3d1c73"
+}

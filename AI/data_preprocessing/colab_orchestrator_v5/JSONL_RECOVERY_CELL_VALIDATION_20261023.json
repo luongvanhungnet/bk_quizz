@@ -1,0 +1,13 @@
+{
+  "generated_combined_cell_executed": true,
+  "controller_backend": "mock",
+  "old_session_closed": true,
+  "requested_pending_units": [
+    "unit_0061"
+  ],
+  "existing_result_unchanged": true,
+  "manual_native_crop_fix_unchanged": true,
+  "venv_reinstalled": false,
+  "actual_Colab_executed": false,
+  "actual_GPU_inference": false
+}

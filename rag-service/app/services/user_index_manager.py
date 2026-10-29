@@ -36,12 +36,13 @@ class UserIndexManager:
         redis_socket_timeout_seconds: float = 2,
         redis_fallback_cooldown_seconds: int = 30,
         redis_client: Any | None = None,
+        store_factory: Any | None = None,
     ) -> None:
         self._root = root
         self._embedding = embedding_service
         self._model_name = model_name
         self._min_score = min_score
-        self._stores: dict[str, VectorStore] = {}
+        self._stores: dict[str, Any] = {}
         self._user_locks: dict[str, RLock] = {}
         self._registry_lock = Lock()
         self._on_index_change = on_index_change
@@ -50,6 +51,7 @@ class UserIndexManager:
         self._redis_fallback_cooldown_seconds = redis_fallback_cooldown_seconds
         self._redis_unavailable_until = 0.0
         self._redis = redis_client if use_redis else None
+        self._store_factory = store_factory
         if self._redis is None and redis_url and use_redis:
             self._redis = Redis.from_url(
                 redis_url,
@@ -62,11 +64,13 @@ class UserIndexManager:
         with self._registry_lock:
             return self._user_locks.setdefault(owner_id, RLock())
 
-    def _store(self, owner_id: str) -> VectorStore:
+    def _store(self, owner_id: str) -> Any:
         with self._registry_lock:
             return self._stores.setdefault(
                 owner_id,
-                VectorStore(self._root / safe_user_key(owner_id), self._model_name),
+                self._store_factory(owner_id)
+                if self._store_factory is not None
+                else VectorStore(self._root / safe_user_key(owner_id), self._model_name),
             )
 
     def snapshot_for(self, owner_id: str) -> Any | None:
@@ -130,8 +134,13 @@ class UserIndexManager:
             if current is None or not current.chunks or not allowed_document_ids:
                 return []
             query = self._embedding.encode_query(question)
-            # Exact IndexFlat search over every candidate, then authorization filter.
-            scores, positions = current.index.search(query, len(current.chunks))
+            if hasattr(current.index, "search_filtered"):
+                scores, positions = current.index.search_filtered(
+                    query, top_k, allowed_document_ids, owner_id
+                )
+            else:
+                # Legacy FAISS scans candidates, then applies authorization filtering.
+                scores, positions = current.index.search(query, len(current.chunks))
             results: list[RetrievalResult] = []
             for score, position in zip(scores[0], positions[0]):
                 if position < 0 or float(score) < self._min_score:
@@ -144,7 +153,7 @@ class UserIndexManager:
                     break
             return results
 
-    def _commit(self, owner_id: str, store: VectorStore, chunks: list[DocumentChunk]) -> None:
+    def _commit(self, owner_id: str, store: Any, chunks: list[DocumentChunk]) -> None:
         if self._redis is None or (self._allow_local_fallback and monotonic() < self._redis_unavailable_until):
             self._commit_unlocked(owner_id, store, chunks)
             return
@@ -190,7 +199,7 @@ class UserIndexManager:
                     safe_user_key(owner_id)[:12],
                 )
 
-    def _commit_unlocked(self, owner_id: str, store: VectorStore, chunks: list[DocumentChunk]) -> None:
+    def _commit_unlocked(self, owner_id: str, store: Any, chunks: list[DocumentChunk]) -> None:
         chunks = sorted(chunks, key=lambda item: (item.document_id, item.chunk_index))
         vectors = self._embedding.encode_documents([chunk.text for chunk in chunks])
         if not chunks:

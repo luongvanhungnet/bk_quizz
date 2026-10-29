@@ -1,0 +1,63 @@
+{
+  "id": "p0812_r01121",
+  "page": 812,
+  "engine": "vlm",
+  "cache_key": "dc207fc402e17f2eaf6770f6cc9fad048b37f3e3fdab3fb12019148a005820ae",
+  "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+  "crop_sha256": "374793b2ffeda60ee8d7e4824d1e1ae19c248452a084085863eef3c1d081b957",
+  "input_image_sha256": "8e6995a3688cacf466c62785eea1544e76cb28efabab6891cd4a22d571603161",
+  "packet_manifest_sha256": "24f2f2d02890d1dcb39abd727e73358f8d6f1d27c5cf8d5ac3a683c636537c69",
+  "status": "ok",
+  "text": "Đây là một slide về bài toán CVRP (Vehicle Routing Problem). Nội dung chính bao gồm:\n\n- Tiêu đề: \"Bài toán CVRP\"\n- Giá trị K được đặt là 2.\n- Có hai node được hiển thị: node 0 và node 1.\n- Node 1 nằm trong một khung vuông với nhãn \"(y[1], y[2])\".\n- Số thứ tự slide là 43.",
+  "semantic_verified": false,
+  "model_config": {
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+    "quantization": "nf4",
+    "visual_tokens": 512,
+    "max_new_tokens": 512,
+    "prompt_sha256": "c1403bf190a08720e1bc09250385f8709e41c765e5cb3aade5e8645aa70c6958",
+    "runtime_sha256": "d255953098f5550008b2125454b863467c64c5fb5a09b5fab2028b1abc6c6d0f",
+    "output": "plain_text",
+    "generation_calls_per_image": 1
+  },
+  "context_supplied": "• K = 2\n1\n(y[1], y[2])\n43\nBài toán CVRP\n0",
+  "one_generation_call": true,
+  "partial_observation": false,
+  "telemetry": {
+    "before": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    },
+    "text_tokens": 200,
+    "input_tokens": 693,
+    "image_grid_thw": [
+      [
+        1,
+        38,
+        52
+      ]
+    ],
+    "visual_tokens": 494,
+    "original_image_size": [
+      1400,
+      1050
+    ],
+    "effective_image_size": [
+      728,
+      532
+    ],
+    "output_tokens": 94,
+    "possibly_truncated": false,
+    "peak_allocated": 6209187328,
+    "after_cleanup": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    }
+  },
+  "elapsed_seconds": 8.501511690999905
+}

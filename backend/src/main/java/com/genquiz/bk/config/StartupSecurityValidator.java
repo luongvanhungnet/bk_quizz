@@ -27,16 +27,16 @@ public class StartupSecurityValidator implements ApplicationRunner {
         if (production) {
             if (properties.security().accessSecret().contains("change-me")
                     || properties.security().accessSecret().contains("development")) {
-                throw new IllegalStateException("JWT_ACCESS_SECRET production phải là secret ngẫu nhiên, không dùng giá trị mẫu.");
+                throw new IllegalStateException("Production JWT_ACCESS_SECRET must be a random secret, not a sample value.");
             }
             if (!properties.security().cookieSecure()) {
-                throw new IllegalStateException("COOKIE_SECURE phải được bật trong production.");
+                throw new IllegalStateException("COOKIE_SECURE must be enabled in production.");
             }
             if (properties.frontendOrigins().stream().anyMatch(origin -> origin.contains("localhost"))) {
                 throw new IllegalStateException(
-                        "FRONTEND_ORIGINS production không được chứa localhost. "
-                                + "Hãy đặt origin HTTPS thật của Cloudflare Pages hoặc custom domain, "
-                                + "ví dụ https://bkquiz.pages.dev.");
+                        "Production FRONTEND_ORIGINS must not contain localhost. "
+                                + "Set the actual HTTPS Cloudflare Pages or custom-domain origin, "
+                                + "for example https://bkquiz.pages.dev.");
             }
             validateProductionStorage();
             URI storageEndpoint = URI.create(properties.storage().endpoint());
@@ -44,7 +44,7 @@ public class StartupSecurityValidator implements ApplicationRunner {
                     storageEndpoint.getHost(), properties.storage().region(), properties.storage().bucket(), cloudRun);
         }
         if (properties.ai().enabled() && environment.getProperty("spring.ai.google.genai.api-key", "").isBlank()) {
-            throw new IllegalStateException("GEMINI_API_KEY là bắt buộc khi AI_ENABLED=true.");
+            throw new IllegalStateException("GEMINI_API_KEY is required when AI_ENABLED=true.");
         }
     }
 
@@ -52,38 +52,38 @@ public class StartupSecurityValidator implements ApplicationRunner {
         String provider = environment.getProperty("bkquiz.storage.provider", "local");
         if (!"s3".equalsIgnoreCase(provider)) {
             throw new IllegalStateException(
-                    "STORAGE_PROVIDER production phải là s3 vì filesystem Cloud Run không lưu trữ bền vững.");
+                    "Production STORAGE_PROVIDER must be s3 because the Cloud Run filesystem is not durable.");
         }
         URI endpoint;
         try { endpoint = URI.create(properties.storage().endpoint()); }
         catch (IllegalArgumentException exception) {
-            throw new IllegalStateException("S3_ENDPOINT production không hợp lệ.", exception);
+            throw new IllegalStateException("Production S3_ENDPOINT is invalid.", exception);
         }
         if (!"https".equalsIgnoreCase(endpoint.getScheme()) || endpoint.getHost() == null
                 || !endpoint.getHost().endsWith(".r2.cloudflarestorage.com")) {
             throw new IllegalStateException(
-                    "S3_ENDPOINT production phải là endpoint HTTPS S3 API của Cloudflare R2.");
+                    "Production S3_ENDPOINT must be the HTTPS S3 API endpoint for Cloudflare R2.");
         }
         if (!"auto".equalsIgnoreCase(properties.storage().region())) {
-            throw new IllegalStateException("S3_REGION cho Cloudflare R2 phải là auto.");
+            throw new IllegalStateException("S3_REGION must be auto for Cloudflare R2.");
         }
         if (properties.storage().accessKey().equalsIgnoreCase("minioadmin")
                 || properties.storage().secretKey().equalsIgnoreCase("minioadmin")
                 || properties.storage().secretKey().contains("replace_me")) {
-            throw new IllegalStateException("Thông tin xác thực Cloudflare R2 production vẫn dùng giá trị mẫu.");
+            throw new IllegalStateException("Production Cloudflare R2 credentials still use sample values.");
         }
     }
 
     private void validateOrigin(String origin) {
         if (origin.contains("*")) {
             throw new IllegalStateException(
-                    "FRONTEND_ORIGINS không được chứa wildcard khi CORS cho phép credentials.");
+                    "FRONTEND_ORIGINS must not contain a wildcard when CORS credentials are enabled.");
         }
         URI uri;
         try { uri = URI.create(origin); }
-        catch (IllegalArgumentException exception) { throw new IllegalStateException("FRONTEND_ORIGINS chứa URL không hợp lệ."); }
+        catch (IllegalArgumentException exception) { throw new IllegalStateException("FRONTEND_ORIGINS contains an invalid URL."); }
         if (uri.getScheme() == null || uri.getHost() == null || uri.getPath() != null && !uri.getPath().isEmpty()) {
-            throw new IllegalStateException("Mỗi FRONTEND_ORIGINS phải chỉ gồm scheme, host và port.");
+            throw new IllegalStateException("Each FRONTEND_ORIGINS entry may contain only a scheme, host, and port.");
         }
     }
 }

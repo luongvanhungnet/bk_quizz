@@ -1,6 +1,19 @@
 name: bkquiz
 
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    environment:
+      VITE_API_BASE_URL: /api
+      VITE_DEV_API_TARGET: http://api:8080
+      VITE_API_SAME_ORIGIN_PROXY: "false"
+      VITE_REALTIME_PROVIDER: stomp
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ["5173:5173"]
+
   postgres:
     image: pgvector/pgvector:pg16
     environment:
@@ -114,6 +127,12 @@ services:
       timeout: 3s
       retries: 20
 
+  rag-qdrant:
+    profiles: ["rag"]
+    image: qdrant/qdrant:v1.19.0
+    ports: ["127.0.0.1:6333:6333"]
+    volumes: ["rag-qdrant-data:/qdrant/storage"]
+
   rag-api:
     profiles: ["rag"]
     build: {context: ./rag-service}
@@ -132,6 +151,11 @@ services:
       INDEX_LOCK_MODE: redis
       INDEX_LOCK_FALLBACK_COOLDOWN_SECONDS: 30
       DATABASE_URL: sqlite:////app/data/rag.db
+      PORT: 8000
+      VECTOR_STORE_BACKEND: qdrant
+      QDRANT_URL: http://rag-qdrant:6333
+      QDRANT_API_KEY: ""
+      QDRANT_COLLECTION: bkquiz_chunks
       USER_UPLOAD_DIR: /app/data/uploads/users
       USER_INDEX_DIR: /app/data/indexes/users
       SYSTEM_DOCUMENTS_DIR: /app/data/system-documents
@@ -151,6 +175,7 @@ services:
       CITATION_MAX_WINDOW_CHARS: ${CITATION_MAX_WINDOW_CHARS:-600}
       CITATION_MAX_CANDIDATES_PER_SOURCE: ${CITATION_MAX_CANDIDATES_PER_SOURCE:-128}
     depends_on:
+      rag-qdrant: {condition: service_started}
       rag-redis: {condition: service_healthy}
     ports: ["8000:8000"]
     volumes: ["rag-data:/app/data"]
@@ -188,3 +213,4 @@ volumes:
   bkquiz-uploads:
   rag-data:
   rag-redis-data:
+  rag-qdrant-data:

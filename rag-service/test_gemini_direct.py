@@ -33,7 +33,7 @@ async def run_checks() -> int:
     print("Key fingerprint:", diagnostics.fingerprint or "NOT SET")
 
     if not settings.gemini_api_key:
-        print("FAILED [GEMINI_NOT_CONFIGURED]: GEMINI_API_KEY chưa được cấu hình.")
+        print("FAILED [GEMINI_NOT_CONFIGURED]: GEMINI_API_KEY is not configured.")
         return 1
 
     service = GeminiService(settings)

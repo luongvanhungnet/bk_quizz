@@ -1,0 +1,23 @@
+{
+  "document": {
+    "path": "D:\\bk_quizz_data\\slide_processed\\pdf\\IT3170-Thuật toán ứng dụng.pdf",
+    "sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087"
+  },
+  "requests": [
+    {
+      "id": "v5:canary:formula:p0033",
+      "page": 33,
+      "kind": "formula",
+      "image": "crops/p0033_r00013_f01_v3_boundary.png",
+      "crop_bbox": [
+        260.0,
+        590.4761904761905,
+        380.0,
+        632.3809523809524
+      ],
+      "crop_sha256": "1fe803dece1fef837cfd74be4be91d2fddd85afc0dc635e07a3236789df9d60c",
+      "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+      "native_text": "O(n log n)"
+    }
+  ]
+}

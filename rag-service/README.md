@@ -3,9 +3,16 @@
 Hướng dẫn chuyển metadata RAG từ SQLite sang Neon PostgreSQL:
 [`docs/deploy/03-rag-neon-postgresql.md`](../docs/deploy/03-rag-neon-postgresql.md).
 
+Hướng dẫn chuyển FAISS sang Qdrant:
+[`docs/deploy/04-qdrant-vector-store.md`](../docs/deploy/04-qdrant-vector-store.md).
+
+Hướng dẫn chạy FastAPI/RAG trên Cloud Run:
+[`docs/deploy/05-rag-fastapi-cloud-run.md`](../docs/deploy/05-rag-fastapi-cloud-run.md).
+
 FastAPI microservice cung cấp Gemini Gateway, RAG tài liệu hệ thống và RAG tài liệu
-riêng của người dùng. Embedding chạy local bằng Sentence Transformers, tìm kiếm exact
-cosine qua FAISS; Gemini chỉ nhận các chunk đã truy xuất để sinh câu trả lời có nguồn.
+riêng của người dùng. Embedding chạy local bằng Sentence Transformers, tìm kiếm cosine
+qua Qdrant trong production (FAISS còn dùng cho local/rollback); Gemini chỉ nhận các
+chunk đã truy xuất để sinh câu trả lời có nguồn.
 
 ## Pipeline Hybrid RAG
 
@@ -14,7 +21,7 @@ Query + conversation history
         │
         ├─ Query rewrite có điều kiện (Gemini structured JSON)
         │
-        ├─ FAISS semantic search
+        ├─ Qdrant semantic search (FAISS local fallback)
         └─ BM25 keyword search local
                     │
               Reciprocal Rank Fusion
@@ -41,12 +48,14 @@ câu hợp lệ trong checkpoint và chỉ tạo lại những slot còn thiếu
 
 ## Kiến trúc và giới hạn
 
-- Python 3.11, SQLite/SQLAlchemy/Alembic, FAISS và filesystem local.
+- Python 3.11, SQLAlchemy/Alembic, Neon PostgreSQL và Qdrant trong production;
+  SQLite/FAISS còn được hỗ trợ cho development và rollback.
 - PDF, DOCX, PPTX, TXT, Markdown; file tối đa 20 MB theo mặc định.
 - Tài liệu và index tách theo user. Database và metadata chunk đều kiểm tra owner.
 - `X-Classroom-Id` chỉ được lưu làm metadata, chưa cấp quyền đọc cho thành viên khác.
-- Chạy đúng **một** Uvicorn worker/replica trên volume bền vững. SQLite và lock hiện tại
-  không hỗ trợ nhiều replica cùng ghi.
+- Với development dùng SQLite/FAISS, chạy đúng **một** Uvicorn worker/replica
+  trên volume bền vững. Production dùng Neon/Qdrant và Redis lock để nhiều
+  replica cùng nhìn thấy một active snapshot.
 - PPTX lấy text của slide và bỏ notes. PDF scan chưa hỗ trợ OCR.
 - Reranker mặc định tải model multilingual khoảng vài trăm MB ở lần khởi động đầu tiên.
 

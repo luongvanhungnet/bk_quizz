@@ -23,7 +23,13 @@ from sqlalchemy.engine import Engine, make_url
 
 from app.db.database import ALEMBIC_HEAD
 
-TABLES = ("documents", "math_extractions", "indexing_jobs", "audit_events")
+TABLES = (
+    "documents",
+    "math_extractions",
+    "indexing_jobs",
+    "audit_events",
+    "vector_index_snapshots",
+)
 
 
 def _chunks(rows: list[dict[str, Any]], size: int = 500) -> Iterator[list[dict[str, Any]]]:
@@ -34,27 +40,27 @@ def _chunks(rows: list[dict[str, Any]], size: int = 500) -> Iterator[list[dict[s
 def _required_url(name: str) -> str:
     value = os.getenv(name, "").strip()
     if not value:
-        raise SystemExit(f"Thiếu biến môi trường {name}.")
+        raise SystemExit(f"Missing required environment variable: {name}.")
     return value
 
 
 def _validate_urls(source_url: str, target_url: str) -> None:
     if make_url(source_url).get_backend_name() != "sqlite":
-        raise SystemExit("RAG_MIGRATION_SOURCE_URL phải là SQLite.")
+        raise SystemExit("RAG_MIGRATION_SOURCE_URL must use SQLite.")
     if make_url(target_url).get_backend_name() != "postgresql":
-        raise SystemExit("RAG_MIGRATION_TARGET_URL phải là PostgreSQL.")
+        raise SystemExit("RAG_MIGRATION_TARGET_URL must use PostgreSQL.")
 
 
 def _validate_target(engine: Engine) -> None:
     tables = set(inspect(engine).get_table_names())
     missing = set(TABLES) - tables
     if missing or "alembic_version" not in tables:
-        raise SystemExit("Neon chưa được chạy Alembic đầy đủ.")
+        raise SystemExit("Alembic has not been fully applied to Neon.")
     with engine.connect() as connection:
         revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
     if revision != ALEMBIC_HEAD:
         raise SystemExit(
-            f"Neon đang ở revision {revision}; cần alembic upgrade tới {ALEMBIC_HEAD}."
+            f"Neon is at revision {revision}; upgrade Alembic to {ALEMBIC_HEAD}."
         )
 
 
@@ -62,12 +68,12 @@ def _validate_source(engine: Engine) -> None:
     tables = set(inspect(engine).get_table_names())
     missing = set(TABLES) - tables
     if missing or "alembic_version" not in tables:
-        raise SystemExit("SQLite source chưa được chạy Alembic đầy đủ.")
+        raise SystemExit("Alembic has not been fully applied to the SQLite source.")
     with engine.connect() as connection:
         revision = connection.exec_driver_sql("SELECT version_num FROM alembic_version").scalar_one()
     if revision != ALEMBIC_HEAD:
         raise SystemExit(
-            f"SQLite source đang ở revision {revision}; hãy chạy alembic upgrade head trước."
+            f"The SQLite source is at revision {revision}; run alembic upgrade head first."
         )
 
 
@@ -84,7 +90,7 @@ def migrate(source_url: str, target_url: str, *, dry_run: bool = False) -> dict[
         target_metadata.reflect(target, only=TABLES)
         missing = set(TABLES) - set(source_metadata.tables)
         if missing:
-            raise SystemExit(f"SQLite thiếu bảng: {', '.join(sorted(missing))}.")
+            raise SystemExit(f"SQLite is missing tables: {', '.join(sorted(missing))}.")
 
         copied: dict[str, int] = {}
         with source.connect() as source_connection, target.begin() as target_connection:
@@ -94,7 +100,7 @@ def migrate(source_url: str, target_url: str, *, dry_run: bool = False) -> dict[
                 existing = target_connection.scalar(select(func.count()).select_from(target_table))
                 if existing:
                     raise SystemExit(
-                        f"Neon không rỗng: bảng {name} có {existing} bản ghi. Hủy migration để tránh ghi đè."
+                        f"Neon is not empty: table {name} contains {existing} rows. Migration was stopped to prevent overwrites."
                     )
                 rows = [dict(row) for row in source_connection.execute(select(source_table)).mappings()]
                 copied[name] = len(rows)
@@ -111,7 +117,7 @@ def migrate(source_url: str, target_url: str, *, dry_run: bool = False) -> dict[
                     )
                     if actual != expected:
                         raise RuntimeError(
-                            f"Sai số lượng sau migration tại {name}: expected={expected}, actual={actual}."
+                            f"Row count mismatch after migration for {name}: expected={expected}, actual={actual}."
                         )
         return copied
     finally:
@@ -123,16 +129,16 @@ def main() -> None:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Migrate BKQuiz RAG metadata từ SQLite sang Neon.")
-    parser.add_argument("--dry-run", action="store_true", help="Chỉ kiểm tra, không ghi dữ liệu.")
+    parser = argparse.ArgumentParser(description="Migrate BKQuiz RAG metadata from SQLite to Neon.")
+    parser.add_argument("--dry-run", action="store_true", help="Validate only; do not write data.")
     args = parser.parse_args()
     copied = migrate(
         _required_url("RAG_MIGRATION_SOURCE_URL"),
         _required_url("RAG_MIGRATION_TARGET_URL"),
         dry_run=args.dry_run,
     )
-    mode = "Kiểm tra" if args.dry_run else "Đã sao chép"
-    print(f"{mode} thành công: " + ", ".join(f"{name}={count}" for name, count in copied.items()))
+    mode = "Validation" if args.dry_run else "Copy"
+    print(f"{mode} completed successfully: " + ", ".join(f"{name}={count}" for name, count in copied.items()))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,31 @@
+{
+  "source": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\runs\\it3170_v5_candidate",
+  "target": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\runs\\it3170_v5_20261020",
+  "source_manifest_sha256": "2b87c1d2a69436a8a41c070883d0fac6639abb58a174f890afc864c4cd353180",
+  "release_manifest_sha256": "6ff432a99871139d3e9517803ea90d53195043c19f69d2cd943e3db1c4743192",
+  "release_records_sha256": "f5ae6e30d910ef6b3e0655c4bfbd03c6a7ecd214afecc22af40e3321148cccaf",
+  "summary": {
+    "records": 2245,
+    "by_kind": {
+      "text": 978,
+      "code": 82,
+      "formula": 745,
+      "table": 16,
+      "diagram": 424
+    },
+    "buckets": {
+      "uncertain": 2204,
+      "critical": 41
+    },
+    "unverified_predictions_exported": 0,
+    "full_source_renders": 1060,
+    "reused_layout_and_specialist_cache": true,
+    "perceptual_duplicate_groups": 97,
+    "training_ready": false,
+    "schema_validated_records": 2245,
+    "asset_hash_checks": 6735,
+    "human_verified": 0
+  },
+  "human_reviews_copied": 0,
+  "original_snapshots_preserved": true
+}

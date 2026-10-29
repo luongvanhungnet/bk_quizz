@@ -71,6 +71,26 @@ describe("GuestOnly", () => {
 });
 
 describe("RequireAdmin", () => {
+  it("allows an analyst with analytics permission to open the dashboard", async () => {
+    const service = {
+      refresh: vi.fn().mockResolvedValue({
+        accessToken: "token",
+        expiresIn: 300,
+        user: { ...user, permissions: ["analytics:read"], administrativeRoles: ["ANALYST"] },
+      }),
+    } as unknown as ReturnType<typeof createAuthApi>;
+
+    render(
+      <AuthProvider service={service}>
+        <MemoryRouter initialEntries={["/admin"]}>
+          <Routes><Route element={<RequireAdmin />}><Route path="/admin" element={<div>Analytics dashboard</div>} /></Route></Routes>
+        </MemoryRouter>
+      </AuthProvider>,
+    );
+
+    expect(await screen.findByText("Analytics dashboard")).toBeInTheDocument();
+  });
+
   it("explains missing role permission instead of silently redirecting", async () => {
     const service = {
       refresh: vi.fn().mockResolvedValue({

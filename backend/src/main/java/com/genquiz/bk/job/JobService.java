@@ -12,12 +12,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.server.ResponseStatusException;
+import com.genquiz.bk.abuse.AiAbuseProtectionService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class JobService {
+    private static final Logger log = LoggerFactory.getLogger(JobService.class);
     private final JobRepository jobs;
     private final JobEventService events;
     private final Clock clock;
+    private AiAbuseProtectionService abuseProtection;
+
+    @Autowired(required = false)
+    void setAbuseProtection(AiAbuseProtectionService abuseProtection) {
+        this.abuseProtection = abuseProtection;
+    }
 
     @Autowired
     public JobService(JobRepository jobs, JobEventService events) {
@@ -46,9 +56,13 @@ public class JobService {
                 return existing.get();
             }
         }
-        Job created = jobs.save(new Job(
+        Job created = new Job(
                 type, actorId, resourceId, payload, idempotencyKey, maxAttempts,
-                Instant.now(clock)));
+                Instant.now(clock));
+        if (type == JobType.QUIZ_GENERATION && abuseProtection != null) {
+            created.attachAiAdmission(abuseProtection.admit(actorId, "quiz_generation", payload));
+        }
+        created = jobs.save(created);
         if (type == JobType.QUIZ_GENERATION) {
             event(created, JobEventLevel.INFO, "QUEUED",
                     "Yêu cầu sinh quiz đã được đưa vào hàng đợi.");
@@ -103,6 +117,9 @@ public class JobService {
                         HttpStatus.NOT_FOUND, "Không tìm thấy tác vụ sinh quiz"));
         try {
             job.retryByOwner(Instant.now(clock));
+            if (abuseProtection != null) {
+                job.attachAiAdmission(abuseProtection.admit(actorId, "quiz_generation_retry", job.getPayload()));
+            }
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage());
         }
@@ -136,6 +153,7 @@ public class JobService {
     public void succeed(UUID jobId, String resultPayload) {
         Job job = requireJob(jobId);
         job.succeed(resultPayload, Instant.now(clock));
+        completeAiAccounting(job, resultPayload);
         if (job.getType() == JobType.QUIZ_GENERATION) {
             event(job, JobEventLevel.SUCCESS, "SUCCEEDED",
                     "Quiz đã được tạo và lưu thành công.");
@@ -172,6 +190,7 @@ public class JobService {
     public void fail(UUID jobId, String safeCode, String safeMessage) {
         Job job = requireJob(jobId);
         job.fail(safeCode, safeMessage, Instant.now(clock));
+        releaseAiIfTerminal(job);
         recordFailure(job, safeCode, safeMessage);
     }
 
@@ -179,6 +198,7 @@ public class JobService {
     public void fail(UUID jobId, String safeCode, String safeMessage, Duration retryAfter, boolean permanent) {
         Job job = requireJob(jobId);
         job.fail(safeCode, safeMessage, Instant.now(clock), retryAfter, permanent);
+        releaseAiIfTerminal(job);
         recordFailure(job, safeCode, safeMessage);
     }
 
@@ -188,6 +208,7 @@ public class JobService {
         Job job = requireJob(jobId);
         job.fail(safeCode, safeMessage, Instant.now(clock), retryAfter,
                 permanent, upstreamRequestId);
+        releaseAiIfTerminal(job);
         recordFailure(job, safeCode, safeMessage);
     }
 
@@ -213,6 +234,23 @@ public class JobService {
     private Job requireJob(UUID jobId) {
         return jobs.findById(jobId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tác vụ"));
+    }
+
+    private void completeAiAccounting(Job job, String resultPayload) {
+        if (abuseProtection == null || job.getType() != JobType.QUIZ_GENERATION) return;
+        try {
+            abuseProtection.completed(job, resultPayload);
+        } catch (RuntimeException exception) {
+            log.warn("Unable to finalize anti-abuse accounting for job {}.", job.getId(), exception);
+            abuseProtection.release(job);
+        }
+    }
+
+    private void releaseAiIfTerminal(Job job) {
+        if (abuseProtection != null && job.getType() == JobType.QUIZ_GENERATION
+                && job.getStatus() == JobStatus.FAILED) {
+            abuseProtection.release(job);
+        }
     }
 
     private void recordFailure(Job job, String code, String message) {

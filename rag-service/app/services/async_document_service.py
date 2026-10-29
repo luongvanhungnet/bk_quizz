@@ -1,7 +1,6 @@
 import asyncio
 import hashlib
 import os
-import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,6 +25,8 @@ class AsyncDocumentService:
         jobs: IndexingJobService, upload_root: Path, max_upload_bytes: int,
         max_documents: int, max_storage_bytes: int,
         validator: UploadValidator | None = None,
+        object_storage: Any | None = None,
+        staging_root: Path | None = None,
     ) -> None:
         self._database = database
         self._documents = documents
@@ -35,6 +36,8 @@ class AsyncDocumentService:
         self._max_documents = max_documents
         self._max_storage_bytes = max_storage_bytes
         self._validator = validator or UploadValidator()
+        self._object_storage = object_storage or documents._object_storage
+        self._staging_root = staging_root or upload_root
 
     async def upload(
         self, context: UserContext, upload: UploadFile,
@@ -47,11 +50,9 @@ class AsyncDocumentService:
                 return existing
         document_id = str(uuid.uuid4())
         filename = sanitize_filename(upload.filename)
-        user_root = self._upload_root / context.safe_key
-        staging = user_root / ".staging" / f"{document_id}.upload"
+        staging = self._staging_root / context.safe_key / ".staging" / f"{document_id}.upload"
         staging.parent.mkdir(parents=True, exist_ok=True)
         digest, size = hashlib.sha256(), 0
-        final_dir = user_root / document_id
         try:
             with staging.open("xb") as stream:
                 while content := await upload.read(1024 * 1024):
@@ -65,16 +66,34 @@ class AsyncDocumentService:
             if not size:
                 raise ServiceError(422, "EMPTY_FILE", "Tệp tải lên không được để trống.")
             mime = await asyncio.to_thread(self._validator.validate, staging, filename, upload.content_type)
-            final_dir.mkdir(parents=True, exist_ok=False)
-            os.replace(staging, final_dir / "original-file")
             try:
+                await asyncio.to_thread(
+                    self._object_storage.store,
+                    staging,
+                    context.safe_key,
+                    document_id,
+                    "original-file",
+                )
                 document, job = self._reserve(
                     context, document_id, filename, mime, size, digest.hexdigest(), idempotency_key
                 )
                 if document.id != document_id:
-                    shutil.rmtree(final_dir, ignore_errors=True)
+                    await asyncio.to_thread(
+                        self._object_storage.delete_document, context.safe_key, document_id
+                    )
+                    return AsyncUploadResponse(
+                        documentId=document.id,
+                        jobId=job.id,
+                        documentStatus=document.status,
+                        jobStatus=job.status,
+                    )
             except Exception:
-                shutil.rmtree(final_dir, ignore_errors=True)
+                try:
+                    await asyncio.to_thread(
+                        self._object_storage.delete_document, context.safe_key, document_id
+                    )
+                except Exception:
+                    pass
                 raise
             return AsyncUploadResponse(
                 documentId=document.id, jobId=job.id,
@@ -93,8 +112,9 @@ class AsyncDocumentService:
             ))
             if document is None:
                 raise ServiceError(404, "DOCUMENT_NOT_FOUND", "Không tìm thấy tài liệu.")
-            source = self._upload_root / context.safe_key / document.id / document.stored_filename
-            if not source.is_file():
+            if not self._object_storage.exists(
+                context.safe_key, document.id, document.stored_filename
+            ):
                 raise ServiceError(
                     409, "DOCUMENT_SOURCE_FILE_MISSING",
                     "Không tìm thấy tệp nguồn để xử lý lại.",
@@ -216,11 +236,7 @@ class AsyncDocumentService:
                 session.delete(document)
             session.query(AuditEvent).filter(AuditEvent.owner_id == owner_id).delete()
             session.commit()
-        shutil.rmtree(self._upload_root / safe_key, ignore_errors=True)
-        try:
-            shutil.rmtree(self._documents._indexes._root / safe_key, ignore_errors=True)
-        except AttributeError:
-            pass
+        self._object_storage.delete_owner(safe_key)
 
 
 class AsyncDocumentProcessor:
@@ -241,9 +257,13 @@ class AsyncDocumentProcessor:
                 self._jobs.cancel(owner_id, job_id)
                 return
             safe_key = __import__("app.models.user_context", fromlist=["safe_user_key"]).safe_user_key(owner_id)
-            path = self._documents._upload_root / safe_key / document_id / record.stored_filename
             self._step(job_id, "PARSING", 30)
-            sections = self._documents._parser.parse(path, record.original_filename, document_id)
+            with self._documents._object_storage.materialize(
+                safe_key, document_id, record.stored_filename
+            ) as path:
+                sections = self._documents._parser.parse(
+                    path, record.original_filename, document_id
+                )
             self._step(job_id, "CHUNKING", 50)
             drafts = self._documents._chunker.chunk_sections(sections)
             if not drafts:

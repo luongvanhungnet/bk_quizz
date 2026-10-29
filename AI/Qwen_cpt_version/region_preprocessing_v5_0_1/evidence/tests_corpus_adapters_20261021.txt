@@ -1,0 +1,154 @@
+C:\Users\hungw\AppData\Local\Temp\tmpts5bsgdt\run
+C:\Users\hungw\AppData\Local\Temp\tmpts5bsgdt\packet\v5_colab_input.zip
+C:\Users\hungw\AppData\Local\Temp\tmpbbrx67jj\run
+C:\Users\hungw\AppData\Local\Temp\tmpqutn7rbb\run
+C:\Users\hungw\AppData\Local\Temp\tmp0ymebh4p\run
+C:\Users\hungw\AppData\Local\Temp\tmpzp7zwxws\run
+C:\Users\hungw\AppData\Local\Temp\tmpzp7zwxws\packet\v5_colab_input.zip
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmpvzzbomtv\\docs",
+  "documents": 1,
+  "pages": 2,
+  "bytes": 6299,
+  "statuses": {
+    "ready": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "1b584d18b511164157f3128d7e51046b73f4ae9b672c5da415a6ae403f0711c1"
+}
+{
+  "documents": 1,
+  "pages": 2,
+  "jobs": 1,
+  "pages_per_packet": 2,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+----------------------------------------------------------------------
+Ran 15 tests in 5.438s
+  "cloud_inference_executed": false,
+
+  "jobs_sha256": "e1333ddeb9c61fb39e075988d6102722751960db44074e67d5e25cd9cbbf28ed",
+OK
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmpida1hb9m\\docs",
+  "documents": 2,
+  "pages": 6,
+  "bytes": 13810,
+  "statuses": {
+    "ready": 1,
+    "exact_duplicate_source": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "e0b7c0ccd2559c792936e565b350bab3adf568cc571dda9d9d2d8dfc0ede2744"
+}
+{
+  "documents": 1,
+  "pages": 3,
+  "jobs": 2,
+  "pages_per_packet": 2,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "149fc5244f13500513154f019ac8a1b696bccaeca2e02f2a679a626143c85a83",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmpwha14rq_\\docs",
+  "documents": 1,
+  "pages": 2,
+  "bytes": 6299,
+  "statuses": {
+    "ready": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "989dd0f873292cf5c14274771fcd00108342ec9801415c7c6fe5e27b90552492"
+}
+{
+  "documents": 1,
+  "pages": 2,
+  "jobs": 1,
+  "pages_per_packet": 2,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "e1e4155e92521fc41d2833adcee0651b5c6d6a46f584ca2c062b036567f3fe78",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+C:\Users\hungw\AppData\Local\Temp\tmpwha14rq_\work\runs\a_f2f26b20ae28
+C:\Users\hungw\AppData\Local\Temp\tmpwha14rq_\work\packets\discovery\a_f2f26b20ae28_p00001-00002\ffa2ba76886b\v5_colab_input.zip
+C:\Users\hungw\AppData\Local\Temp\tmpwha14rq_\work\packets\inference\a_f2f26b20ae28_p00001-00002\4e41e70be80b\v5_colab_input.zip
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmprrgemr7m\\docs",
+  "documents": 1,
+  "pages": 2,
+  "bytes": 6299,
+  "statuses": {
+    "ready": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "f8e22c9cd05a2e21760c50c5e5452094f74526cba2d822dc0a759526ca879ef3"
+}
+{
+  "documents": 1,
+  "pages": 2,
+  "jobs": 1,
+  "pages_per_packet": 2,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "03659d9b0d6f2d435346c68af02f65dcd39a7b3107cfa28f00845fc3afd2fb58",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+C:\Users\hungw\AppData\Local\Temp\tmprrgemr7m\work\runs\a_de02a1e66772
+C:\Users\hungw\AppData\Local\Temp\tmprrgemr7m\work\packets\discovery\a_de02a1e66772_p00001-00002\8c975a349dfe\v5_colab_input.zip
+{
+  "source_root": "C:\\Users\\hungw\\AppData\\Local\\Temp\\tmpg7f5huls\\docs",
+  "documents": 1,
+  "pages": 2,
+  "bytes": 6299,
+  "statuses": {
+    "ready": 1
+  },
+  "cached_documents": 0,
+  "upstream_hash_matches": 0,
+  "source_files_modified": false,
+  "native_sample_is_not_quality_benchmark": true,
+  "excluded_roots": [],
+  "documents_sha256": "d62204704f4faef79c75120c88e9929b0a62d305c0b94af797ee55309e9cd53a"
+}
+{
+  "documents": 1,
+  "pages": 2,
+  "jobs": 2,
+  "pages_per_packet": 1,
+  "reused_documents": 0,
+  "new_documents_needing_layout": 1,
+  "new_rendering_executed": false,
+  "cloud_inference_executed": false,
+  "jobs_sha256": "29a78c854abd04f364aee14ed571904105a6b998aec25912ccda7cc86a106946",
+  "global_near_duplicate_and_split_audit_required_before_combined_cpt": true
+}
+C:\Users\hungw\AppData\Local\Temp\tmpg7f5huls\work\runs\a_b3a4b74379a0
+C:\Users\hungw\AppData\Local\Temp\tmpg7f5huls\work\packets\discovery\a_b3a4b74379a0_p00002-00002\4f6909ef66c5\v5_colab_input.zip

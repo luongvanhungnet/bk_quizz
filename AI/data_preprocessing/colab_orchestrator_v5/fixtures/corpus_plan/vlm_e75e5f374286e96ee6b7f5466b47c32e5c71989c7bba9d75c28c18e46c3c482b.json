@@ -1,0 +1,65 @@
+{
+  "id": "p0005_r00000",
+  "page": 5,
+  "engine": "vlm",
+  "cache_key": "e75e5f374286e96ee6b7f5466b47c32e5c71989c7bba9d75c28c18e46c3c482b",
+  "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+  "crop_sha256": "8b2548c7d94de214103393db897ea72b77c1a65ca53a8e031bed2ff3a6969002",
+  "input_image_sha256": "dac15ec38d6466e6f65ed0a0bd441e857e7d97265f445f5e322deb372e2d2463",
+  "packet_manifest_sha256": "0ed16f06f6dcbc415cc2f2011780442773fa3492b745cb0d32892d038b64bea8",
+  "status": "ok",
+  "text": "Mô hình này bao gồm các thành phần chính sau:\n\n1. **Phát biểu bài toán đã được nghiên cứu nhiều**: Đây là bước đầu tiên, nơi xác định rõ ràng vấn đề cần giải quyết.\n2. **Kiến thức về khoa học máy tính**: Bắt buộc để hiểu và áp dụng các nguyên lý cơ bản của khoa học máy tính.\n3. **Lập trình**: Bước tiếp theo sau khi có kiến thức nền tảng, tiến hành viết mã để giải quyết bài toán.\n4. **Dữ liệu kiểm thử (được giữ bí mật)**: Dữ liệu này được sử dụng để kiểm tra tính chính xác của chương trình.\n5. **Kết quả đầu ra**: Kết quả cuối cùng sau khi chương trình được chạy với dữ liệu kiểm thử.\n\nCác thành phần này liên kết với nhau thông qua các hướng dẫn và quy trình để giải quyết bài toán một cách hiệu quả.",
+  "semantic_verified": false,
+  "model_config": {
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+    "quantization": "nf4",
+    "visual_tokens": 512,
+    "max_new_tokens": 512,
+    "prompt_sha256": "c1403bf190a08720e1bc09250385f8709e41c765e5cb3aade5e8645aa70c6958",
+    "runtime_sha256": "d255953098f5550008b2125454b863467c64c5fb5a09b5fab2028b1abc6c6d0f",
+    "output": "plain_text",
+    "generation_calls_per_image": 1
+  },
+  "context_supplied": "Mô hình Bài tập lập trình Thuật toán ứng dụng\nYếu tố chính : giải bài toán đúng nhanh nhất có thể!\n5 / 44",
+  "one_generation_call": true,
+  "partial_observation": false,
+  "telemetry": {
+    "before": {
+      "allocated": 5937458688,
+      "reserved": 8319401984,
+      "free": 7190937600,
+      "total": 15637086208
+    },
+    "text_tokens": 208,
+    "input_tokens": 711,
+    "image_grid_thw": [
+      [
+        1,
+        36,
+        56
+      ]
+    ],
+    "visual_tokens": 504,
+    "original_image_size": [
+      1168,
+      744
+    ],
+    "effective_image_size": [
+      784,
+      504
+    ],
+    "output_tokens": 195,
+    "possibly_truncated": false,
+    "peak_allocated": 6212592640,
+    "after_cleanup": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    }
+  },
+  "elapsed_seconds": 425.31591132200003,
+  "cache_hit": true,
+  "reused_from_packet_manifest_sha256": "0ed16f06f6dcbc415cc2f2011780442773fa3492b745cb0d32892d038b64bea8"
+}

@@ -13,16 +13,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwt;
     private final UserRepository users;
+    private final AuthorizationService authorization;
 
-    public JwtAuthenticationFilter(JwtService jwt, UserRepository users) {
+    public JwtAuthenticationFilter(JwtService jwt, UserRepository users, AuthorizationService authorization) {
         this.jwt = jwt;
         this.users = users;
+        this.authorization = authorization;
     }
 
     @Override
@@ -34,9 +36,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 JwtService.AccessClaims claims = jwt.verifyAccessToken(header.substring(7).trim());
                 User user = users.findById(claims.userId()).orElse(null);
                 if (user != null && user.isActive() && user.getDeletedAt() == null) {
+                    AuthorizationService.AuthorizationSnapshot snapshot = authorization.snapshot(user.getId());
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             user.getId().toString(), null,
-                            List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())));
+                            snapshot.authorities().stream()
+                                    .map(SimpleGrantedAuthority::new)
+                                    .collect(Collectors.toUnmodifiableSet()));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             } catch (JwtService.JwtValidationException ignored) {
@@ -46,4 +51,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 }
-

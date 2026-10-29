@@ -171,22 +171,31 @@ class HybridRetrievalService:
             snapshot = view.snapshot
             if not snapshot.chunks:
                 continue
-            filtered_positions = [
-                position
-                for position, chunk in enumerate(snapshot.chunks)
-                if (
-                    view.allowed_document_ids is None
-                    or chunk.document_id in view.allowed_document_ids
+            if hasattr(snapshot.index, "search_filtered"):
+                scores, positions = snapshot.index.search_filtered(
+                    query,
+                    self._vector_limit,
+                    view.allowed_document_ids,
+                    view.owner_id,
                 )
-                and (view.owner_id is None or chunk.owner_id == view.owner_id)
-            ]
-            if len(filtered_positions) != len(snapshot.chunks):
-                scores, positions = self._filtered_vector_search(
-                    snapshot.index, query, filtered_positions
-                )
+                filtered_positions = []
             else:
-                limit = min(len(snapshot.chunks), self._vector_limit)
-                scores, positions = snapshot.index.search(query, limit)
+                filtered_positions = [
+                    position
+                    for position, chunk in enumerate(snapshot.chunks)
+                    if (
+                        view.allowed_document_ids is None
+                        or chunk.document_id in view.allowed_document_ids
+                    )
+                    and (view.owner_id is None or chunk.owner_id == view.owner_id)
+                ]
+                if len(filtered_positions) != len(snapshot.chunks):
+                    scores, positions = self._filtered_vector_search(
+                        snapshot.index, query, filtered_positions
+                    )
+                else:
+                    limit = min(len(snapshot.chunks), self._vector_limit)
+                    scores, positions = snapshot.index.search(query, limit)
             for score, position in zip(scores[0], positions[0]):
                 if position < 0 or float(score) < self._min_vector_score:
                     continue

@@ -3,7 +3,6 @@ import hashlib
 import logging
 import math
 import os
-import shutil
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,6 +38,8 @@ class UserDocumentService:
         chunker: ChunkingService,
         index_manager: Any,
         validator: UploadValidator | None = None,
+        object_storage: Any | None = None,
+        staging_root: Path | None = None,
     ) -> None:
         self._database = database
         self._upload_root = upload_root
@@ -49,12 +50,17 @@ class UserDocumentService:
         self._chunker = chunker
         self._indexes = index_manager
         self._validator = validator or UploadValidator()
+        if object_storage is None:
+            from app.services.document_object_storage import LocalDocumentObjectStorage
+
+            object_storage = LocalDocumentObjectStorage(upload_root)
+        self._object_storage = object_storage
+        self._staging_root = staging_root or upload_root
 
     async def upload(self, context: UserContext, upload: UploadFile) -> UserDocumentDto:
         document_id = str(uuid.uuid4())
         filename = sanitize_filename(upload.filename)
-        user_root = self._upload_root / context.safe_key
-        staging = user_root / ".staging" / f"{document_id}.upload"
+        staging = self._staging_root / context.safe_key / ".staging" / f"{document_id}.upload"
         staging.parent.mkdir(parents=True, exist_ok=True)
         digest = hashlib.sha256()
         size = 0
@@ -79,13 +85,21 @@ class UserDocumentService:
             file_hash = digest.hexdigest()
             stage = "RESERVING"
             await asyncio.to_thread(self._reserve, context, document_id, filename, mime, size, file_hash)
-            document_dir = user_root / document_id
-            document_dir.mkdir(parents=True, exist_ok=False)
-            final_path = document_dir / "original-file"
-            os.replace(staging, final_path)
+            await asyncio.to_thread(
+                self._object_storage.store,
+                staging,
+                context.safe_key,
+                document_id,
+                "original-file",
+            )
             self._set_status(document_id, "PROCESSING")
             stage = "PARSING"
-            sections = await asyncio.to_thread(self._parser.parse, final_path, filename, document_id)
+            with self._object_storage.materialize(
+                context.safe_key, document_id, "original-file"
+            ) as source_path:
+                sections = await asyncio.to_thread(
+                    self._parser.parse, source_path, filename, document_id
+                )
             stage = "CHUNKING"
             drafts = await asyncio.to_thread(self._chunker.chunk_sections, sections)
             if not drafts:
@@ -124,7 +138,12 @@ class UserDocumentService:
                 getattr(error, "code", "DOCUMENT_PROCESSING_FAILED"),
             )
             staging.unlink(missing_ok=True)
-            shutil.rmtree(user_root / document_id, ignore_errors=True)
+            try:
+                await asyncio.to_thread(
+                    self._object_storage.delete_document, context.safe_key, document_id
+                )
+            except Exception:
+                LOGGER.warning("document_storage_cleanup_failed document_id=%s", document_id)
             self._mark_failed_if_exists(document_id, self._safe_error_code(error))
             if index_committed:
                 await asyncio.to_thread(self._indexes.remove_document, context.owner_id, document_id)
@@ -196,13 +215,13 @@ class UserDocumentService:
             chunks: list[DocumentChunk] = []
             safe_key = context_safe_key(owner_id)
             for record in records:
-                path = self._upload_root / safe_key / record.id / record.stored_filename
-                if not path.is_file():
-                    raise ServiceError(409, "USER_INDEX_REBUILD_REQUIRED", "Thiếu tệp nguồn để dựng lại chỉ mục người dùng.")
                 try:
-                    sections = self._parser.parse(path, record.original_filename, record.id)
-                    drafts = self._chunker.chunk_sections(sections)
-                except ValueError as error:
+                    with self._object_storage.materialize(
+                        safe_key, record.id, record.stored_filename
+                    ) as path:
+                        sections = self._parser.parse(path, record.original_filename, record.id)
+                        drafts = self._chunker.chunk_sections(sections)
+                except (ValueError, ServiceError) as error:
                     raise ServiceError(409, "USER_INDEX_REBUILD_REQUIRED", "Không thể dựng lại chỉ mục người dùng.") from error
                 context = UserContext(owner_id, safe_key, record.classroom_id)
                 chunks.extend(self._to_chunks(
@@ -227,7 +246,7 @@ class UserDocumentService:
             # DB authorization filter removes the document immediately; a later
             # search will detect the stale manifest and rebuild it.
             pass
-        shutil.rmtree(self._upload_root / context_safe_key(owner_id) / document_id, ignore_errors=True)
+        self._object_storage.delete_document(context_safe_key(owner_id), document_id)
 
     def _reserve(self, context: UserContext, document_id: str, filename: str, mime: str, size: int, file_hash: str) -> None:
         with self._indexes.lock_for(context.owner_id), self._database.session() as session:

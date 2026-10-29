@@ -1,0 +1,81 @@
+{
+  "status": "ok",
+  "request_count": 1,
+  "record_count": 1,
+  "versions": {
+    "paddleocr": "3.7.0",
+    "paddlex": "3.7.2",
+    "paddlepaddle": "3.2.2",
+    "paddlepaddle-gpu": null
+  },
+  "records": [
+    {
+      "id": "v5:canary:formula:p0033",
+      "page": 33,
+      "mode": "formula",
+      "status": "ok",
+      "fingerprint": "17c9732c2e06b2537efef4fa9d540ef3c9c26229f564c8f7756778eac362e9ff",
+      "input_file_sha256": "1fe803dece1fef837cfd74be4be91d2fddd85afc0dc635e07a3236789df9d60c",
+      "config": {
+        "mode": "formula",
+        "device": "cpu",
+        "lang": "vi",
+        "ocr_version": "PP-OCRv3",
+        "formula_model": "PP-FormulaNet-S",
+        "versions": {
+          "paddleocr": "3.7.0",
+          "paddlex": "3.7.2",
+          "paddlepaddle": "3.2.2",
+          "paddlepaddle-gpu": null
+        }
+      },
+      "native_text": "O(n log n)",
+      "candidates": [
+        {
+          "page": 33,
+          "bbox": [
+            260.0,
+            590.4761904761905,
+            380.0,
+            632.3809523809524
+          ],
+          "kind": "formula",
+          "text": "\\mathcal{O}(n\\log n)",
+          "engine": "paddle_formula",
+          "status": "ok",
+          "confidence": null,
+          "evidence": {
+            "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+            "parser_output_file": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v5\\evidence\\paddle_formula_canary\\output\\raw\\v5_canary_formula_p0033_3c8c6a04ebab_formula.json",
+            "parser_output_sha256": "2d0160a98f656a4439628792eb805d20612b7eefa2b2494fea75f608cd299364",
+            "parser": "paddle_formula",
+            "parser_version": "3.7.0",
+            "backend_family": "paddle_formula",
+            "model": "PP-FormulaNet-S",
+            "geometry_status": "known",
+            "region_id": "v5:canary:formula:p0033",
+            "semantic_verified": false,
+            "original": {
+              "crop_bbox": [
+                260.0,
+                590.4761904761905,
+                380.0,
+                632.3809523809524
+              ]
+            }
+          }
+        }
+      ],
+      "semantic_verified": false,
+      "raw": [
+        {
+          "input_path": "D:\\BKQuiz\\AI\\Qwen_cpt_version\\region_preprocessing_v3\\runs\\it3170_v3_20261019\\crops\\p0033_r00013_f01_v3_boundary.png",
+          "page_index": null,
+          "rec_formula": "\\mathcal{O}(n\\log n)"
+        }
+      ],
+      "elapsed_seconds": 1.4097927999973763
+    }
+  ],
+  "semantic_verified": false
+}

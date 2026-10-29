@@ -9,6 +9,8 @@ export interface UserDto {
   bio?: string | null;
   emailVerified: boolean;
   active: boolean;
+  administrativeRoles?: string[];
+  permissions?: string[];
 }
 
 export interface AuthPayload {

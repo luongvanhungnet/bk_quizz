@@ -1,0 +1,29 @@
+{
+  "valid": true,
+  "preprocessing_version": "6.0.0",
+  "runtime_files": 24,
+  "runtime_bytes": 63144,
+  "runtime_sha256": "df87b5c018d69ab295f9bdeea5a8bb511f2a033a2d5a16df6f1e079c7350b5ab",
+  "tests": 30,
+  "failures": 0,
+  "errors": 0,
+  "core_files_verified": 48,
+  "original_inputs_sha256_verified": 134,
+  "original_input_archives_modified": false,
+  "previous_v3_v4_runtime_archives_unchanged": true,
+  "background_occurrences_excluded": 170646,
+  "notebook_cells_compiled": true,
+  "actual_GPU_inference": false,
+  "actual_Colab_executed": false,
+  "legacy_outputs_relabelled_as_v6": false,
+  "human_verification_created": false,
+  "delivery": {
+    "folder": "D:\\BKQuiz\\AI\\data_preprocessing\\colab_orchestrator_v5\\drive_upload",
+    "input_folder": "D:\\BKQuiz\\AI\\data_preprocessing\\colab_orchestrator_v5\\drive_upload\\inputs_134",
+    "input_archives": 134,
+    "precompleted_result_archives": 7,
+    "runtime_zip": "colab_orchestrator_v5_v6_runtime.zip",
+    "runtime_sha256": "df87b5c018d69ab295f9bdeea5a8bb511f2a033a2d5a16df6f1e079c7350b5ab",
+    "upload_bytes": 5617888508
+  }
+}

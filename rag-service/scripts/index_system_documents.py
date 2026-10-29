@@ -17,11 +17,11 @@ from app.services.vector_store import VectorStore
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Lập chỉ mục tài liệu hệ thống BKQuiz.")
+    parser = argparse.ArgumentParser(description="Index BKQuiz system documents.")
     parser.add_argument(
         "--force",
         action="store_true",
-        help="Bỏ qua vector cũ và lập lại toàn bộ chỉ mục.",
+        help="Discard existing vectors and rebuild the complete index.",
     )
     arguments = parser.parse_args()
     try:

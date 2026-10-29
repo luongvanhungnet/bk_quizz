@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "date": "2026-10-18",
+  "checks": [
+    "5 data/checkpoint unit tests passed",
+    "nbformat schema",
+    "all notebook cells compile",
+    "Python scripts parse",
+    "ZIP CRC and every member SHA-256",
+    "actual pinned Qwen3 tokenizer packing"
+  ],
+  "tokenization": {
+    "model_id": "Qwen/Qwen3-1.7B",
+    "revision": "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e",
+    "transformers_version": "4.57.6",
+    "dataset_manifest_sha256": "b1335ac2944bc3989ccad8b5a25d9eddb4deafebed244737ebfbf9cbcda13a48",
+    "input_samples": 264,
+    "sequence_length": 1024,
+    "packed_sequences": 30,
+    "tokens_including_eos": 29771,
+    "supervised_next_token_positions": 29741,
+    "eos_token": "<|im_end|>",
+    "eos_token_id": 151645,
+    "files_sha256": {
+      "train.packed.jsonl": "cba2b7b325b65d35c48d58a915d621de268aa9f965342320c4332a1ae21d1490",
+      "train.sources.jsonl": "804991b32095d2e029fb4443ba315704bb05eddce8f7b0a0217b8bffe806725a"
+    },
+    "chat_template_applied": false,
+    "labels_shifted_in_data": false,
+    "cross_sample_attention": true,
+    "last_fragment_kept": true,
+    "validation": "none: one document group, train-only; no random page split"
+  },
+  "gpu_training_executed": false,
+  "colab_smoke_required": true
+}

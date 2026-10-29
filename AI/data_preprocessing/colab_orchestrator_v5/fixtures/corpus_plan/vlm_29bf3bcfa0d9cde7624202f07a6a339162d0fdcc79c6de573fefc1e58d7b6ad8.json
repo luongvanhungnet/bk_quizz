@@ -1,0 +1,63 @@
+{
+  "id": "p0930_r01239",
+  "page": 930,
+  "engine": "vlm",
+  "cache_key": "29bf3bcfa0d9cde7624202f07a6a339162d0fdcc79c6de573fefc1e58d7b6ad8",
+  "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+  "crop_sha256": "fa89c7f10554bd843f9f91f25aa2ca0f76e585c94d090316c863c3f39d377834",
+  "input_image_sha256": "b515183432d90e2645ae6ee580ff16f9672bd201c716b4be28a4ee4755663d68",
+  "packet_manifest_sha256": "24f2f2d02890d1dcb39abd727e73358f8d6f1d27c5cf8d5ac3a683c636537c69",
+  "status": "ok",
+  "text": "Hình ảnh mô tả thuật toán tìm kiếm rộng (Breadth First Search - BFS) với một đồ thị có hướng. Trong đó:\n\n- \"BFS(1)\" ở bên trái chỉ ra rằng thuật toán BFS bắt đầu từ đỉnh 1.\n- Các số trong hình đại diện cho các đỉnh của đồ thị: 1, 2, 3, 4, 5, 6, và 7.\n- Các mũi tên chỉ ra các cạnh giữa các đỉnh, cho thấy mối liên hệ giữa chúng.\n- Số 32 ở góc dưới bên trái có thể là số trang hoặc slide trong một bài giảng hoặc tài liệu học thuật.",
+  "semantic_verified": false,
+  "model_config": {
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+    "quantization": "nf4",
+    "visual_tokens": 512,
+    "max_new_tokens": 512,
+    "prompt_sha256": "c1403bf190a08720e1bc09250385f8709e41c765e5cb3aade5e8645aa70c6958",
+    "runtime_sha256": "d255953098f5550008b2125454b863467c64c5fb5a09b5fab2028b1abc6c6d0f",
+    "output": "plain_text",
+    "generation_calls_per_image": 1
+  },
+  "context_supplied": "Breadth First Search - BFS\nBFS(1)\n6\n2\n1\n5\n3\n4\n7\n32",
+  "one_generation_call": true,
+  "partial_observation": false,
+  "telemetry": {
+    "before": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    },
+    "text_tokens": 202,
+    "input_tokens": 695,
+    "image_grid_thw": [
+      [
+        1,
+        38,
+        52
+      ]
+    ],
+    "visual_tokens": 494,
+    "original_image_size": [
+      1400,
+      1029
+    ],
+    "effective_image_size": [
+      728,
+      532
+    ],
+    "output_tokens": 138,
+    "possibly_truncated": false,
+    "peak_allocated": 6209499648,
+    "after_cleanup": {
+      "allocated": 5945978880,
+      "reserved": 8319401984,
+      "free": 7174160384,
+      "total": 15637086208
+    }
+  },
+  "elapsed_seconds": 12.026994210999874
+}

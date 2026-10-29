@@ -1,0 +1,8 @@
+# Runtime local; Paddle, Torch, Docling, MinerU use separate environments.
+PyMuPDF==1.28.2
+Pillow==13.0.0
+pydantic==2.14.1
+ImageHash==4.3.2
+python-pptx==1.0.2
+# Optional blur diagnostic: opencv-python-headless (already available via
+# opencv-contrib-python locally). Never install both OpenCV variants together.

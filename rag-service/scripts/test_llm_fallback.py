@@ -141,7 +141,7 @@ async def main() -> int:
         providers.append(OllamaQwenProvider(settings))
     elif args.provider == "gemini-api-key":
         if not settings.gemini_api_key:
-            raise SystemExit("GEMINI_API_KEY chưa được cấu hình.")
+            raise SystemExit("GEMINI_API_KEY is not configured.")
         owned_gemini = GeminiService(settings)
         providers.append(GeminiApiKeyProvider(owned_gemini, settings.gemini_model))
     elif args.provider == "gemini-oauth":
@@ -171,7 +171,7 @@ async def main() -> int:
         output = GroundedQuizOutput.model_validate_json(result.answer)
         for question in output.questions:
             if len(question.options) != 4 or sum(option.correct for option in question.options) != 1:
-                raise ValueError("Câu SINGLE_CHOICE không có đúng bốn lựa chọn và một đáp án.")
+                raise ValueError("A SINGLE_CHOICE question must have exactly four options and one correct answer.")
             citations = (
                 question.questionCitations
                 + question.answerCitations
@@ -184,7 +184,7 @@ async def main() -> int:
                 ) is None
                 for citation in citations
             ):
-                raise ValueError("Citation Qwen không khớp context tin cậy.")
+                raise ValueError("The Qwen citation does not match the trusted context.")
         print(json.dumps({
             "provider": result.provider,
             "model": result.model,

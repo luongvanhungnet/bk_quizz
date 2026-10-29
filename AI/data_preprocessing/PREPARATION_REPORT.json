@@ -1,0 +1,32 @@
+{
+  "release": "5.0.0",
+  "release_manifest_sha256": "27c582322ce77fb5fc9796776612c65222160d74810e9743994c90e9aceec23b",
+  "corpus_documents": 27,
+  "corpus_pages": 13314,
+  "plan_jobs": 148,
+  "packet": "D:\\BKQuiz\\AI\\data_preprocessing\\workspaces\\corpus_20261021\\packets\\inference\\it3170_c6c829f14bf2_p00001-00100\\ebefa4fde289\\v5_colab_input.zip",
+  "packet_sha256": "eb879d771b0cc7c056a9d538f28442788ed4702c01d0d42e32ae44ee3a64460e",
+  "packet_bytes": 43099127,
+  "packet_manifest_sha256": "0ed16f06f6dcbc415cc2f2011780442773fa3492b745cb0d32892d038b64bea8",
+  "source_sha256": "c6c829f14bf2a8a1e42b6919d729fdf23865ef4734eb25817f183103dd877087",
+  "source_page_range": [
+    1,
+    100
+  ],
+  "requests": 154,
+  "by_kind": {
+    "text": 95,
+    "code": 5,
+    "formula": 38,
+    "table": 4,
+    "diagram": 12
+  },
+  "vlm_requests": 1,
+  "cached_specialist_failures_deferred": 0,
+  "zip_crc_and_input_hashes_valid": true,
+  "same_vlm_prompt_model_runtime_as_validated_v5_pilot": true,
+  "python_tests_passed": 167,
+  "full_corpus_cloud_inference_executed": false,
+  "new_corpus_rendering_executed": false,
+  "registry_tests_passed": 4
+}

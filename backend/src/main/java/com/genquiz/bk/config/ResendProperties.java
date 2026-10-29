@@ -4,4 +4,10 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "resend.api")
-public record ResendProperties(String key, String url, Duration connectTimeout, Duration readTimeout) {}
+public record ResendProperties(
+        String key,
+        String url,
+        Duration connectTimeout,
+        Duration readTimeout,
+        Duration networkRetryDelay
+) {}
